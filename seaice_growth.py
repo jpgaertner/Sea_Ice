@@ -270,7 +270,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     surf_theta = np.maximum(theta, TempFrz) #the ocean temperature cannot be lower than TempFrz (otherwise it would have been frozen)
     mltf = 1 + (McPheeTaperFac - 1) / (1 + np.exp((AreapreTH - tmpscal0) * tmpscal1))
     F_oi = - tmpscal2 * (surf_theta - TempFrz) * mltf #mixed layer turbulence factor (determines how much of the temperature difference is used for heat flux)
-    IceGrowthRateMixedLayer = F_oi * qi * 0
+    IceGrowthRateMixedLayer = F_oi * qi
     print("IceGrowthRateMixedLayer",IceGrowthRateMixedLayer)
     print("NetExistingIceGrowthRate",NetExistingIceGrowthRate)
     print("IceGrowthRateOpenWater",IceGrowthRateOpenWater)

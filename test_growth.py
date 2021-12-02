@@ -18,7 +18,6 @@
 # ATemp: atmospheric temperature [K]
 # aqh: atmospheric specific humidity [g/kg]
 
-
 import numpy as np
 from seaice_size import *
 from seaice_params import *
@@ -44,9 +43,6 @@ LWDown = np.ones((sNx,sNy))*50 #winter
 ATemp = np.ones((sNx,sNy))*celsius2K-20
 aqh = np.ones((sNx,sNy))*1e-4
 
-#numpy binary dateien lesen
-#np.fromfile
-
 
 x = np.array([0])
 ice = np.array([hIceMean[0,0]])
@@ -54,6 +50,7 @@ snow = np.array([hSnowMean[0,0]])
 qnet = np.array([Qnet[0,0]])
 iceTemp = np.array([TIceSnow[0,0,:]])
 area_arr = np.array([Area[0,0]])
+qsw = np.array([Qsw[0,0]])
 
 for i in range(365):
     hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet, seaIceLoad = (
@@ -66,12 +63,23 @@ for i in range(365):
     qnet = np.append(qnet, Qnet[0,0])
     iceTemp = np.append(iceTemp, TIceSnow[0,0,:])
     area_arr = np.append(area_arr, Area[0,0])
+    qsw = np.append(qsw, Qsw[0,0])
 
 
-
-plt.plot(x,ice)
-#plt.plot(x,area_arr)
-#plt.plot(x,snow+1)
+fig, axs = plt.subplots(3,2, figsize=(10,6))
+axs[0,0].plot(x,ice)
+axs[0,0].set_ylabel("Ice Thickness")
+axs[0,1].plot(x,snow)
+axs[0,1].set_ylabel("Snow Thickness")
+axs[1,0].plot(x,area_arr)
+axs[1,0].set_ylabel("Area")
+axs[1,1].plot(x,qnet)
+axs[1,1].set_ylabel("Qnet")
+axs[2,0].plot(x,iceTemp)
+axs[2,0].set_ylabel("Ice Temperature")
+axs[2,1].plot(x,qsw)
+axs[2,1].plot("Qsw")
+fig.tight_layout()
 plt.show()
 #print(x)
 #print(f"ice:{ice}")

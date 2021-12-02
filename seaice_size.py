@@ -14,7 +14,6 @@ import numpy as np
 
 sNx =   1 #Number of X points in tile
 sNy =   1 #Number of Y points in tile
-#1-OLx:sNx+OLx
 OLx =   2 #Tile overlap extent in X
 OLy =   2 #Tile overlap extent in Y
 #nSx =   1 #Number of tiles per process in X
@@ -27,17 +26,11 @@ OLy =   2 #Tile overlap extent in Y
 #Ny  = sNy*nSy*nPy #Number of points in Y for the full domain
 Nr  =  26 #Number of points in vertical direction
 
-#ifdef ALLOW_SEAICE
-
-
 #nITC is the number of ice thickness categories to allocate.
 #Instead of assuming just one thickness for a grid cell, a distribution of nITC thicknesses (centered around the mean value and containing equal fractions of the area) is assumed.
 #Bitz et al. (2001, JGR) suggest a minimum of nITD = 5
 nITC = 1
 recip_nITC = 1 / nITC
-
-SItrMaxNum = 3 #the number of passive tracers to allocate
-#maximum number of tracers?
 
 #grid descriptor variables
 dxC = np.ones((sNx+2*OLx, sNy+2*OLy)) #distance between two adjacent cell centers in x direction across western cell wall [m]
