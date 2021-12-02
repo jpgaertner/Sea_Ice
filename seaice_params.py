@@ -7,7 +7,7 @@ rhoIce = 910
 rhoSnow = 330
 rhoFresh = 999.8
 recip_rhoFresh = 1 / rhoFresh
-rhoConst = rhoFresh #constant (Boussinesq) reference density for sea water
+rhoConst = 1027.0 #constant reference density for sea water (Boussinesq)
 recip_rhoConst = 1 / rhoConst
 rhoice2rhosnow     = rhoIce / rhoSnow
 rhoIce2rhoFresh = rhoIce / rhoFresh
@@ -23,7 +23,7 @@ drySnowAlb_south = 0.84
 wetSnowAlb = 0.7
 wetSnowAlb_south = 0.7
 
-wetAlbTemp = -0.001
+wetAlbTemp = 0
 
 #ifdef ALLOW_EXF
 #Use parameters that have already been set in data.exf:
@@ -41,13 +41,13 @@ snowEmiss = emissivity
 
 iceConduct = 2.1656
 snowConduct = 0.31
-hCut = 0.15 #cut off snow thickness, used for calculating albedo
+hCut = 0 #cut off snow thickness, used for calculating albedo
 shortwave = 0.3 #penetration shortwave radiation factor
 
-heatCapacity = 3994
+heatCapacity = 3986.0
 
-tempFrz0 = 0.0901
-dTempFrz_dS = -0.0575
+tempFrz0 = -1.96
+dTempFrz_dS = 0
 
 saltIce = 0 #salinity of sea ice
 
@@ -60,8 +60,8 @@ minTAir = -50 #minimum air temperature
 seaice_dalton = 0.00175
 
 # parametrization values:
-SEAICE_area_reg = 10**(-5)
-SEAICE_hice_reg = 0.05
+SEAICE_area_reg = 0.15
+SEAICE_hice_reg = 0.10
 
 #The change of mean ice thickness due to out-of-bounds values following
 #sea ice dynamics and advection
@@ -71,7 +71,7 @@ d_hSnowbyDyn = np.ones((sNx, sNy))
 SINegFac = 1 #value is actually one, but what is it?
 swFracAbsTopOcean = 0 #the fraction of incoming shortwave radiation absorbed in the uppermost ocean grid cell
 
-celsius2K = 273.15
+celsius2K = 273.16
 
 deltatTherm = 86400/2 #timestep for thermodynamic equations [s]
 recip_deltatTherm = 1 / deltatTherm
@@ -79,7 +79,8 @@ recip_deltatTherm = 1 / deltatTherm
 #constants needed for McPhee formulas for calculating turbulent ocean fluxes:
 stantonNr = 0.0056 #stanton number
 uStarBase = 0.0125 #typical friction velocity beneath sea ice [m/s]
-McPheeTaperFac = 12.5 #tapering factor
+#McPheeTaperFac = 12.5 #tapering factor
+McPheeTaperFac = 0.92
 
 # lead closing parameters:
 h0 = 0.5 # the thickness of new ice formed in open water [m]
@@ -92,7 +93,7 @@ recip_h0_south = 1 / h0_south
 
 airTurnAngle = 0 #turning angle of air-ice interfacial stress
 waterTurnAngle = 0 #turning angle of the water-ice interfacial stress 
-eps = 1e-10
+eps = 1e-8
 eps_sq = eps**2
 
 airOceanDrag = 0.001 #air-ocean drag coefficient
@@ -119,7 +120,7 @@ recip_deltatDyn = 1 / deltatDyn
 
 #### sea ice dynsolver ####
 seaIceLoadFac = 1 #factor to scale (and turn off) seaIceLoading
-gravity = 9.81
+gravity = 9.8156
 
 #### sea ice lsr ####
 seaIceOLx = OLx - 2
