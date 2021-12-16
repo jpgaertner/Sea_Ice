@@ -41,7 +41,7 @@ def advdiff(uIce, vIce, hIceMean, hSnowMean, hIceMeanMask, Area):
     # calculate transports of mean thickness through tracer cells
     uTrans = uIce * xA
     vTrans = vIce * yA
-
+    new = 4
 
     ##### calculate tendency of ice field and do explicit time step #####
 
