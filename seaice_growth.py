@@ -189,11 +189,23 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     # calculate freezing temperature
     TempFrz = tempFrz0 + dTempFrz_dS * salt + celsius2K
 
+    print("hIceActual",hIceActual)
+    print("hIceActual_mult",hIceActual_mult)
+    print("hSnowActual_mult",hSnowActual_mult)
+    print("TIceIn_mult",TIceIn_mult)
+    print("TempFrz",TempFrz)
+    print("ug",ug)
+    print("SWDown",SWDown)
+    print("LWDown",LWDown)
+    print("ATemp",ATemp)
+    print("aqh",aqh)
+
+
     for l in range(0, nITC):
         TIceOut_mult[:,:,l], F_io_net_mult[:,:,l], F_ia_net_mult[:,:,l], F_ia_mult[:,:,l], qswi_mult[:,:,l], FWsublim_mult[:,:,l] = (
         solve4temp(hIceActual_mult[:,:,l], hSnowActual_mult[:,:,l], TIceIn_mult[:,:,l], TempFrz, ug, SWDown, LWDown, ATemp, aqh))
 
-
+    print("TIceOut_mult", TIceOut_mult)
     ##### evaluate precipitation as snow or rain #####
 
     # if the temperature is above the freezing point, the precipitation remains wet and runs into the ocean

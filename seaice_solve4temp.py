@@ -195,9 +195,9 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
     TSurfOut[isIce] = TSurfLoc[isIce]
     FWsublim[isIce] = F_lh[isIce] / lhSublim
 
-    print("F_c",F_c)
-    print("F_ia",F_ia)
-    print("F_ia_net",F_ia_net)
-    print("F_io_net",F_io_net)
+    #print("F_c",F_c)
+    #print("F_ia",F_ia)
+    #print("F_ia_net",F_ia_net)
+    #print("F_io_net",F_io_net)
 
     return TSurfOut, F_io_net, F_ia_net, F_ia, IcePenetSW, FWsublim

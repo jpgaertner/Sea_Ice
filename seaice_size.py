@@ -26,13 +26,13 @@ OLy =   2 #Tile overlap extent in Y
 #Ny  = sNy*nSy*nPy #Number of points in Y for the full domain
 Nr  =  26 #Number of points in vertical direction
 
-#nITC is the number of ice thickness categories to allocate.
-#Instead of assuming just one thickness for a grid cell, a distribution of nITC thicknesses (centered around the mean value and containing equal fractions of the area) is assumed.
-#Bitz et al. (2001, JGR) suggest a minimum of nITD = 5
+# number of ice thickness categories
+# instead of assuming just one thickness for a grid cell, a distribution of nITD thicknesses (centered around the mean value and containing equal fractions of the area) is assumed.
+# Bitz et al. (2001, JGR) suggest a minimum of nITD = 5
 nITC = 1
 recip_nITC = 1 / nITC
 
-#grid descriptor variables
+# grid descriptor variables
 dxC = np.ones((sNx+2*OLx, sNy+2*OLy)) #distance between two adjacent cell centers in x direction across western cell wall [m]
 dyC = np.ones((sNx+2*OLx, sNy+2*OLy)) #distance between two adjacent cell centers in y direction across southern cell wall [m]
 dxG = np.ones((sNx+2*OLx, sNy+2*OLy)) #distance between cell faces (cell width) in x direction along southern cell wall [m]
@@ -49,8 +49,16 @@ recip_dxF = 1 / dxF
 recip_dyF = 1 / dyF
 recip_dxV = 1 / dxV
 recip_dyU = 1 / dyU
+dxN = 1
 
 rAz = np.ones((sNx+2*OLx, sNy+2*OLy))
 
 fCori = np.ones((sNx+2*OLx, sNy+2*OLy))*1e-4 #coriolis parameter at grid center point
 fCoriG = np.ones((sNx+2*OLx, sNy+2*OLy))*1e-4 #coriolis parameter at grid corner point (south west corner?)
+
+# masks
+maskInW = 1
+maskInS = 1
+maskInC = 1
+SeaIceMaskU = 1
+SeaIceMaskV = 1

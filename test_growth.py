@@ -52,7 +52,7 @@ iceTemp = np.array([TIceSnow[0,0,:]])
 area_arr = np.array([Area[0,0]])
 qsw = np.array([Qsw[0,0]])
 
-for i in range(365):
+for i in range(3):
     hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet, seaIceLoad = (
         growth(hIceMean, hIceMeanMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, 
         runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh)    )
