@@ -14,7 +14,6 @@ from seaice_advection import advection
 # nur cgrid, b grid conversion not needed
 # i.e. uc = uIce
 
-test = 1
 ### input
 # uIce
 # vIce
