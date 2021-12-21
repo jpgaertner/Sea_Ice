@@ -14,18 +14,15 @@ from seaice_fluxlimit_adv_y import fluxlimit_adv_y
 # iceFld: sea ice field
 # r_hFld: reciprocal of ice thickness
 
-extensiveFld = True #indicates to advect an "extensive" type of ice field
-
-#originally time splitting approach. calc x and then use new x flux to calc y
-
-recip_rA = 1
-
 ### output
-# gFld: tendency array
+# gFld: advection tendency
+
+
+extensiveFld = True #indicates to advect an "extensive" type of ice field
+recip_rA = 1
 
 
 def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):
-
 
     # make local copy of sea-ice field and mask West & South
     localTij = iceFld.copy()

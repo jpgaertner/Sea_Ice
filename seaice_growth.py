@@ -25,6 +25,17 @@ from seaice_solve4temp import solve4temp
 # ATemp: atmospheric temperature [K]
 # aqh: atmospheric specific humidity [g/kg]
 
+### output
+# hIceMean
+# hSnowMean
+# Area
+# TIceSnow
+# saltflux
+# EvPrecRun
+# Qsw
+# Qnet
+# seaIceLoad
+
 
 def growth(hIceMean, hIceMeanMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, 
 runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):

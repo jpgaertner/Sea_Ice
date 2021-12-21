@@ -15,12 +15,12 @@ from seaice_advection import advection
 # i.e. uc = uIce
 
 ### input
-# uIce
-# vIce
-# hIceMean
-# hSnowMean
-# hIceMeanMask
-# Area
+# hIceMean: mean ice thickness [m3/m2] (= hIceActual * Area with Area the sea ice cover fraction and hIceActual = Vol_ice / x_len y_len)
+# hIceMeanMask: contains geometry of the set up
+# hSnowMean: mean snow thickness [m3/m2]
+# Area: sea ice cover fraction (0 <= Area <= 1)
+# uIce: zonal ice velocity [m/s]
+# vIce: meridional ice velocity [m/s]
 
 ### output
 # hIceMean

@@ -3,56 +3,58 @@
 import numpy as np
 from seaice_size import *
 from seaice_params import *
-from seaice_init_fields import *
 from seaice_freedrift import seaIceFreeDrift
 
 
 ### input:
-# uIce #zonal ice velocity [m/s] at south-west B-grid (or c grid? ifdef cgrid) u point? (what does the grid look like) (>0 = from west to east)
-# vIce #meridional ice velocty [m/s] at south-west B-grid v point (>0 = from south to north)
+# uIce: zonal ice velocity [m/s] at south-west B-grid (or c grid? ifdef cgrid) u point? (what does the grid look like) (>0 = from west to east)
+# vIce: meridional ice velocty [m/s] at south-west B-grid v point (>0 = from south to north)
 # hIceMean
 # hSnowMean
 # Area
-# etaN
+# etaN: ocean surface elevation
 # pLoad
 # SeaIceLoad
 # useRealFreshWaterFlux
-# uVel
-# vVel
+# uVel: zonal ocean velocity [m/s]
+# vVel: meridional ocean velocity [m/s]
 
 ### output:
 # uIce
 # vIce
 
+
 def dynsolver(uIce, vIce, uVel, vVel, hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux):
 
     # local variables:
-    tauX = np.zeros((sNx+2*OLx, sNy+2*OLy)) #wind stress over ice at u point
-    tauY = np.zeros((sNx+2*OLx, sNy+2*OLy)) #wind stress over ice at v point
+    tauX = np.zeros((sNx+2*OLx, sNy+2*OLy)) # zonal wind stress over ice at u point
+    tauY = np.zeros((sNx+2*OLx, sNy+2*OLy)) # meridional wind stress over ice at v point
+    seaIceMassC = np.zeros((sNx+2*OLx,sNy+2*OLy))
+    seaIceMassU = np.zeros((sNx+2*OLx,sNy+2*OLy))
+    seaIceMassV = np.zeros((sNx+2*OLx,sNy+2*OLy))
+    IceSurfStressX0 = np.zeros((sNx+2*OLx,sNy+2*OLy))
+    IceSurfStressY0 = np.zeros((sNx+2*OLx,sNy+2*OLy))
 
-    #if different(deltatDyn, deltatTherm)
+    # if different(deltatDyn, deltatTherm)
 
-    # set up mass per unit area and coriolis term
+    # set up mass per unit area
     seaIceMassC[1:,1:] = rhoIce * hIceMean[1:,1:]
     seaIceMassU[1:,1:] = rhoIce * 0.5 * (hIceMean[1:,1:] + hIceMean[:-1,1:])
     seaIceMassV[1:,1:] = rhoIce * 0.5 * (hIceMean[1:,1:] + hIceMean[1:,:-1])
 
-    #if SEAICEaddSnowMass (true)
+    # if SEAICEaddSnowMass (true)
     seaIceMassC[1:,1:] = seaIceMassC[1:,1:] + rhoSnow * hSnowMean[1:,1:]
     seaIceMassU[1:,1:] = seaIceMassU[1:,1:] + rhoSnow * 0.5 * (hSnowMean[1:,1:] + hSnowMean[:-1,1:])
     seaIceMassV[1:,1:] = seaIceMassV[1:,1:] + rhoSnow * 0.5 * (hSnowMean[1:,1:] + hSnowMean[1:,:-1])
 
-    #if SEAICE_maskRHS (false)
+    # if SEAICE_maskRHS... (false)
 
 
-    ### set up forcing fields ###
+    ##### set up forcing fields #####
 
-    stressDivergenceX = np.zeros((sNx+2*OLx,sNy+2*OLy))
-    stressDivergenceY = np.zeros((sNx+2*OLx,sNy+2*OLy))
+    # call SEAICE_GET_DYNFORCING
 
-    #call SEAICE_GET_DYNFORCING
-
-    # compute surface pressure at z = 0: (where?)
+    # compute surface pressure at z = 0:
     # use actual sea surface height phiSurf for tilt computations
     phiSurf = gravity * etaN
 
@@ -64,8 +66,8 @@ def dynsolver(uIce, vIce, uVel, vVel, hIceMean, hSnowMean, Area, etaN, pLoad, Se
 
     # forcing by wind
     #if SEAICEscaleSurfStress (true)
-    IceSurfStressX0[1:,1:] = tauX[1:,1:] * 0.5 * (Area[1:,1:] + Area[:-1,1:]) #forcex0
-    IceSurfStressY0[1:,1:] = tauY[1:,1:] * 0.5 * (Area[1:,1:] + Area[1:,:-1]) #forcey0
+    IceSurfStressX0[1:,1:] = tauX[1:,1:] * 0.5 * (Area[1:,1:] + Area[:-1,1:]) #forcex0 in F
+    IceSurfStressY0[1:,1:] = tauY[1:,1:] * 0.5 * (Area[1:,1:] + Area[1:,:-1]) #forcey0 in F
 
     # add in tilt
     #if SEAICEuseTILT (true)
@@ -75,7 +77,7 @@ def dynsolver(uIce, vIce, uVel, vVel, hIceMean, hSnowMean, Area, etaN, pLoad, Se
     # call SEAICE_CALC_ICE_STRENGTH
 
     #if SEAICEuseDYNAMICS (true)
-    uIce, vIce = seaIceFreeDrift(hIceMean, uVel, vVel)
+    uIce, vIce = seaIceFreeDrift(hIceMean, uVel, vVel, IceSurfStressX0, IceSurfStressY0)
 
     #ifdef ALLOW_OBCS
     #call OBCS_APPLY_UVICE

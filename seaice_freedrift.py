@@ -2,10 +2,9 @@ import numpy as np
 
 from seaice_size import *
 from seaice_params import *
-from seaice_init_fields import *
 
 
-def seaIceFreeDrift(hIceMean, uVel, vVel):
+def seaIceFreeDrift(hIceMean, uVel, vVel, IceSurfStressX0, IceSurfStressY0):
 
     # surface level
     kSurf = 0
