@@ -7,7 +7,7 @@ from seaice_solve4temp import solve4temp
 
 import matplotlib.pyplot as plt
 
-hIceActual = np.ones((sNx,sNy))*1
+hIceActual = np.ones((sNx,sNy))*0.5
 hSnowActual = np.ones((sNx,sNy))*0
 TSurf = celsius2K*np.ones((sNx,sNy))
 ug = np.ones((sNx,sNy))*2

@@ -28,19 +28,18 @@ from seaice_advection import advection
 # Area
 
 
+recip_hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy))
+
 def advdiff(uIce, vIce, hIceMean, hSnowMean, hIceMeanMask, Area):
 
     # compute cell areas used by all tracers
     xA = dyG * SeaIceMaskU
     yA = dxG * SeaIceMaskV
 
-    # if SEAICEmultiDimAdvection: whole routine toline 570
-
-    recip_hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy))
-
     # calculate transports of mean thickness through tracer cells
     uTrans = uIce * xA
     vTrans = vIce * yA
+
 
     ##### calculate tendency of ice field and do explicit time step #####
 

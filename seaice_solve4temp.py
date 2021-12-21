@@ -183,6 +183,10 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
     F_c, F_lh, F_ia, dFia_dTs = fluxes(t1)
 
+    TSurfLoc[isIce] = TSurfLoc[isIce] + (F_c[isIce] - F_ia[isIce]) / (effConduct[isIce] + dFia_dTs[isIce])
+    TSurfLoc[isIce] = np.min((TSurfLoc[isIce], Tmelt))
+
+
     # case 1: F_c <= 0
     # F_io_net is already set up as zero everywhere
     F_ia_net = F_ia.copy()
@@ -195,9 +199,5 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
     TSurfOut[isIce] = TSurfLoc[isIce]
     FWsublim[isIce] = F_lh[isIce] / lhSublim
 
-    #print("F_c",F_c)
-    #print("F_ia",F_ia)
-    #print("F_ia_net",F_ia_net)
-    #print("F_io_net",F_io_net)
 
     return TSurfOut, F_io_net, F_ia_net, F_ia, IcePenetSW, FWsublim
