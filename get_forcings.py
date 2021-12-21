@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 path = "/Users/jgaertne/MITgcm/verification/1D_ocean_ice_column/input/"
 AirTemp_forcing = np.fromfile(path + "atemp_1x1_one_year", dtype = ">f4")
@@ -14,4 +15,5 @@ print(f"SWDown{SWDown_forcing[:10]}")
 print(f"uWind{uWind_forcing[:10]}")
 print(f"vWind{vWind_forcing[:10]}")
 
-print(np.shape(AirTemp_forcing))
+plt.plot(AirTemp_forcing)
+plt.show()
