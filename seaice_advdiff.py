@@ -11,8 +11,7 @@ from seaice_advection import advection
 # diffusion = false
 # no salinity
 # no sitracer (passive tracer, die die dynamik nicht beeinfussen)
-# nur cgrid, b grid conversion not needed
-# i.e. uc = uIce
+# nur cgrid, b grid conversion not needed, i.e. uc = uIce
 
 ### input
 # hIceMean: mean ice thickness [m3/m2] (= hIceActual * Area with Area the sea ice cover fraction and hIceActual = Vol_ice / x_len y_len)
@@ -43,16 +42,18 @@ def advdiff(uIce, vIce, hIceMean, hSnowMean, hIceMeanMask, Area):
 
     ##### calculate tendency of ice field and do explicit time step #####
 
+    extensiveFld = True #indicates to advect an "extensive" type of ice field
+
     # update mean ice thickness
-    gFld = advection(uIce, vIce, uTrans, vTrans, hIceMean, recip_hIceMean)
+    gFld = advection(uIce, vIce, uTrans, vTrans, hIceMean, recip_hIceMean, extensiveFld)
     hIceMean = (hIceMean + deltatTherm * gFld) * hIceMeanMask # actually just from 1 to N
 
     # update surface cover fraction
-    gFld = advection(uIce, vIce, uTrans, vTrans, Area, recip_hIceMean)
+    gFld = advection(uIce, vIce, uTrans, vTrans, Area, recip_hIceMean, extensiveFld)
     Area = (Area + deltatTherm * gFld) * hIceMeanMask
 
     # update mean snow thickness
-    gFld = advection(uIce, vIce, uTrans, vTrans, hSnowMean, recip_hIceMean)
+    gFld = advection(uIce, vIce, uTrans, vTrans, hSnowMean, recip_hIceMean, extensiveFld)
     hSnowMean = (hSnowMean + deltatTherm * gFld) * hIceMeanMask
 
     return hIceMean, hSnowMean, Area

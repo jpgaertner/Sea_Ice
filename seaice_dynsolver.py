@@ -3,7 +3,9 @@
 import numpy as np
 from seaice_size import *
 from seaice_params import *
+
 from seaice_freedrift import seaIceFreeDrift
+from seaice_get_dynforcing import get_dynforcing
 
 
 ### input:
@@ -18,13 +20,15 @@ from seaice_freedrift import seaIceFreeDrift
 # useRealFreshWaterFlux
 # uVel: zonal ocean velocity [m/s]
 # vVel: meridional ocean velocity [m/s]
+# uWind: zonal wind velocity [m/s]
+# vWind: meridional wind velocity [m/s]
 
 ### output:
 # uIce
 # vIce
 
 
-def dynsolver(uIce, vIce, uVel, vVel, hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux):
+def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux):
 
     # local variables:
     tauX = np.zeros((sNx+2*OLx, sNy+2*OLy)) # zonal wind stress over ice at u point
@@ -34,8 +38,6 @@ def dynsolver(uIce, vIce, uVel, vVel, hIceMean, hSnowMean, Area, etaN, pLoad, Se
     seaIceMassV = np.zeros((sNx+2*OLx,sNy+2*OLy))
     IceSurfStressX0 = np.zeros((sNx+2*OLx,sNy+2*OLy))
     IceSurfStressY0 = np.zeros((sNx+2*OLx,sNy+2*OLy))
-
-    # if different(deltatDyn, deltatTherm)
 
     # set up mass per unit area
     seaIceMassC[1:,1:] = rhoIce * hIceMean[1:,1:]
@@ -52,7 +54,8 @@ def dynsolver(uIce, vIce, uVel, vVel, hIceMean, hSnowMean, Area, etaN, pLoad, Se
 
     ##### set up forcing fields #####
 
-    # call SEAICE_GET_DYNFORCING
+    # compute surface stresses from wind, ocean and ice velocities
+    tauX, tauY = get_dynforcing(uIce, vIce, uWind, vWind, uVel, vVel)
 
     # compute surface pressure at z = 0:
     # use actual sea surface height phiSurf for tilt computations
@@ -74,6 +77,7 @@ def dynsolver(uIce, vIce, uVel, vVel, hIceMean, hSnowMean, Area, etaN, pLoad, Se
     IceSurfStressX0[1:,1:] = IceSurfStressX0[1:,1:] - seaIceMassU[1:,1:] * recip_dxC[1:,1:] * (phiSurf[1:,1:] - phiSurf[:-1,1:])
     IceSurfStressY0[1:,1:] = IceSurfStressY0[1:,1:] - seaIceMassV[1:,1:] * recip_dyC[1:,1:] * (phiSurf[1:,1:] - phiSurf[1:,:-1])
 
+    # calculate press0, where is it used?
     # call SEAICE_CALC_ICE_STRENGTH
 
     #if SEAICEuseDYNAMICS (true)
@@ -108,5 +112,4 @@ def dynsolver(uIce, vIce, uVel, vVel, hIceMean, hSnowMean, Area, etaN, pLoad, Se
     uIce.clip(-0.4, 0.4)
     vIce.clip(-0.4, 0.4)
 
-    #rest is just diagnostics
     return uIce, vIce

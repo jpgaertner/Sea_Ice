@@ -135,7 +135,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     hIceMean.clip(0)
     Area.clip(0)
 
-    noIce = np.where((hIceMean == 0) or (Area == 0))
+    noIce = np.where((hIceMean == 0) | (Area == 0))
     Area[noIce] = 0
     hSnowMean[noIce] = 0
     hIceMean[noIce] = 0
@@ -147,9 +147,9 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
 
     # compute actual ice and snow thickness using the regularized area and add lower boundary
     # case 1: hIceMeanpreTH = 0
-    hIceActual = np.zeros((sNx, sNy))
-    hSnowActual = np.zeros((sNx, sNy))
-    recip_hIceActual = np.zeros((sNx, sNy)) #reciprocal of the actual ice thickness
+    hIceActual = np.zeros((sNx,sNy))#np.zeros((sNx+2*OLx, sNy+2*OLy))
+    hSnowActual = np.zeros((sNx,sNy))#np.zeros((sNx+2*OLx, sNy+2*OLy))
+    recip_hIceActual = np.zeros((sNx,sNy))#np.zeros((sNx+2*OLx, sNy+2*OLy)) #reciprocal of the actual ice thickness
     #case 2: hIceMeanpreTH > 0
     isIce = np.where(hIceMeanpreTH > 0)
     regAreaSqrt =  np.sqrt(AreapreTH[isIce]**2 + area_reg_sq)

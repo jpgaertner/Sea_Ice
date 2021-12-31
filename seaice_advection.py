@@ -11,15 +11,15 @@ from seaice_fluxlimit_adv_y import fluxlimit_adv_y
 # vFld: meridional velocity component
 # uTrans: volume transport at U points
 # vTrans: volume transport at V points
-# iceFld: sea ice field
+# iceFld: sea ice field (mean thickness of ice or snow, or area)
 # r_hFld: reciprocal of ice thickness
+# extensiveFld: indicates to advect an "extensive" type of ice field
 
 ### output
 # gFld: advection tendency
 
 
-extensiveFld = True #indicates to advect an "extensive" type of ice field
-recip_rA = 1
+recip_rA = np.ones((sNx+2*OLx,sNy+2*OLy)) #reciprocal of ice thickness (difference r_hFld?? )
 
 
 def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):

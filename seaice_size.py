@@ -57,8 +57,8 @@ fCori = np.ones((sNx+2*OLx, sNy+2*OLy))*1e-4 #coriolis parameter at grid center 
 fCoriG = np.ones((sNx+2*OLx, sNy+2*OLy))*1e-4 #coriolis parameter at grid corner point (south west corner?)
 
 # masks
-maskInW = 1
-maskInS = 1
-maskInC = 1
-SeaIceMaskU = 1
-SeaIceMaskV = 1
+maskInW = np.ones((sNx+2*OLx,sNy+2*OLy))
+maskInS = np.ones((sNx+2*OLx,sNy+2*OLy))
+maskInC = np.ones((sNx+2*OLx,sNy+2*OLy))
+SeaIceMaskU = np.ones((sNx+2*OLx,sNy+2*OLy))
+SeaIceMaskV = np.ones((sNx+2*OLx,sNy+2*OLy))

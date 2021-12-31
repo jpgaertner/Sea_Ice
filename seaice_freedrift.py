@@ -3,18 +3,17 @@ import numpy as np
 from seaice_size import *
 from seaice_params import *
 
+from seaice_fill_overlap import fill_overlap
+
 
 def seaIceFreeDrift(hIceMean, uVel, vVel, IceSurfStressX0, IceSurfStressY0):
 
-    # surface level
-    kSurf = 0
 
     # initialize fields
     uIceFD = np.zeros((sNx+2*OLx,sNy+2*OLy))
     vIceFD = np.zeros((sNx+2*OLx,sNy+2*OLy))
     uIceCenter = np.zeros((sNx+2*OLx,sNy+2*OLy))
     vIceCenter = np.zeros((sNx+2*OLx,sNy+2*OLy))
-
 
     # air-ice stress at cell center
     tauXIceCenter = 0.5 * (IceSurfStressX0[:-1,:-1] + IceSurfStressX0[1:,:-1])
@@ -24,8 +23,8 @@ def seaIceFreeDrift(hIceMean, uVel, vVel, IceSurfStressX0, IceSurfStressY0):
     mIceCor = rhoIce * hIceMean[:-1,:-1] * fCori[:-1,:-1]
 
     # ocean surface velocity at the cell center
-    uVelCenter = 0.5 * (uVel[:-1,:-1,kSurf] + uVel[1:,:-1,kSurf])
-    vVelCenter = 0.5 * (vVel[:-1,:-1,kSurf] + vVel[:-1,1:,kSurf])
+    uVelCenter = 0.5 * (uVel[:-1,:-1] + uVel[1:,:-1])
+    vVelCenter = 0.5 * (vVel[:-1,:-1] + vVel[:-1,1:])
 
     # right hand side of the free drift equation
     rhsX = - tauXIceCenter - mIceCor * vVelCenter
@@ -67,9 +66,9 @@ def seaIceFreeDrift(hIceMean, uVel, vVel, IceSurfStressX0, IceSurfStressY0):
     uIceFD[OLx:-OLx,OLy:-OLy] = 0.5 * (uIceCenter[OLx-1:-OLx-1,OLy:-OLy] + uIceCenter[OLx:-OLx,OLy:-OLy])
     vIceFD[OLx:-OLx,OLy:-OLy] = 0.5 * (vIceCenter[OLx:-OLx,OLy-1:-OLy-1] + vIceCenter[OLx:-OLx,OLy:-OLy])
 
-    #fill the overlap regions
-
-    #call EXCH_UV_XY_RL
+    # fill the overlap regions
+    uIceFD = fill_overlap(uIceFD)
+    vIceFD = fill_overlap(vIceFD)
 
     # apply masks
     uIceFD = uIceFD * SeaIceMaskU

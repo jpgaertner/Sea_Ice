@@ -95,6 +95,8 @@ airTurnAngle = 0 #turning angle of air-ice interfacial stress
 waterTurnAngle = 0 #turning angle of the water-ice interfacial stress 
 eps = 1e-8
 eps_sq = eps**2
+si_eps = 1e-5
+area_floor = si_eps
 
 airOceanDrag = 0.001 #air-ocean drag coefficient
 airIceDrag = 0.001 #air-ice drag coefficient

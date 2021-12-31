@@ -28,7 +28,6 @@ def fluxlimit_adv_y(vFld, tracer, vTrans, deltatLoc, maskLocS):
 
     # local variables
     CrMax = 1e6
-    Cr = np.zeros((sNx+2*OLx,sNy+2*OLy))
 
     vCFL = np.abs(vFld * deltatLoc * recip_dyC * recip_deepFacC)
 
@@ -36,18 +35,18 @@ def fluxlimit_adv_y(vFld, tracer, vTrans, deltatLoc, maskLocS):
     Rj = (tracer[:,2:-1] - tracer[:,1:-2]) * maskLocS[:,2:-1]
     Rjm = (tracer[:,1:-2] - tracer[:,:-3]) * maskLocS[:,1:-2]
 
-    Cr[2:-1,:] = Rjp
-    vFlow = np.where(vTrans > 0)
-    Cr[vFlow] = Rjm
+    Cr = Rjp
+    vFlow = np.where(vTrans[:,2:-1] > 0)
+    Cr[vFlow] = Rjm[vFlow]
 
-    Cr[2:-1,:] = Cr[2:-1,:]/Rj
+    Cr = Cr/Rj
     tmp = np.where(np.abs(Rj) * CrMax <= np.abs(Cr))
-    Cr[tmp] = np.sign(Cr) * CrMax * np.sign(Rj)
+    Cr[tmp] = np.sign(Cr[tmp]) * CrMax * np.sign(Rj[tmp])
 
     # limit Cr
     Cr = limiter(Cr)
 
-    vT[:,2:-1] = vTrans[:,2:-1] * (tracer[:,2:-1] + tracer[:,1:-2]) * 0.5 - np.abs(vTrans[:,2:-1]) * ((1 - Cr[:,2:-1]) + vCFL * Cr[:,2:-1] ) * Rj * 0.5
+    vT[:,2:-1] = vTrans[:,2:-1] * (tracer[:,2:-1] + tracer[:,1:-2]) * 0.5 - np.abs(vTrans[:,2:-1]) * ((1 - Cr) + vCFL[:,2:-1] * Cr ) * Rj * 0.5
 
     # vT is only defined in [2:-1,:] (no fill overlap)?
 

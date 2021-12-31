@@ -2,14 +2,9 @@ import numpy as np
 
 from seaice_size import *
 
-OLx = 1
-OLy = 1
-sNx = 3
-sNy = 3
 
 ### input:
-# A: field of size (sNx+2*OLx, sNy+2*OLy) where [OLx:-OLx,OLy:-OLy] is the cell,
-#    [:OLx,:OLy] the left and lower overlap, and [-OLx:,-OLy:] the right and upper overlap.
+# A: field of size (sNx+2*OLx, sNy+2*OLy) where [OLx:-OLx,OLy:-OLy] is the actual cell
 
 ### output:
 # A with filled overlaps (using the values from the actual cell)

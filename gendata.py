@@ -100,8 +100,8 @@ if variableWindField:
         #writefield('Uwindfield_'+dxstr+'.bin',uwind)
         #writefield('Vwindfield_'+dxstr+'.bin',vwind)
 
-    uWindField = uwind.copy()
-    vWindField = vwind.copy()
+    uWind = uwind.copy()
+    vWind = vwind.copy()
 
 # ocean
 uo = +0.01*(2*yy-Ly)/Ly
