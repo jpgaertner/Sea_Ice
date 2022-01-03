@@ -12,8 +12,8 @@
 
 import numpy as np
 
-sNx =   1 #Number of X points in tile
-sNy =   1 #Number of Y points in tile
+sNx =   61 #Number of X points in tile
+sNy =   61 #Number of Y points in tile
 OLx =   2 #Tile overlap extent in X
 OLy =   2 #Tile overlap extent in Y
 #nSx =   1 #Number of tiles per process in X

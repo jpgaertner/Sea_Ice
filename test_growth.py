@@ -25,9 +25,9 @@ from seaice_growth import growth
 import matplotlib.pyplot as plt
 
 
-hIceMean = np.ones((sNx,sNy))*0
+hIceMean = np.ones((sNx,sNy))*1
 hSnowMean = np.ones((sNx,sNy))*0
-Area = np.ones((sNx,sNy))*0
+Area = np.ones((sNx,sNy))*1
 
 hIceMeanMask = np.ones((sNx,sNy))*1
 salt = np.ones((sNx,sNy))*29

@@ -53,23 +53,23 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
     # initialize output arrays
     TSurfOut = TSurfIn.copy()
-    F_ia = np.zeros((sNx, sNy))
+    F_ia = np.zeros((sNx+2*OLx, sNy+2*OLy))
     #F_ia_net
-    F_io_net = np.zeros((sNx, sNy))
-    IcePenetSW = np.zeros((sNx, sNy)) #the shortwave radiative flux at the ocean-ice interface (+ = upwards)
-    FWsublim = np.zeros((sNx, sNy))
+    F_io_net = np.zeros((sNx+2*OLx, sNy+2*OLy))
+    IcePenetSW = np.zeros((sNx+2*OLx, sNy+2*OLy)) #the shortwave radiative flux at the ocean-ice interface (+ = upwards)
+    FWsublim = np.zeros((sNx+2*OLx, sNy+2*OLy))
     
     iceOrNot = (hIceActual > 0)
     
-    effConduct = np.zeros((sNx, sNy)) #effective conductivity of ice and snow combined
-    dFia_dTs = np.zeros((sNx, sNy)) #derivative of F_ia w.r.t snow/ice surf. temp
-    absorbedSW = np.zeros((sNx, sNy)) #shortwave radiative flux convergence in the sea ice
-    qhice = np.zeros((sNx, sNy)) #saturation vapor pressure of snow/ice surface
-    dqh_dTs = np.zeros((sNx, sNy)) #derivative of qhice w.r.t snow/ice surf. temp
-    F_lh = np.zeros((sNx, sNy)) #latent heat flux (sublimation) (+ = upward)
-    F_lwu = np.zeros((sNx, sNy)) #upward long-wave surface heat flux (+ = upward)
-    F_sens = np.zeros((sNx, sNy)) #sensible surface heat flux (+ = upward)
-    F_c = np.zeros((sNx, sNy)) #conductive heat flux through ice and snow (+ = upward)
+    effConduct = np.zeros((sNx+2*OLx, sNy+2*OLy)) #effective conductivity of ice and snow combined
+    dFia_dTs = np.zeros((sNx+2*OLx, sNy+2*OLy)) #derivative of F_ia w.r.t snow/ice surf. temp
+    absorbedSW = np.zeros((sNx+2*OLx, sNy+2*OLy)) #shortwave radiative flux convergence in the sea ice
+    qhice = np.zeros((sNx+2*OLx, sNy+2*OLy)) #saturation vapor pressure of snow/ice surface
+    dqh_dTs = np.zeros((sNx+2*OLx, sNy+2*OLy)) #derivative of qhice w.r.t snow/ice surf. temp
+    F_lh = np.zeros((sNx+2*OLx, sNy+2*OLy)) #latent heat flux (sublimation) (+ = upward)
+    F_lwu = np.zeros((sNx+2*OLx, sNy+2*OLy)) #upward long-wave surface heat flux (+ = upward)
+    F_sens = np.zeros((sNx+2*OLx, sNy+2*OLy)) #sensible surface heat flux (+ = upward)
+    F_c = np.zeros((sNx+2*OLx, sNy+2*OLy)) #conductive heat flux through ice and snow (+ = upward)
 
     # make local copies of downward longwave radiation, surface and atmospheric temperatures
     TSurfLoc = TSurfIn.copy()
@@ -80,7 +80,7 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
     ##### determine fixed (relative to surface temperature) forcing term in heat budget #####
 
-    d3 = np.ones((sNx,sNy)) * iceEmiss * stefBoltz
+    d3 = np.ones((sNx+2*OLx,sNy+2*OLy)) * iceEmiss * stefBoltz
     # LWDownLoc[isIce] = iceEmiss * LWDownLoc[isIce]
 
     isSnow = np.where(hSnowActual > 0)
@@ -92,12 +92,12 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
     isIce = np.where(iceOrNot == True)
 
-    albIce = np.zeros((sNx, sNy))
-    albSnow = np.zeros((sNx, sNy))
-    alb = np.zeros((sNx, sNy))
+    albIce = np.zeros((sNx+2*OLx, sNy+2*OLy))
+    albSnow = np.zeros((sNx+2*OLx, sNy+2*OLy))
+    alb = np.zeros((sNx+2*OLx, sNy+2*OLy))
 
-    for j in range(0, sNy):
-        for i in range(0, sNx):
+    for j in range(0, sNy+2*OLy):
+        for i in range(0, sNx+2*OLx):
             if (iceOrNot[i,j]):
                 if fCori[i,j] < 0:
                     if TSurfLoc[i,j] >= SurfMeltTemp:
@@ -175,7 +175,7 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
         # update surface temperature as solution of F_c = F_ia + d/dT (F_c - F_ia) * delta T
         TSurfLoc[isIce] = TSurfLoc[isIce] + (F_c[isIce] - F_ia[isIce]) / (effConduct[isIce] + dFia_dTs[isIce])
-        TSurfLoc[isIce] = np.min((TSurfLoc[isIce], Tmelt))
+        TSurfLoc[isIce] = np.minimum(TSurfLoc[isIce], Tmelt)
 
         # recalculate the fluxes based on the adjusted surface temperature
         t1 = TSurfLoc[isIce]
@@ -184,7 +184,7 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
     F_c, F_lh, F_ia, dFia_dTs = fluxes(t1)
 
     TSurfLoc[isIce] = TSurfLoc[isIce] + (F_c[isIce] - F_ia[isIce]) / (effConduct[isIce] + dFia_dTs[isIce])
-    TSurfLoc[isIce] = np.min((TSurfLoc[isIce], Tmelt))
+    TSurfLoc[isIce] = np.minimum(TSurfLoc[isIce], Tmelt)
 
 
     # case 1: F_c <= 0
