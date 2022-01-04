@@ -35,13 +35,13 @@ def fluxlimit_adv_y(vFld, tracer, vTrans, deltatLoc, maskLocS):
     Rj = (tracer[:,2:-1] - tracer[:,1:-2]) * maskLocS[:,2:-1]
     Rjm = (tracer[:,1:-2] - tracer[:,:-3]) * maskLocS[:,1:-2]
 
-    Cr = Rjp
+    Cr = Rjp.copy()
     vFlow = np.where(vTrans[:,2:-1] > 0)
     Cr[vFlow] = Rjm[vFlow]
 
-    Cr = Cr/Rj
-    tmp = np.where(np.abs(Rj) * CrMax <= np.abs(Cr))
-    Cr[tmp] = np.sign(Cr[tmp]) * CrMax * np.sign(Rj[tmp])
+    Cr = np.sign(Cr) * CrMax * np.sign(Rj)
+    tmp = np.where(np.abs(Rj) * CrMax > np.abs(Cr))
+    Cr[tmp] = Cr[tmp] / Rj[tmp]
 
     # limit Cr
     Cr = limiter(Cr)

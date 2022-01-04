@@ -25,25 +25,25 @@ from seaice_growth import growth
 import matplotlib.pyplot as plt
 
 
-hIceMean = np.ones((sNx,sNy))*1
-hSnowMean = np.ones((sNx,sNy))*0
-Area = np.ones((sNx,sNy))*1
+hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy))*1
+hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy))*0
+Area = np.ones((sNx+2*OLx,sNy+2*OLy))*1
 
-hIceMeanMask = np.ones((sNx,sNy))*1
-salt = np.ones((sNx,sNy))*29
-TIceSnow = np.ones((sNx,sNy,nITC))*celsius2K
-precip = np.ones((sNx,sNy))*0 #order 1e-6
-snowPrecip = np.ones((sNx,sNy))*0
-evap = np.ones((sNx,sNy))*0
-runoff = np.ones((sNx,sNy))*0
-wspeed = np.ones((sNx,sNy))*2
-theta = np.ones((sNx,sNy))*celsius2K-1.96
-Qnet = np.ones((sNx,sNy))* 153.536072
-Qsw = np.ones((sNx,sNy))*0 #winter condition
-SWDown = np.ones((sNx,sNy))*0 #winter
-LWDown = np.ones((sNx,sNy))*20 #winter
-ATemp = np.ones((sNx,sNy))*celsius2K-20.16
-aqh = np.ones((sNx,sNy))*0#1e-4
+hIceMeanMask = np.ones((sNx+2*OLx,sNy+2*OLy))*1
+salt = np.ones((sNx+2*OLx,sNy+2*OLy))*29
+TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC))*celsius2K
+precip = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #order 1e-6
+snowPrecip = np.ones((sNx+2*OLx,sNy+2*OLy))*0
+evap = np.ones((sNx+2*OLx,sNy+2*OLy))*0
+runoff = np.ones((sNx+2*OLx,sNy+2*OLy))*0
+wspeed = np.ones((sNx+2*OLx,sNy+2*OLy))*2
+theta = np.ones((sNx+2*OLx,sNy+2*OLy))*celsius2K-1.96
+Qnet = np.ones((sNx+2*OLx,sNy+2*OLy))* 153.536072
+Qsw = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #winter condition
+SWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #winter
+LWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*20 #winter
+ATemp = np.ones((sNx+2*OLx,sNy+2*OLy))*celsius2K-20.16
+aqh = np.ones((sNx+2*OLx,sNy+2*OLy))*0#1e-4
 
 
 ice = np.array([hIceMean[0,0]])
@@ -54,7 +54,7 @@ area = np.array([Area[0,0]])
 qsw = np.array([Qsw[0,0]])
 days = np.array([0])
 
-timesteps = 720
+timesteps = 30
 
 # in F, runtime = 360d with deltat = 12h and dump frequency = 10d 
 for i in range(timesteps):
@@ -86,15 +86,6 @@ for i in range(timesteps):
 # axs[2,1].plot("Qsw")
 # fig.tight_layout()
 # plt.show()
-#print(x)
-#print(f"ice:{ice}")
-#print(f"snow:{snow}")
-#print(f"qnet:{qnet}")
-#print(f"iceTemp:{iceTemp}")
-#myPlt = plt.plot(days, ice)
-#plt.xlabel("Time [days]")
-#plt.ylabel("Ice Thickness [m]")
-#plt.title("Python")
-#myPlt
-#plt.show()
-#print(ice)
+
+
+print(hIceMean)

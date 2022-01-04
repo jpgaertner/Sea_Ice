@@ -10,7 +10,6 @@ from seaice_dynsolver import dynsolver
 from seaice_advdiff import advdiff
 from seaice_reg_ridge import ridging
 from seaice_growth import growth
-from seaice_overlap import *
 
 
 ### input
@@ -41,14 +40,22 @@ LWDown = np.ones((sNx+2*OLx,sNy+2*OLy)) * 80
 ATemp = np.ones((sNx+2*OLx,sNy+2*OLy)) * celsius2K - 20.16
 aqh = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
 
-ice = np.array([hIceMean])
-snow = np.array([hSnowMean])
-area = np.array([Area])
-days = np.array([0])
+
+timesteps = 14
+
+ice = [None] * timesteps
+snow = [None] * timesteps
+area = [None] * timesteps
+days = [None] * timesteps
 
 
+for i in range(1):
 
-for i in range(14):
+    ice[i] = hIceMean
+    snow[i] = hIceMean
+    area[i] = Area
+    days[i] = i
+
 
     uIce, vIce = dynsolver(uIce, vIce, uVel, vVel, uWind[0,:,:], vWind[0,:,:], hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux)
 
@@ -58,10 +65,5 @@ for i in range(14):
 
     hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet, seaIceLoad = growth(hIceMean, hIceMeanMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh)
 
-    ice = np.append(ice, hIceMean)
-    snow = np.append(snow, hSnowMean)
-    area = np.append(area, Area)
-    days = np.append(days,(i+1)/2)
 
-
-print(np.shape(hIceMean))
+#print(ice[10])

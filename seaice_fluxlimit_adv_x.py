@@ -39,15 +39,16 @@ def fluxlimit_adv_x(uFld, tracer, uTrans, deltatLoc, maskLocW):
     uFlow = np.where(uTrans[2:-1,:] > 0)
     Cr[uFlow] = Rjm[uFlow]
 
-    Cr = Cr/Rj
-    tmp = np.where(np.abs(Rj) * CrMax <= np.abs(Cr))
-    Cr[tmp] = np.sign(Cr[tmp]) * CrMax * np.sign(Rj[tmp])
+    Cr = np.sign(Cr) * CrMax * np.sign(Rj)
+    tmp = np.where(np.abs(Rj) * CrMax > np.abs(Cr))
+    Cr[tmp] = Cr[tmp] / Rj[tmp]
 
     # limit Cr
     Cr = limiter(Cr)
-
+    
     uT[2:-1,:] = uTrans[2:-1,:] * (tracer[2:-1,:] + tracer[1:-2,:]) * 0.5 - np.abs(uTrans[2:-1,:]) * ((1 - Cr) + uCFL[2:-1,:] * Cr ) * Rj * 0.5
 
     # uT is only defined in [2:-1,:] (no fill overlap)?
+    #uT = fill_overlap(uT)
 
     return uT
