@@ -41,7 +41,7 @@ snowEmiss = emissivity
 
 iceConduct = 2.1656
 snowConduct = 0.31
-hCut = 0 #cut off snow thickness, used for calculating albedo
+hCut = 0.2 #cut off snow thickness, used for calculating albedo
 shortwave = 0.3 #penetration shortwave radiation factor
 
 heatCapacity = 3986.0

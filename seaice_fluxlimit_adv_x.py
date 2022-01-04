@@ -3,6 +3,7 @@ import numpy as np
 from seaice_size import *
 from seaice_params import *
 from seaice_flux_limiter import limiter
+from seaice_fill_overlap import fill_overlap
 
 # calculates the area integrated zonal flux due to advection of a tracer
 # using second-order interpolation with a flux limiter
@@ -39,9 +40,11 @@ def fluxlimit_adv_x(uFld, tracer, uTrans, deltatLoc, maskLocW):
     uFlow = np.where(uTrans[2:-1,:] > 0)
     Cr[uFlow] = Rjm[uFlow]
 
-    Cr = np.sign(Cr) * CrMax * np.sign(Rj)
     tmp = np.where(np.abs(Rj) * CrMax > np.abs(Cr))
     Cr[tmp] = Cr[tmp] / Rj[tmp]
+    tmp2 = np.where(np.abs(Rj) * CrMax <= np.abs(Cr))
+    Cr[tmp2] = np.sign(Cr[tmp2]) * CrMax * np.sign(Rj[tmp2])
+
 
     # limit Cr
     Cr = limiter(Cr)

@@ -1,5 +1,6 @@
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from seaice_size import *
 from seaice_params import *
@@ -14,13 +15,14 @@ from seaice_growth import growth
 
 ### input
 hIceMean = hIce_init.copy()
-hSnowMean = np.zeros((sNx+2*OLx,sNy+2*OLy))
+hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0.2
 Area = np.ones((sNx+2*OLx,sNy+2*OLy))
 TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC))*celsius2K
 
+uIce = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
+vIce = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
+
 hIceMeanMask = np.ones((sNx+2*OLx,sNy+2*OLy))
-uIce = np.ones((sNx+2*OLx,sNy+2*OLy)) # ice velocity
-vIce = np.ones((sNx+2*OLx,sNy+2*OLy))
 etaN = np.ones((sNx+2*OLx,sNy+2*OLy))
 pLoad = np.ones((sNx+2*OLx,sNy+2*OLy))
 SeaIceLoad = np.ones((sNx+2*OLx,sNy+2*OLy))
@@ -41,7 +43,7 @@ ATemp = np.ones((sNx+2*OLx,sNy+2*OLy)) * celsius2K - 20.16
 aqh = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
 
 
-timesteps = 14
+timesteps = 32
 
 ice = [None] * timesteps
 snow = [None] * timesteps
@@ -49,15 +51,15 @@ area = [None] * timesteps
 days = [None] * timesteps
 
 
-for i in range(1):
+for i in range(timesteps):
 
-    ice[i] = hIceMean
-    snow[i] = hIceMean
-    area[i] = Area
-    days[i] = i
+    # ice[i] = hIceMean
+    # snow[i] = hIceMean
+    # area[i] = Area
+    # days[i] = i
 
 
-    uIce, vIce = dynsolver(uIce, vIce, uVel, vVel, uWind[0,:,:], vWind[0,:,:], hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux)
+    uIce, vIce = dynsolver(uIce, vIce, uVel, vVel, uWind[i,:,:], vWind[i,:,:], hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux)
 
     hIceMean, hSnowMean, Area = advdiff(uIce, vIce, hIceMean, hSnowMean, hIceMeanMask, Area)
 
@@ -66,4 +68,9 @@ for i in range(1):
     hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet, seaIceLoad = growth(hIceMean, hIceMeanMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh)
 
 
-#print(ice[10])
+print(np.mean(hIceMean))
+
+plt.contourf(Area)
+plt.title(f'Area distribution after {timesteps/2} days')
+plt.colorbar()
+plt.show()
