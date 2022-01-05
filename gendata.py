@@ -100,16 +100,16 @@ if variableWindField:
         #writefield('Uwindfield_'+dxstr+'.bin',uwind)
         #writefield('Vwindfield_'+dxstr+'.bin',vwind)
 
-    uWind = uwind.copy()
-    vWind = vwind.copy()
+    uWind_gendata = uwind.copy()
+    vWind_gendata = vwind.copy()
 
 # ocean
 uo = +0.01*(2*yy-Ly)/Ly
 vo = -0.01*(2*xx-Lx)/Lx
 #writefield('uVel_'+dxstr+'.bin',uo)
 #writefield('vVel_'+dxstr+'.bin',vo)
-uVel = uo.copy()
-vVel = vo.copy()
+uVel_gendata = uo.copy()
+vVel_gendata = vo.copy()
 
 # initial thickness:
 hice = 0.3 + 0.005*np.sin(500*xx) + 0.005*np.sin(500*yy)

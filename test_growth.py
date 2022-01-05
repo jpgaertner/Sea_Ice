@@ -25,7 +25,7 @@ from seaice_growth import growth
 import matplotlib.pyplot as plt
 
 hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy))*1
-hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy))*0.2
+hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy))*0
 Area = np.ones((sNx+2*OLx,sNy+2*OLy))*1
 
 hIceMeanMask = np.ones((sNx+2*OLx,sNy+2*OLy))*1
@@ -53,7 +53,7 @@ area = np.array([Area[0,0]])
 qsw = np.array([Qsw[0,0]])
 days = np.array([0])
 
-timesteps = 730
+timesteps = 720
 
 # in F, runtime = 360d with deltat = 12h and dump frequency = 10d 
 for i in range(timesteps):

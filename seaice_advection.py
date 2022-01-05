@@ -5,6 +5,7 @@ from seaice_params import *
 
 from seaice_fluxlimit_adv_x import fluxlimit_adv_x
 from seaice_fluxlimit_adv_y import fluxlimit_adv_y
+from seaice_fill_overlap import fill_overlap
 
 ### input
 # uFld: zonal velocity component
@@ -51,5 +52,6 @@ def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):
 
     # explicit advection is done, store tendency in gFld
     gFld = (localTij - iceFld) / deltatTherm
+    gFld = fill_overlap(gFld)
 
     return gFld

@@ -140,6 +140,13 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
                 # calculate the effective conductivity of the snow-ice system
                 effConduct[i,j] = iceConduct * snowConduct / (snowConduct * hIceActual[i,j] + iceConduct * hSnowActual[i,j])
 
+    # print('minTemp', np.min(TSurfLoc))
+    # print('hice', np.max(hIceActual))
+    # print('minFc', np.min(F_c))
+    # print('minFia', np.min(F_ia))
+    # print('cond', np.max(np.abs(effConduct)))
+    # print('Tfreez', np.max(np.abs(TempFrz)))
+
 
     ##### calculate the fluxes #####
 
@@ -153,6 +160,7 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
         # calculate the saturation vapor pressure in the snow/ ice-atmosphere boundary layer
         mm_log10pi = - aa1 / t1 + aa2
         mm_pi = np.exp(mm_log10pi * lnTen)
+
         # equivalent to mm_pi = 10**mm_log10pi but faster (?) 
         qhice[isIce] = bb1 * mm_pi / (Ppascals - (1 - bb1) * mm_pi)
         # a constant for the saturation vapor pressure derivative
@@ -185,7 +193,6 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
     TSurfLoc[isIce] = TSurfLoc[isIce] + (F_c[isIce] - F_ia[isIce]) / (effConduct[isIce] + dFia_dTs[isIce])
     TSurfLoc[isIce] = np.minimum(TSurfLoc[isIce], Tmelt)
-
 
     # case 1: F_c <= 0
     # F_io_net is already set up as zero everywhere
