@@ -4,6 +4,10 @@ import numpy as np
 from seaice_size import *
 from seaice_params import *
 
+sNx = 1
+sNy = 1
+OLx = 2
+OLy = 2
 
 ### input
 #hIceActual     : actual ice thickness [m]
@@ -28,6 +32,7 @@ from seaice_params import *
 
 def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, ATemp, aqh):
 
+
     ##### define local constants used for calculations #####
 
     # coefficients for the saturation vapor pressure equation
@@ -37,7 +42,7 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
     bb2 = 1 - bb1
     Ppascals = 100000
     lnTen = np.log(10)
-    cc0 = np.exp(aa2 * lnTen) #really faster than 10**aa2 ?
+    cc0 = 10**aa2
     cc1 = cc0 * aa1 * bb1 * Ppascals * lnTen
     cc2 = cc0 * bb2
     
@@ -80,17 +85,17 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
     ##### determine fixed (relative to surface temperature) forcing term in heat budget #####
 
-    d3 = np.ones((sNx+2*OLx,sNy+2*OLy)) * iceEmiss * stefBoltz
-    # LWDownLoc[isIce] = iceEmiss * LWDownLoc[isIce]
-
     isSnow = np.where(hSnowActual > 0)
+    isIce = np.where(iceOrNot == True)
+
+    d3 = np.ones((sNx+2*OLx,sNy+2*OLy)) * iceEmiss * stefBoltz
     d3[isSnow] = snowEmiss * stefBoltz
+
+    LWDownLoc[isIce] = iceEmiss * LWDownLoc[isIce]
     LWDownLoc[isSnow] = snowEmiss * LWDownLoc[isSnow]
 
 
     ##### determine albedo #####
-
-    isIce = np.where(iceOrNot == True)
 
     albIce = np.zeros((sNx+2*OLx, sNy+2*OLy))
     albSnow = np.zeros((sNx+2*OLx, sNy+2*OLy))
@@ -115,7 +120,7 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
                         albSnow[i,j] = drySnowAlb
 
                 if hSnowActual[i,j] > hCut:
-                    # shortwave optically thick snow
+                # shortwave optically thick snow
                     alb[i,j] = albSnow[i,j]
                 elif hSnowActual[i,j] == 0:
                     alb[i,j] = albIce[i,j]
@@ -140,13 +145,6 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
                 # calculate the effective conductivity of the snow-ice system
                 effConduct[i,j] = iceConduct * snowConduct / (snowConduct * hIceActual[i,j] + iceConduct * hSnowActual[i,j])
 
-    # print('minTemp', np.min(TSurfLoc))
-    # print('hice', np.max(hIceActual))
-    # print('minFc', np.min(F_c))
-    # print('minFia', np.min(F_ia))
-    # print('cond', np.max(np.abs(effConduct)))
-    # print('Tfreez', np.max(np.abs(TempFrz)))
-
 
     ##### calculate the fluxes #####
 
@@ -159,12 +157,11 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
         # calculate the saturation vapor pressure in the snow/ ice-atmosphere boundary layer
         mm_log10pi = - aa1 / t1 + aa2
-        mm_pi = np.exp(mm_log10pi * lnTen)
+        mm_pi = 10**mm_log10pi
 
-        # equivalent to mm_pi = 10**mm_log10pi but faster (?) 
         qhice[isIce] = bb1 * mm_pi / (Ppascals - (1 - bb1) * mm_pi)
         # a constant for the saturation vapor pressure derivative
-        cc3t = np.exp(aa1 / t1 * lnTen) #faster this way?
+        cc3t = 10**(aa1 / t1)
         dqh_dTs[isIce] = cc1 * cc3t / ((cc2 - cc3t * Ppascals)**2 * t2)
 
         # calculate the fluxes based on the surface temperature
@@ -178,21 +175,21 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
         return F_c, F_lh, F_ia, dFia_dTs
 
-    for i in range(0,10):
+    # save TSurfLoc because it is changed for finding the fluxes
+    TSurfIter = TSurfLoc.copy()
+
+    for i in range(5):
         F_c, F_lh, F_ia, dFia_dTs = fluxes(t1)
 
         # update surface temperature as solution of F_c = F_ia + d/dT (F_c - F_ia) * delta T
-        TSurfLoc[isIce] = TSurfLoc[isIce] + (F_c[isIce] - F_ia[isIce]) / (effConduct[isIce] + dFia_dTs[isIce])
-        TSurfLoc[isIce] = np.minimum(TSurfLoc[isIce], Tmelt)
+        TSurfIter[isIce] = TSurfIter[isIce] + (F_c[isIce] - F_ia[isIce]) / (effConduct[isIce] + dFia_dTs[isIce])
+        #TSurfLoc = np.maximum(TSurfLoc, celsius2K + minTIce)
+        #TSurfLoc = np.minimum(TSurfLoc, Tmelt)
 
         # recalculate the fluxes based on the adjusted surface temperature
-        t1 = TSurfLoc[isIce]
-
-
-    F_c, F_lh, F_ia, dFia_dTs = fluxes(t1)
+        t1 = TSurfIter[isIce]
 
     TSurfLoc[isIce] = TSurfLoc[isIce] + (F_c[isIce] - F_ia[isIce]) / (effConduct[isIce] + dFia_dTs[isIce])
-    TSurfLoc[isIce] = np.minimum(TSurfLoc[isIce], Tmelt)
 
     # case 1: F_c <= 0
     # F_io_net is already set up as zero everywhere

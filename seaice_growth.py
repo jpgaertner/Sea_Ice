@@ -4,6 +4,10 @@ from seaice_size import *
 from seaice_params import *
 from seaice_solve4temp import solve4temp
 
+sNx = 1
+sNy = 1
+OLx = 2
+OLy = 2
 
 ### input
 # hIceMean: mean ice thickness [m3/m2] (= hIceActual * Area with Area the sea ice cover fraction and hIceActual = Vol_ice / x_len y_len)
@@ -41,7 +45,6 @@ def growth(hIceMean, hIceMeanMask, hSnowMean, Area, salt, TIceSnow, precip, snow
 runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     ##### constants and initializations #####
 
-    ug = np.zeros((sNx+2*OLx, sNy+2*OLy)) #wind speed [m/s]
 
     # #ifdef ALLOW_SALT_PLUME
     # IceGrowthRateInLeads = np.zeros((sNx+2*OLx, sNy+2*OLy)) #d(hIceMean)/dt from heat fluxes in the open water fraction of the grid cell
@@ -53,7 +56,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     NetExistingIceGrowthRate = np.zeros((sNx+2*OLx, sNy+2*OLy))
     IceGrowthRateUnderExistingIce = np.zeros((sNx+2*OLx, sNy+2*OLy))
     IceGrowthRateFromSurface = np.zeros((sNx+2*OLx, sNy+2*OLy))
-    IceGrowthRateOpenWater = np.zeros((sNx+2*OLx, sNy+2*OLy))
+    #IceGrowthRateOpenWater
     IceGrowthRateMixedLayer = np.zeros((sNx+2*OLx, sNy+2*OLy)) # ice growth rate due to heat flux from ocean to ice
 
     d_hIceMeanByFlood = np.zeros((sNx+2*OLx, sNy+2*OLy))  #change of ice thickness due to conversion of snow to ice if snow is submerged with water [m]
@@ -87,13 +90,11 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     #                                               < 0: some snow (if present) will melt
     F_io_net = np.zeros((sNx+2*OLx, sNy+2*OLy)) #net upward conductive heat flux through sea ice and snow 
     #                                   realized at the sea ice/snow surface (+ = upward)
-    F_ao = np.zeros((sNx+2*OLx, sNy+2*OLy)) #heat flux from atmosphere to ocean
+    #F_ao: heat flux from atmosphere to ocean
     F_oi = np.zeros((sNx+2*OLx, sNy+2*OLy)) #heat flux from ocean to the ice (change of mixed layer temperature) (+ = upward)
 
     FWsublim = np.zeros((sNx+2*OLx, sNy+2*OLy)) #freshwater flux due to sublimation [kg/m2] (+ = upward)
 
-    TIceIn_mult = np.zeros((sNx+2*OLx, sNy+2*OLy, nITC))
-    TIceOut_mult = np.zeros((sNx+2*OLx, sNy+2*OLy, nITC))
     hIceActual_mult = np.zeros((sNx+2*OLx, sNy+2*OLy, nITC))
     hSnowActual_mult = np.zeros((sNx+2*OLx, sNy+2*OLy, nITC))
     F_io_net_mult = np.zeros((sNx+2*OLx, sNy+2*OLy, nITC))
@@ -144,9 +145,9 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
 
     # compute actual ice and snow thickness using the regularized area and add lower boundary
     # case 1: hIceMeanpreTH = 0
-    hIceActual = np.zeros((sNx+2*OLx,sNy+2*OLy))#np.zeros((sNx+2*OLx+2*OLx, sNy+2*OLy+2*OLy))
-    hSnowActual = np.zeros((sNx+2*OLx,sNy+2*OLy))#np.zeros((sNx+2*OLx+2*OLx, sNy+2*OLy+2*OLy))
-    recip_hIceActual = np.zeros((sNx+2*OLx,sNy+2*OLy))#np.zeros((sNx+2*OLx+2*OLx, sNy+2*OLy+2*OLy)) #reciprocal of the actual ice thickness
+    hIceActual = np.zeros((sNx+2*OLx,sNy+2*OLy))
+    hSnowActual = np.zeros((sNx+2*OLx,sNy+2*OLy))
+    recip_hIceActual = np.zeros((sNx+2*OLx,sNy+2*OLy)) #reciprocal of the actual ice thickness
     #case 2: hIceMeanpreTH > 0
     isIce = np.where(hIceMeanpreTH > 0)
     regAreaSqrt =  np.sqrt(AreapreTH[isIce]**2 + area_reg_sq)
@@ -162,8 +163,6 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
 
     # set wind speed
     ug = np.maximum(eps, wspeed)
-    #no negative wind speeds?
-    #print(f"Qnet_start{Qnet}")
 
     F_ao = Qnet.copy()
     qswo = Qsw.copy()
@@ -198,23 +197,12 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     # calculate freezing temperature
     TempFrz = tempFrz0 + dTempFrz_dS * salt + celsius2K
 
-    #print("hIceActual",hIceActual)
-    #print("hIceActual_mult",hIceActual_mult)
-    #print("hSnowActual_mult",hSnowActual_mult)
-    #print("TIceIn_mult",TIceIn_mult)
-    #print("TempFrz",TempFrz)
-    #print("ug",ug)
-    #print("SWDown",SWDown)
-    #print("LWDown",LWDown)
-    #print("ATemp",ATemp)
-    #print("aqh",aqh)
-
 
     for l in range(0, nITC):
         TIceOut_mult[:,:,l], F_io_net_mult[:,:,l], F_ia_net_mult[:,:,l], F_ia_mult[:,:,l], qswi_mult[:,:,l], FWsublim_mult[:,:,l] = (
         solve4temp(hIceActual_mult[:,:,l], hSnowActual_mult[:,:,l], TIceIn_mult[:,:,l], TempFrz, ug, SWDown, LWDown, ATemp, aqh))
 
-    #print("TIceOut_mult", TIceOut_mult)
+
     ##### evaluate precipitation as snow or rain #####
 
     # if the temperature is above the freezing point, the precipitation remains wet and runs into the ocean
@@ -240,10 +228,6 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
         F_ia = F_ia + F_ia_mult[:,:,l] * recip_nITC
         qswi = qswi + qswi_mult[:,:,l] * recip_nITC
         FWsublim = FWsublim + FWsublim_mult[:,:,l] * recip_nITC
-
-    #print("F_ia_net",F_ia_net)
-    #print("F_io_net",F_io_net)
-    #print("F_ia",F_ia)
 
     # the ice growth rate beneath ice is given by the upward conductive flux F_io_net and qi:
     IceGrowthRateUnderExistingIce = F_io_net * qi
@@ -292,9 +276,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     mltf = 1 + (McPheeTaperFac - 1) / (1 + np.exp((AreapreTH - tmpscal0) * tmpscal1))
     F_oi = - tmpscal2 * (surf_theta - TempFrz) * mltf #mixed layer turbulence factor (determines how much of the temperature difference is used for heat flux)
     IceGrowthRateMixedLayer = F_oi * qi
-    #print("IceGrowthRateUnderExistingIce",IceGrowthRateUnderExistingIce)
-    #print("IceGrowthRateMixedLayer",IceGrowthRateMixedLayer)
-    #print("NetExistingIceGrowthRate",NetExistingIceGrowthRate)
+
 
     ##### calculate d(Area)/dt #####
 
@@ -373,16 +355,13 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
 
     # the energy required to melt or form the new ice volume [J/m2]
     EnergyInNewTotalIceVolume = ActualNewTotalVolumeChange / qi
-    #print("ActualNewTotalVolumeChange",ActualNewTotalVolumeChange)
 
     # the net energy flux out of the ocean [J/m2]
     NetEnergyFluxOutOfOcean = (AreapreTH * (F_ia_net + F_io_net + qswi) + (1 - AreapreTH) * F_ao) * deltatTherm
-    #print("NetEnergyFluxOutOfOcean",NetEnergyFluxOutOfOcean)
     # if the net energy flux out of the ocean is balanced by the latent heat of fusion, the temperature of the mixed layer will not change
     ResidualEnergyOutOfOcean = NetEnergyFluxOutOfOcean - EnergyInNewTotalIceVolume
     #the total heat flux out of the ocean [W/m2]
     Qnet = ResidualEnergyOutOfOcean * recip_deltatTherm
-    #print(f"Qnet_end{Qnet}")
     # the freshwater flux from melting [m3/m2] (positive if the ice thickness decreases/ melting occurs)
     FreshwaterContribFromIce = - ActualNewTotalVolumeChange * rhoIce2rhoFresh
     # in the case of non-zero ice salinity, the freshwater contribution is reduced by the salinity ration of ice to water

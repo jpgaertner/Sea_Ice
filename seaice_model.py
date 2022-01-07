@@ -16,17 +16,17 @@ from seaice_fill_overlap import fill_overlap, fill_overlap3d
 
 ### input from gendata
 hIceMean = np.zeros((sNx+2*OLx,sNy+2*OLy))
-uWind = np.zeros((32, sNx+2*OLx,sNy+2*OLy))
-vWind = np.zeros((32, sNx+2*OLx,sNy+2*OLy))
+uWind = np.ones((32, sNx+2*OLx,sNy+2*OLy))
+vWind = np.ones((32, sNx+2*OLx,sNy+2*OLy))
 uVel = np.zeros((sNx+2*OLx,sNy+2*OLy))
 vVel = np.zeros((sNx+2*OLx,sNy+2*OLy))
 
 hIceMean[OLx:sNx+OLx,OLy:sNy+OLy] = hIce_init
 hIceMean = fill_overlap(hIceMean)
-uWind[:,OLx:sNx+OLx,OLy:sNy+OLy] = uWind_gendata
-uWind = fill_overlap3d(uWind)
-vWind[:,OLx:sNx+OLx,OLy:sNy+OLy] = vWind_gendata
-vWind = fill_overlap3d(vWind)
+# uWind[:,OLx:sNx+OLx,OLy:sNy+OLy] = uWind_gendata
+# uWind = fill_overlap3d(uWind)
+# vWind[:,OLx:sNx+OLx,OLy:sNy+OLy] = vWind_gendata
+# vWind = fill_overlap3d(vWind)
 uVel[OLx:sNx+OLx,OLy:sNy+OLy] = uVel_gendata
 uVel = fill_overlap(uVel)
 vVel[OLx:sNx+OLx,OLy:sNy+OLy] = vVel_gendata
