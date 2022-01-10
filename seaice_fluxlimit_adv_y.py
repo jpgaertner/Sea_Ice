@@ -22,6 +22,7 @@ from seaice_fill_overlap import fill_overlap
 
 recip_deepFacC = 1  #in seaice_grid but not set up
 
+
 def fluxlimit_adv_y(vFld, tracer, vTrans, deltatLoc, maskLocS):
 
     # output
@@ -50,7 +51,7 @@ def fluxlimit_adv_y(vFld, tracer, vTrans, deltatLoc, maskLocS):
 
     vT[:,2:-1] = vTrans[:,2:-1] * (tracer[:,2:-1] + tracer[:,1:-2]) * 0.5 - np.abs(vTrans[:,2:-1]) * ((1 - Cr) + vCFL[:,2:-1] * Cr ) * Rj * 0.5
 
-    # vT is only defined in [2:-1,:] (no fill overlap)?
-    #vT = fill_overlap(vT)
+    vT = fill_overlap(vT)
+
 
     return vT

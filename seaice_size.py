@@ -54,7 +54,7 @@ recip_dyU = 1 / dyU
 dxN = 1
 
 rAz = np.ones((sNx+2*OLx, sNy+2*OLy))
-rA = np.ones((sNx+2*OLx, sNy+2*OLy)) * gridcellWidth**2 #R-face are f[X,Y] ( m^2 )
+rA = dxF * dyF #R-face are f[X,Y] ( m^2 )
 #   Note: In a cartesian framework rA is simply dx*dy, however we use rA to allow for non-globally
 #   orthogonal coordinate frames (with appropriate metric terms)
 recip_rA = 1 / rA

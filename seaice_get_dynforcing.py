@@ -29,29 +29,30 @@ def get_dynforcing(uIce, vIce, uWind, vWind, uVel, vVel):
     CDAir = np.zeros((sNx+2*OLx,sNy+2*OLy))
     tauX = np.zeros((sNx+2*OLx,sNy+2*OLy))
     tauY = np.zeros((sNx+2*OLx,sNy+2*OLy))
+    u1 = np.zeros((sNx+2*OLx,sNy+2*OLy))
+    v1 = np.zeros((sNx+2*OLx,sNy+2*OLy))
+
 
     ##### set up forcing fields #####
 
     # wind stress is computed on the center of the grid cell and interpolated to u and v points later
     # compute ice surface stress
-    u1 = uWind[:-1,:-1] + 0.5 * (uVel[:-1,:-1] + uVel[1:,:-1]) - 0.5 * (uIce[:-1,:-1] + uIce[1:,:-1])
-    v1 = vWind[:-1,:-1] + 0.5 * (vVel[:-1,:-1] + vVel[:-1,1:]) - 0.5 * (vIce[:-1,:-1] + vIce[:-1,1:])
+    u1[:-1,:-1] = uWind[:-1,:-1] + 0.5 * (uVel[:-1,:-1] + uVel[1:,:-1]) - 0.5 * (uIce[:-1,:-1] + uIce[1:,:-1])
+    v1[:-1,:-1] = vWind[:-1,:-1] + 0.5 * (vVel[:-1,:-1] + vVel[:-1,1:]) - 0.5 * (vIce[:-1,:-1] + vIce[:-1,1:])
     aaa = u1**2 + v1**2
 
     tmp = np.where(aaa < eps_sq)
     aaa = np.sqrt(aaa)
     aaa[tmp] = eps
 
-    CDAir[:-1,:-1] = rhoAir * waterIceDrag * aaa
-    south = np.where(fCori[:-1,:-1] < 0)
+    CDAir[:-1,:-1] = rhoAir * waterIceDrag * aaa[:-1,:-1]
+    south = np.where(fCori < 0)
     CDAir[south] = rhoAir * waterIceDrag_south * aaa[south]
 
     # interpolate to u points
-    tauX[1:,1:] = 0.5 * (CDAir[1:,1:] * (cosWin * uWind[1:,1:] - np.sign(fCori[1:,1:]) * sinWin * vWind[1:,1:]) + CDAir[:-1,1:] * (cosWin * uWind[:-1,1:] - np.sign(fCori[:-1,1:]) * sinWin * vWind[:-1,1:])) * SeaIceMaskU[1:,1:]
+    tauX[1:-1,1:-1] = 0.5 * (CDAir[1:-1,1:-1] * (cosWin * (uWind[1:-1,1:-1] + 0.5 * (uVel[1:-1,1:-1] + uVel[2:,1:-1]) - 0.5 * (uIce[1:-1,1:-1] + uIce[2:,1:-1])) - np.sign(fCori[1:-1,1:-1]) * sinWin * (vWind[1:-1,1:-1] + 0.5 * (vVel[1:-1,1:-1] + vVel[1:-1,2:]) - 0.5 *(vIce[1:-1,1:-1] + vIce[1:-1,2:]))) + CDAir[:-2,1:-1] * (cosWin * (uWind[:-2,1:-1] + 0.5 * (uVel[:-2,1:-1] + uVel[1:-1,1:-1]) - 0.5 * (uIce[:-2,1:-1] + uIce[1:-1,1:-1])) - np.sign(fCori[1:-1,1:-1]) * sinWin * (vWind[:-2,1:-1] + 0.5 * (vVel[:-2,1:-1] + vVel[:-2,2:]) - 0.5 * (vIce[:-2,1:-1] + vIce[:-2,2:])))) * SeaIceMaskU[1:-1,1:-1]
 
     # interpolate to v points
-    tauY[1:,1:] = 0.5 * (CDAir[1:,1:] * (np.sign(fCori[1:,1:]) * sinWin * uWind[1:,1:] + cosWin * vWind[1:,1:]) + CDAir[1:,:-1] * (np.sign(fCori[1:,:-1]) * sinWin * uWind[1:,:-1] + cosWin * vWind[1:,:-1])) * SeaIceMaskV[1:,1:]
-
-    # why is tauX and tauY calculated again?
+    tauY[1:-1,1:-1] = 0.5 * (CDAir[1:-1,1:-1] * (np.sign(fCori[1:-1,1:-1]) * sinWin * (uWind[1:-1,1:-1] + 0.5 * (uVel[1:-1,1:-1] + uVel[2:,1:-1]) - 0.5 * (uIce[1:-1,1:-1] + uIce[2:,1:-1])) + cosWin * (vWind[1:-1,1:-1] + 0.5 * (vVel[1:-1,1:-1] + vVel[1:-1,2:]) - 0.5 * (vIce[1:-1,1:-1] + vIce[1:-1,2:]))) + CDAir[1:-1,:-2] * np.sign(fCori[1:-1,:-2] * sinWin * (uWind[1:-1,:-2] + 0.5 * (uVel[1:-1,:-2] + uVel[2:,:-2]) - 0.5 * (uIce[1:-1,:-2] + uIce[2:,:-2])) + cosWin * (vWind[1:-1,:-2] + 0.5 * (vVel[1:-1,:-2] + vVel[1:-1,1:-1]) - 0.5 * (vIce[1:-1,:-2] + vIce[1:-1,1:-1])))) * SeaIceMaskV[1:-1,1:-1]
 
     return tauX, tauY

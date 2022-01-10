@@ -22,6 +22,7 @@ from seaice_fill_overlap import fill_overlap
 
 recip_deepFacC = 1  #in seaice_grid but not set up
 
+
 def fluxlimit_adv_x(uFld, tracer, uTrans, deltatLoc, maskLocW):
 
     # output
@@ -45,13 +46,12 @@ def fluxlimit_adv_x(uFld, tracer, uTrans, deltatLoc, maskLocW):
     tmp2 = np.where(np.abs(Rj) * CrMax <= np.abs(Cr))
     Cr[tmp2] = np.sign(Cr[tmp2]) * CrMax * np.sign(Rj[tmp2])
 
-
     # limit Cr
     Cr = limiter(Cr)
     
     uT[2:-1,:] = uTrans[2:-1,:] * (tracer[2:-1,:] + tracer[1:-2,:]) * 0.5 - np.abs(uTrans[2:-1,:]) * ((1 - Cr) + uCFL[2:-1,:] * Cr ) * Rj * 0.5
 
-    # uT is only defined in [2:-1,:] (no fill overlap)?
-    #uT = fill_overlap(uT)
+    uT = fill_overlap(uT)
+
 
     return uT

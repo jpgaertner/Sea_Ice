@@ -31,13 +31,13 @@ OLy = 2
 
 
 
-hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy))*3.3
-hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy))*0.43
-Area = np.ones((sNx+2*OLx,sNy+2*OLy))*0.4
+hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy))*1.3
+Area = np.ones((sNx+2*OLx,sNy+2*OLy))*0.7
+hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy))*0.1
 
 hIceMeanMask = np.ones((sNx+2*OLx,sNy+2*OLy))*1
 salt = np.ones((sNx+2*OLx,sNy+2*OLy))*29
-TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC))*celsius2K
+TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC))*231.29116821289062
 precip = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #order 1e-6
 snowPrecip = np.ones((sNx+2*OLx,sNy+2*OLy))*0
 evap = np.ones((sNx+2*OLx,sNy+2*OLy))*0
@@ -48,7 +48,7 @@ Qnet = np.ones((sNx+2*OLx,sNy+2*OLy))* 153.536072
 Qsw = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #winter condition
 SWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #winter
 LWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*20 #winter
-ATemp = np.ones((sNx+2*OLx,sNy+2*OLy))*celsius2K-20.16
+ATemp = np.ones((sNx+2*OLx,sNy+2*OLy))*253
 aqh = np.ones((sNx+2*OLx,sNy+2*OLy))*0#1e-4
 
 

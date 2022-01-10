@@ -4,10 +4,10 @@ import numpy as np
 from seaice_size import *
 from seaice_params import *
 
-sNx = 1
-sNy = 1
-OLx = 2
-OLy = 2
+# sNx = 1
+# sNy = 1
+# OLx = 2
+# OLy = 2
 
 ### input
 #hIceActual     : actual ice thickness [m]
@@ -148,7 +148,6 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
     ##### calculate the fluxes #####
 
-    t1 = TSurfLoc[isIce]
     def fluxes(t1):
 
         t2 = t1 * t1
@@ -175,21 +174,21 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
         return F_c, F_lh, F_ia, dFia_dTs
 
-    # save TSurfLoc because it is changed for finding the fluxes
-    TSurfIter = TSurfLoc.copy()
+    for i in range(10):
 
-    for i in range(5):
+        t1 = TSurfLoc[isIce]
         F_c, F_lh, F_ia, dFia_dTs = fluxes(t1)
 
         # update surface temperature as solution of F_c = F_ia + d/dT (F_c - F_ia) * delta T
-        TSurfIter[isIce] = TSurfIter[isIce] + (F_c[isIce] - F_ia[isIce]) / (effConduct[isIce] + dFia_dTs[isIce])
-        #TSurfLoc = np.maximum(TSurfLoc, celsius2K + minTIce)
-        #TSurfLoc = np.minimum(TSurfLoc, Tmelt)
+        TSurfLoc[isIce] = TSurfLoc[isIce] + (F_c[isIce] - F_ia[isIce]) / (effConduct[isIce] + dFia_dTs[isIce])
 
-        # recalculate the fluxes based on the adjusted surface temperature
-        t1 = TSurfIter[isIce]
+        # add upper and lower boundary
+        TSurfLoc = np.maximum(TSurfLoc, celsius2K + minTIce)
+        TSurfLoc = np.minimum(TSurfLoc, Tmelt)
 
-    TSurfLoc[isIce] = TSurfLoc[isIce] + (F_c[isIce] - F_ia[isIce]) / (effConduct[isIce] + dFia_dTs[isIce])
+    # recalculate the fluxes based on the adjusted surface temperature
+    t1 = TSurfLoc[isIce]
+    F_c, F_lh, F_ia, dFia_dTs = fluxes(t1)
 
     # case 1: F_c <= 0
     # F_io_net is already set up as zero everywhere
@@ -203,5 +202,6 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
     TSurfOut[isIce] = TSurfLoc[isIce]
     FWsublim[isIce] = F_lh[isIce] / lhSublim
 
+    #print('T change:', np.mean(TSurfOut) - np.mean(TSurfIn))
 
     return TSurfOut, F_io_net, F_ia_net, F_ia, IcePenetSW, FWsublim

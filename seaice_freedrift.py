@@ -12,10 +12,10 @@ def seaIceFreeDrift(hIceMean, uVel, vVel, IceSurfStressX0, IceSurfStressY0):
     # initialize fields
     uIceFD = np.zeros((sNx+2*OLx,sNy+2*OLy))
     vIceFD = np.zeros((sNx+2*OLx,sNy+2*OLy))
-    uVelCenter = np.zeros((sNx+2*OLx,sNy+2*OLy))
-    vVelCenter = np.zeros((sNx+2*OLx,sNy+2*OLy))
     uIceCenter = np.zeros((sNx+2*OLx,sNy+2*OLy))
     vIceCenter = np.zeros((sNx+2*OLx,sNy+2*OLy))
+    uVelCenter = np.zeros((sNx+2*OLx,sNy+2*OLy))
+    vVelCenter = np.zeros((sNx+2*OLx,sNy+2*OLy))
     tauXIceCenter = np.zeros((sNx+2*OLx,sNy+2*OLy))
     tauYIceCenter = np.zeros((sNx+2*OLx,sNy+2*OLy))
 
@@ -55,7 +55,7 @@ def seaIceFreeDrift(hIceMean, uVel, vVel, IceSurfStressX0, IceSurfStressY0):
 
     # solve for angle
     tmp1 = np.ones((sNx, sNy)) * waterIceDrag * rhoConst
-    tmp1[south] = waterIceDrag_south * rhoFresh
+    tmp1[south] = waterIceDrag_south * rhoConst
     tmp2 = tmp1 * solNorm**2
     tmp3 = mIceCor * solNorm
     tmp4 = tmp2**2 + tmp3**2
@@ -66,6 +66,9 @@ def seaIceFreeDrift(hIceMean, uVel, vVel, IceSurfStressX0, IceSurfStressY0):
     # compute uIce, vIce at cell center
     uIceCenter[OLx:-OLx,OLy:-OLy] = uVelCenter[OLx:-OLx,OLy:-OLy] - solNorm * np.cos(solAngle)
     vIceCenter[OLx:-OLx,OLy:-OLy] = vVelCenter[OLx:-OLx,OLy:-OLy] - solNorm * np.sin(solAngle)
+
+    uIceCenter = fill_overlap(uIceCenter)
+    vIceCenter = fill_overlap(vIceCenter)
 
     # interpolate to velocity points
     uIceFD[OLx:-OLx,OLy:-OLy] = 0.5 * (uIceCenter[OLx-1:-OLx-1,OLy:-OLy] + uIceCenter[OLx:-OLx,OLy:-OLy])
