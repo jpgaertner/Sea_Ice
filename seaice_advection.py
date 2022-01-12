@@ -39,6 +39,8 @@ def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):
     # advective flux in x direction
     afx = fluxlimit_adv_x(uFld, localTij, uTrans, deltatTherm, maskLocW)
 
+
+
     # update the local seaice field
     if extensiveFld:
         localTij[1:-1,:] = localTij[1:-1,:] - deltatTherm * maskInC[1:-1,:] * recip_rA[1:-1,:] * (afx[2:,:] - afx[1:-1,:])
@@ -62,5 +64,11 @@ def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):
     gFld = (localTij - iceFld) / deltatTherm
     gFld = fill_overlap(gFld)
 
+    # import matplotlib.pyplot as plt
+    # plt.contourf(afy[OLx:-OLx,OLy:-OLy])
+    # plt.colorbar()
+    # plt.show()
+    
 
-    return gFld
+
+    return gFld, afy

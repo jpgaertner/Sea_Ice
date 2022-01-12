@@ -45,15 +45,15 @@ def advdiff(uIce, vIce, hIceMean, hSnowMean, hIceMeanMask, Area):
     extensiveFld = True #indicates to advect an "extensive" type of ice field
 
     # update mean ice thickness
-    gFld = advection(uIce, vIce, uTrans, vTrans, hIceMean, recip_hIceMean, extensiveFld)
+    gFld, afx = advection(uIce, vIce, uTrans, vTrans, hIceMean, recip_hIceMean, extensiveFld)
     hIceMean = (hIceMean + deltatTherm * gFld) * hIceMeanMask
 
     # update surface cover fraction
-    gFld = advection(uIce, vIce, uTrans, vTrans, Area, recip_hIceMean, extensiveFld)
+    gFld, afx = advection(uIce, vIce, uTrans, vTrans, Area, recip_hIceMean, extensiveFld)
     Area = (Area + deltatTherm * gFld) * hIceMeanMask
 
     # update mean snow thickness
-    gFld = advection(uIce, vIce, uTrans, vTrans, hSnowMean, recip_hIceMean, extensiveFld)
+    gFld, afx = advection(uIce, vIce, uTrans, vTrans, hSnowMean, recip_hIceMean, extensiveFld)
     hSnowMean = (hSnowMean + deltatTherm * gFld) * hIceMeanMask
 
 

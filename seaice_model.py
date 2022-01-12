@@ -16,13 +16,13 @@ from seaice_fill_overlap import fill_overlap, fill_overlap3d
 
 ### input from gendata
 hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy))
-uWind = np.ones((32, sNx+2*OLx,sNy+2*OLy))*0
-vWind = np.ones((32, sNx+2*OLx,sNy+2*OLy))*1
+uWind = np.zeros((32, sNx+2*OLx,sNy+2*OLy))*0
+vWind = np.zeros((32, sNx+2*OLx,sNy+2*OLy))
 uVel = np.zeros((sNx+2*OLx,sNy+2*OLy))
 vVel = np.zeros((sNx+2*OLx,sNy+2*OLy))
 
-# hIceMean[OLx:-OLx,OLy:-OLy] = hIce_init
-# hIceMean = fill_overlap(hIceMean)
+hIceMean[OLx:-OLx,OLy:-OLy] = hIce_init
+hIceMean = fill_overlap(hIceMean)
 # uWind[:,OLx:-OLx,OLy:-OLy] = uWind_gendata
 # uWind = fill_overlap3d(uWind)
 vWind[:,OLx:-OLx,OLy:-OLy] = vWind_gendata
@@ -79,18 +79,19 @@ for i in range(1):
 
     uIce, vIce = dynsolver(uIce, vIce, uVel, vVel, uWind[0,:,:], vWind[0,:,:], hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux)
 
-    hIceMean, hSnowMean, Area = advdiff(uIce, -vIce, hIceMean, hSnowMean, hIceMeanMask, Area)
+    hIceMean, hSnowMean, Area = advdiff(uIce, vIce, hIceMean, hSnowMean, hIceMeanMask, Area)
 
     hIceMean, hSnowMean, Area, TIceSnow = ridging(hIceMean, hSnowMean, Area, TIceSnow)
 
     hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet, seaIceLoad = growth(hIceMean, hIceMeanMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh)
+
 
 # print(np.mean(hIceMean))
 # print(np.mean(uWind))
 # print(np.mean(vWind))
 # print(np.max(uIce))
 # print(np.max(vIce))
-#plt.contourf(-uIce[OLx:-OLx,OLy:-OLy])
+#plt.contourf(vIce[OLx:-OLx,OLy:-OLy])
 plt.contourf(hIceMean[OLx:-OLx,OLy:-OLy])
 #plt.contourf(vWind[0,OLx:-OLx,OLy:-OLy])
 plt.colorbar()
