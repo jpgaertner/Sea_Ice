@@ -24,10 +24,10 @@ from seaice_params import *
 from seaice_growth import growth
 import matplotlib.pyplot as plt
 
-sNx = 1
-sNy = 1
-OLx = 2
-OLy = 2
+# sNx = 1
+# sNy = 1
+# OLx = 2
+# OLy = 2
 
 
 
@@ -37,7 +37,7 @@ hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy))*0.1
 
 hIceMeanMask = np.ones((sNx+2*OLx,sNy+2*OLy))*1
 salt = np.ones((sNx+2*OLx,sNy+2*OLy))*29
-TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC))*231.29116821289062
+TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC))*234.4680938720703
 precip = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #order 1e-6
 snowPrecip = np.ones((sNx+2*OLx,sNy+2*OLy))*0
 evap = np.ones((sNx+2*OLx,sNy+2*OLy))*0

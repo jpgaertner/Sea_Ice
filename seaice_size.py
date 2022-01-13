@@ -11,6 +11,7 @@
 
 
 import numpy as np
+from seaice_fill_overlap import fill_overlap
 
 sNx =   65 #Number of X points in tile
 sNy =   65 #Number of Y points in tile
@@ -64,7 +65,14 @@ fCoriG = np.ones((sNx+2*OLx, sNy+2*OLy))*1e-4 #coriolis parameter at grid corner
 
 # masks
 maskInW = np.ones((sNx+2*OLx,sNy+2*OLy))
+maskInW[:,sNy+OLy] = 0
+maskInW[sNx+OLx-2:sNx+OLx,:] = 0
 maskInS = np.ones((sNx+2*OLx,sNy+2*OLy))
+maskInS[sNx+OLx,:] = 0
+maskInS[:,sNy+OLy:sNy+OLy+2] = 0
 maskInC = np.ones((sNx+2*OLx,sNy+2*OLy))
+maskInC[:,sNy+OLy] = 0
+maskInC[sNx+OLx,:] = 0
+maskInC = fill_overlap(maskInC)
 SeaIceMaskU = np.ones((sNx+2*OLx,sNy+2*OLy))
 SeaIceMaskV = np.ones((sNx+2*OLx,sNy+2*OLy))
