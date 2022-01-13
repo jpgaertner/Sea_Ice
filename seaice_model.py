@@ -16,17 +16,17 @@ from seaice_fill_overlap import fill_overlap, fill_overlap3d
 
 ### input from gendata
 hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy))
-uWind = np.zeros((32, sNx+2*OLx,sNy+2*OLy))*0
-vWind = np.zeros((32, sNx+2*OLx,sNy+2*OLy))
+uWind = np.ones((32, sNx+2*OLx,sNy+2*OLy))
+vWind = np.ones((32, sNx+2*OLx,sNy+2*OLy))
 uVel = np.zeros((sNx+2*OLx,sNy+2*OLy))
 vVel = np.zeros((sNx+2*OLx,sNy+2*OLy))
 
-hIceMean[OLx:-OLx,OLy:-OLy] = hIce_init
-hIceMean = fill_overlap(hIceMean)
+# hIceMean[OLx:-OLx,OLy:-OLy] = hIce_init
+# hIceMean = fill_overlap(hIceMean)
 # uWind[:,OLx:-OLx,OLy:-OLy] = uWind_gendata
 # uWind = fill_overlap3d(uWind)
-vWind[:,OLx:-OLx,OLy:-OLy] = vWind_gendata
-vWind = fill_overlap3d(vWind)
+# vWind[:,OLx:-OLx,OLy:-OLy] = vWind_gendata
+# vWind = fill_overlap3d(vWind)
 # uVel[OLx:-OLx,OLy:-OLy] = uVel_gendata
 # uVel = fill_overlap(uVel)
 # vVel[OLx:-OLx,OLy:-OLy] = vVel_gendata
@@ -42,7 +42,7 @@ vIce = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
 
 hIceMeanMask = np.ones((sNx+2*OLx,sNy+2*OLy))
 etaN = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
-pLoad = np.ones((sNx+2*OLx,sNy+2*OLy))
+pLoad = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
 SeaIceLoad = np.ones((sNx+2*OLx,sNy+2*OLy))
 useRealFreshWaterFlux = True
 
@@ -93,6 +93,6 @@ for i in range(1):
 # print(np.max(vIce))
 #plt.contourf(vIce[OLx:-OLx,OLy:-OLy])
 plt.contourf(hIceMean[OLx:-OLx,OLy:-OLy])
-#plt.contourf(vWind[0,OLx:-OLx,OLy:-OLy])
+#plt.contourf(uWind[0,OLx:-OLx,OLy:-OLy])
 plt.colorbar()
 plt.show()
