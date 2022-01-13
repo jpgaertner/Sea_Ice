@@ -15,50 +15,49 @@ from seaice_fill_overlap import fill_overlap, fill_overlap3d
 
 
 ### input from gendata
-hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy))
-uWind = np.ones((32, sNx+2*OLx,sNy+2*OLy))
-vWind = np.ones((32, sNx+2*OLx,sNy+2*OLy))
-uVel = np.zeros((sNx+2*OLx,sNy+2*OLy))
-vVel = np.zeros((sNx+2*OLx,sNy+2*OLy))
+hIceMean = np.ones((sNy+2*OLy,sNx+2*OLx))
+uWind = np.ones((32, sNy+2*OLy,sNx+2*OLx))
+vWind = np.ones((32, sNy+2*OLy,sNx+2*OLx))*0
+uVel = np.zeros((sNy+2*OLy,sNx+2*OLx))
+vVel = np.zeros((sNy+2*OLy,sNx+2*OLx))
 
-# hIceMean[OLx:-OLx,OLy:-OLy] = hIce_init
+# hIceMean[OLy:-OLy,OLx:-OLx] = hIce_init
 # hIceMean = fill_overlap(hIceMean)
-# uWind[:,OLx:-OLx,OLy:-OLy] = uWind_gendata
-# uWind = fill_overlap3d(uWind)
-# vWind[:,OLx:-OLx,OLy:-OLy] = vWind_gendata
-# vWind = fill_overlap3d(vWind)
-# uVel[OLx:-OLx,OLy:-OLy] = uVel_gendata
+uWind[:,OLy:-OLy,OLx:-OLx] = uWind_gendata
+uWind = fill_overlap3d(uWind)
+vWind[:,OLy:-OLy,OLx:-OLx] = vWind_gendata
+vWind = fill_overlap3d(vWind)
+# uVel[OLy:-OLy,OLx:-OLx] = uVel_gendata
 # uVel = fill_overlap(uVel)
-# vVel[OLx:-OLx,OLy:-OLy] = vVel_gendata
+# vVel[OLy:-OLy,OLx:-OLx] = vVel_gendata
 # vVel = fill_overlap(vVel)
 
 
-hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
-Area = np.ones((sNx+2*OLx,sNy+2*OLy))
-TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC))*celsius2K
+hSnowMean = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+Area = np.ones((sNy+2*OLy,sNx+2*OLx))
+TIceSnow = np.ones((sNy+2*OLy,sNx+2*OLx,nITC))*celsius2K
 
-uIce = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
-vIce = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
+uIce = np.zeros((sNy+2*OLy,sNx+2*OLx))
+vIce = np.zeros((sNy+2*OLy,sNx+2*OLx))
 
-hIceMeanMask = np.ones((sNx+2*OLx,sNy+2*OLy))
-etaN = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
-pLoad = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
-SeaIceLoad = np.ones((sNx+2*OLx,sNy+2*OLy))
+etaN = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+pLoad = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+SeaIceLoad = hIceMean * rhoIce + hSnowMean * rhoSnow
 useRealFreshWaterFlux = True
 
-salt = np.ones((sNx+2*OLx,sNy+2*OLy)) * 29
-precip = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
-snowPrecip = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
-evap = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
-runoff = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
-wspeed = np.ones((sNx+2*OLx,sNy+2*OLy))*2 #np.sqrt(uWind[0,:,:]**2 + vWind[0,:,:]**2)
-theta = np.ones((sNx+2*OLx,sNy+2*OLy))*celsius2K - 1.96
-Qnet = np.ones((sNx+2*OLx,sNy+2*OLy)) * 153.536072
-Qsw = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
-SWDown = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
-LWDown = np.ones((sNx+2*OLx,sNy+2*OLy)) * 20
-ATemp = np.ones((sNx+2*OLx,sNy+2*OLy)) * celsius2K - 20.16
-aqh = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
+salt = np.ones((sNy+2*OLy,sNx+2*OLx)) * 29
+precip = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+snowPrecip = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+evap = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+runoff = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+wspeed = np.sqrt(uWind[0,:,:]**2 + vWind[0,:,:]**2)
+theta = np.ones((sNy+2*OLy,sNx+2*OLx))*celsius2K - 1.96
+Qnet = np.ones((sNy+2*OLy,sNx+2*OLx)) * 153.536072
+Qsw = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+SWDown = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+LWDown = np.ones((sNy+2*OLy,sNx+2*OLx)) * 20
+ATemp = np.ones((sNy+2*OLy,sNx+2*OLx)) * celsius2K - 20.16
+aqh = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
 
 
 # timesteps = 32
@@ -69,7 +68,7 @@ aqh = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
 # days = [None] * timesteps
 
 
-for i in range(1):
+for i in range(2):
 
     # ice[i] = hIceMean
     # snow[i] = hIceMean
@@ -79,20 +78,22 @@ for i in range(1):
 
     uIce, vIce = dynsolver(uIce, vIce, uVel, vVel, uWind[0,:,:], vWind[0,:,:], hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux)
 
-    hIceMean, hSnowMean, Area = advdiff(uIce, vIce, hIceMean, hSnowMean, hIceMeanMask, Area)
+    hIceMean, hSnowMean, Area = advdiff(uIce, vIce, hIceMean, hSnowMean, Area)
 
     hIceMean, hSnowMean, Area, TIceSnow = ridging(hIceMean, hSnowMean, Area, TIceSnow)
 
     hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet, seaIceLoad = growth(hIceMean, hIceMeanMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh)
 
 
+
+
 # print(np.mean(hIceMean))
 # print(np.mean(uWind))
 # print(np.mean(vWind))
-# print(np.max(uIce))
+#print(np.max(uIce))
 # print(np.max(vIce))
-#plt.contourf(vIce[OLx:-OLx,OLy:-OLy])
-plt.contourf(hIceMean[OLx:-OLx,OLy:-OLy])
-#plt.contourf(uWind[0,OLx:-OLx,OLy:-OLy])
+#plt.contourf(vIce[OLy:-OLy,OLx:-OLx])
+plt.contourf(hIceMean[OLy:-OLy,OLx:-OLx])
+#plt.contourf(vWind[0,OLy:-OLy,OLx:-OLx])
 plt.colorbar()
 plt.show()

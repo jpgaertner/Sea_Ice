@@ -21,7 +21,6 @@ from seaice_fill_overlap import fill_overlap
 ### output
 # gFld: advection tendency
 
-import matplotlib.pyplot as plt
 
 def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):
 
@@ -39,13 +38,11 @@ def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):
     # advective flux in x direction
     afx = fluxlimit_adv_x(uFld, localTij, uTrans, deltatTherm, maskLocW)
 
-
-
     # update the local seaice field
     if extensiveFld:
-        localTij[1:-1,:] = localTij[1:-1,:] - deltatTherm * maskInC[1:-1,:] * recip_rA[1:-1,:] * (afx[2:,:] - afx[1:-1,:])
+        localTij[:,1:-1] = localTij[:,1:-1] - deltatTherm * maskInC[:,1:-1] * recip_rA[:,1:-1] * (afx[:,2:] - afx[:,1:-1])
     else:
-        localTij[1:-1,:] = localTij[1:-1,:] - deltatTherm * maskInC[1:-1,:] * recip_rA[1:-1,:] * r_hFld[1:-1,:] * ((afx[2:,:] - afx[1:-1,:]) - (uTrans[2:,:] - uTrans[1:-1,:]) * iceFld[1:-1,:])
+        localTij[:,1:-1] = localTij[:,1:-1] - deltatTherm * maskInC[:,1:-1] * recip_rA[:,1:-1] * r_hFld[:,1:-1] * ((afx[:,2:] - afx[:,1:-1]) - (uTrans[:,2:] - uTrans[:,1:-1]) * iceFld[:,1:-1])
 
 
     ##### calculate advective flux in y direction #####
@@ -55,20 +52,14 @@ def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):
 
     # update the local seaice field
     if extensiveFld:
-        localTij[:,1:-1] = localTij[:,1:-1] - deltatTherm * maskInC[:,1:-1] * recip_rA[:,1:-1] * (afy[:,2:] - afy[:,1:-1])
+        localTij[1:-1,:] = localTij[1:-1,:] - deltatTherm * maskInC[1:-1,:] * recip_rA[1:-1,:] * (afy[2:,:] - afy[1:-1,:])
     else:
-        localTij[:,1:-1] = localTij[:,1:-1] - deltatTherm * maskInC[:,1:-1] * recip_rA[:,1:-1] * r_hFld[:,1:-1] * ((afy[:,2:] - afy[:,1:-1]) - (vTrans[:,2:] - vTrans[:,1:-1]) * iceFld[:,1:-1])
+        localTij[1:-1,:] = localTij[1:-1,:] - deltatTherm * maskInC[1:-1,:] * recip_rA[1:-1,:] * r_hFld[1:-1,:] * ((afy[2:,:] - afy[1:-1,:]) - (vTrans[2:,:] - vTrans[1:-1,:]) * iceFld[1:-1,:])
 
 
     # explicit advection is done, store tendency in gFld
     gFld = (localTij - iceFld) / deltatTherm
     gFld = fill_overlap(gFld)
 
-    # import matplotlib.pyplot as plt
-    # plt.contourf(afy[OLx:-OLx,OLy:-OLy])
-    # plt.colorbar()
-    # plt.show()
-    
 
-
-    return gFld, afy
+    return gFld

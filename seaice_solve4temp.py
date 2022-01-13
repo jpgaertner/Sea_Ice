@@ -1,6 +1,7 @@
 #Calculates heat fluxes and temperature of the ice surface (see Hibler, MWR, 108, 1943-1973, 1980)
 
 import numpy as np
+
 from seaice_size import *
 from seaice_params import *
 
@@ -32,8 +33,8 @@ from seaice_params import *
 
 def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, ATemp, aqh):
 
-
     ##### define local constants used for calculations #####
+
 
     # coefficients for the saturation vapor pressure equation
     aa1 = 2663.5
@@ -58,23 +59,23 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
     # initialize output arrays
     TSurfOut = TSurfIn.copy()
-    F_ia = np.zeros((sNx+2*OLx, sNy+2*OLy))
+    F_ia = np.zeros((sNy+2*OLy,sNx+2*OLx))
     #F_ia_net
-    F_io_net = np.zeros((sNx+2*OLx, sNy+2*OLy))
-    IcePenetSW = np.zeros((sNx+2*OLx, sNy+2*OLy)) #the shortwave radiative flux at the ocean-ice interface (+ = upwards)
-    FWsublim = np.zeros((sNx+2*OLx, sNy+2*OLy))
+    F_io_net = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    IcePenetSW = np.zeros((sNy+2*OLy,sNx+2*OLx)) #the shortwave radiative flux at the ocean-ice interface (+ = upwards)
+    FWsublim = np.zeros((sNy+2*OLy,sNx+2*OLx))
     
     iceOrNot = (hIceActual > 0)
     
-    effConduct = np.zeros((sNx+2*OLx, sNy+2*OLy)) #effective conductivity of ice and snow combined
-    dFia_dTs = np.zeros((sNx+2*OLx, sNy+2*OLy)) #derivative of F_ia w.r.t snow/ice surf. temp
-    absorbedSW = np.zeros((sNx+2*OLx, sNy+2*OLy)) #shortwave radiative flux convergence in the sea ice
-    qhice = np.zeros((sNx+2*OLx, sNy+2*OLy)) #saturation vapor pressure of snow/ice surface
-    dqh_dTs = np.zeros((sNx+2*OLx, sNy+2*OLy)) #derivative of qhice w.r.t snow/ice surf. temp
-    F_lh = np.zeros((sNx+2*OLx, sNy+2*OLy)) #latent heat flux (sublimation) (+ = upward)
-    F_lwu = np.zeros((sNx+2*OLx, sNy+2*OLy)) #upward long-wave surface heat flux (+ = upward)
-    F_sens = np.zeros((sNx+2*OLx, sNy+2*OLy)) #sensible surface heat flux (+ = upward)
-    F_c = np.zeros((sNx+2*OLx, sNy+2*OLy)) #conductive heat flux through ice and snow (+ = upward)
+    effConduct = np.zeros((sNy+2*OLy,sNx+2*OLx)) #effective conductivity of ice and snow combined
+    dFia_dTs = np.zeros((sNy+2*OLy,sNx+2*OLx)) #derivative of F_ia w.r.t snow/ice surf. temp
+    absorbedSW = np.zeros((sNy+2*OLy,sNx+2*OLx)) #shortwave radiative flux convergence in the sea ice
+    qhice = np.zeros((sNy+2*OLy,sNx+2*OLx)) #saturation vapor pressure of snow/ice surface
+    dqh_dTs = np.zeros((sNy+2*OLy,sNx+2*OLx)) #derivative of qhice w.r.t snow/ice surf. temp
+    F_lh = np.zeros((sNy+2*OLy,sNx+2*OLx)) #latent heat flux (sublimation) (+ = upward)
+    F_lwu = np.zeros((sNy+2*OLy,sNx+2*OLx)) #upward long-wave surface heat flux (+ = upward)
+    F_sens = np.zeros((sNy+2*OLy,sNx+2*OLx)) #sensible surface heat flux (+ = upward)
+    F_c = np.zeros((sNy+2*OLy,sNx+2*OLx)) #conductive heat flux through ice and snow (+ = upward)
 
     # make local copies of downward longwave radiation, surface and atmospheric temperatures
     TSurfLoc = TSurfIn.copy()
@@ -88,7 +89,7 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
     isSnow = np.where(hSnowActual > 0)
     isIce = np.where(iceOrNot == True)
 
-    d3 = np.ones((sNx+2*OLx,sNy+2*OLy)) * iceEmiss * stefBoltz
+    d3 = np.ones((sNy+2*OLy,sNx+2*OLx)) * iceEmiss * stefBoltz
     d3[isSnow] = snowEmiss * stefBoltz
 
     LWDownLoc[isIce] = iceEmiss * LWDownLoc[isIce]
@@ -97,9 +98,9 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
     ##### determine albedo #####
 
-    albIce = np.zeros((sNx+2*OLx, sNy+2*OLy))
-    albSnow = np.zeros((sNx+2*OLx, sNy+2*OLy))
-    alb = np.zeros((sNx+2*OLx, sNy+2*OLy))
+    albIce = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    albSnow = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    alb = np.zeros((sNy+2*OLy,sNx+2*OLx))
 
     for j in range(0, sNy+2*OLy):
         for i in range(0, sNx+2*OLx):
@@ -202,6 +203,5 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
     TSurfOut[isIce] = TSurfLoc[isIce]
     FWsublim[isIce] = F_lh[isIce] / lhSublim
 
-    #print('T change:', np.mean(TSurfOut) - np.mean(TSurfIn))
 
     return TSurfOut, F_io_net, F_ia_net, F_ia, IcePenetSW, FWsublim

@@ -31,23 +31,23 @@ from seaice_get_dynforcing import get_dynforcing
 def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux):
 
     # local variables:
-    tauX = np.zeros((sNx+2*OLx, sNy+2*OLy)) # zonal wind stress over ice at u point
-    tauY = np.zeros((sNx+2*OLx, sNy+2*OLy)) # meridional wind stress over ice at v point
-    seaIceMassC = np.zeros((sNx+2*OLx,sNy+2*OLy))
-    seaIceMassU = np.zeros((sNx+2*OLx,sNy+2*OLy))
-    seaIceMassV = np.zeros((sNx+2*OLx,sNy+2*OLy))
-    IceSurfStressX0 = np.zeros((sNx+2*OLx,sNy+2*OLy))
-    IceSurfStressY0 = np.zeros((sNx+2*OLx,sNy+2*OLy))
+    tauX = np.zeros((sNy+2*OLy,sNx+2*OLx)) # zonal wind stress over ice at u point
+    tauY = np.zeros((sNy+2*OLy,sNx+2*OLx)) # meridional wind stress over ice at v point
+    seaIceMassC = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    seaIceMassU = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    seaIceMassV = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    IceSurfStressX0 = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    IceSurfStressY0 = np.zeros((sNy+2*OLy,sNx+2*OLx))
 
     # set up mass per unit area
     seaIceMassC[1:,1:] = rhoIce * hIceMean[1:,1:]
-    seaIceMassU[1:,1:] = rhoIce * 0.5 * (hIceMean[1:,1:] + hIceMean[:-1,1:])
-    seaIceMassV[1:,1:] = rhoIce * 0.5 * (hIceMean[1:,1:] + hIceMean[1:,:-1])
+    seaIceMassU[1:,1:] = rhoIce * 0.5 * (hIceMean[1:,1:] + hIceMean[1:,:-1])
+    seaIceMassV[1:,1:] = rhoIce * 0.5 * (hIceMean[1:,1:] + hIceMean[:-1,1:])
 
     # if SEAICEaddSnowMass (true)
     seaIceMassC[1:,1:] = seaIceMassC[1:,1:] + rhoSnow * hSnowMean[1:,1:]
-    seaIceMassU[1:,1:] = seaIceMassU[1:,1:] + rhoSnow * 0.5 * (hSnowMean[1:,1:] + hSnowMean[:-1,1:])
-    seaIceMassV[1:,1:] = seaIceMassV[1:,1:] + rhoSnow * 0.5 * (hSnowMean[1:,1:] + hSnowMean[1:,:-1])
+    seaIceMassU[1:,1:] = seaIceMassU[1:,1:] + rhoSnow * 0.5 * (hSnowMean[1:,1:] + hSnowMean[1:,:-1])
+    seaIceMassV[1:,1:] = seaIceMassV[1:,1:] + rhoSnow * 0.5 * (hSnowMean[1:,1:] + hSnowMean[:-1,1:])
 
     # if SEAICE_maskRHS... (false)
 
@@ -69,13 +69,13 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean, hSnowMean, Area, e
 
     # forcing by wind
     #if SEAICEscaleSurfStress (true)
-    IceSurfStressX0[1:,1:] = tauX[1:,1:] * 0.5 * (Area[1:,1:] + Area[:-1,1:]) #forcex0 in F
-    IceSurfStressY0[1:,1:] = tauY[1:,1:] * 0.5 * (Area[1:,1:] + Area[1:,:-1]) #forcey0 in F
+    IceSurfStressX0[1:,1:] = tauX[1:,1:] * 0.5 * (Area[1:,1:] + Area[1:,:-1]) #forcex0 in F
+    IceSurfStressY0[1:,1:] = tauY[1:,1:] * 0.5 * (Area[1:,1:] + Area[:-1,1:]) #forcey0 in F
 
     # add in tilt
     #if SEAICEuseTILT (true)
-    IceSurfStressX0[1:,1:] = IceSurfStressX0[1:,1:] - seaIceMassU[1:,1:] * recip_dxC[1:,1:] * (phiSurf[1:,1:] - phiSurf[:-1,1:])
-    IceSurfStressY0[1:,1:] = IceSurfStressY0[1:,1:] - seaIceMassV[1:,1:] * recip_dyC[1:,1:] * (phiSurf[1:,1:] - phiSurf[1:,:-1])
+    IceSurfStressX0[1:,1:] = IceSurfStressX0[1:,1:] - seaIceMassU[1:,1:] * recip_dxC[1:,1:] * (phiSurf[1:,1:] - phiSurf[1:,:-1])
+    IceSurfStressY0[1:,1:] = IceSurfStressY0[1:,1:] - seaIceMassV[1:,1:] * recip_dyC[1:,1:] * (phiSurf[1:,1:] - phiSurf[:-1,1:])
 
     # calculate press0, where is it used?
     # call SEAICE_CALC_ICE_STRENGTH
@@ -111,5 +111,6 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean, hSnowMean, Area, e
     #if SEAICE_clipVelocities
     uIce.clip(-0.4, 0.4)
     vIce.clip(-0.4, 0.4)
+
 
     return uIce, vIce

@@ -13,10 +13,10 @@
 import numpy as np
 from seaice_fill_overlap import fill_overlap
 
-sNx =   65 #Number of X points in tile
-sNy =   65 #Number of Y points in tile
-OLx =   2 #Tile overlap extent in X
-OLy =   2 #Tile overlap extent in Y
+sNx = 65 #Number of X points in tile
+sNy = 65 #Number of Y points in tile
+OLx = 2 #Tile overlap extent in X
+OLy = 2 #Tile overlap extent in Y
 #nSx =   1 #Number of tiles per process in X
 #nSy =   1 #Number of tiles per process in Y
 #tiles are subprocesses that can work with the same memory
@@ -36,14 +36,14 @@ recip_nITC = 1 / nITC
 gridcellWidth = 8000 #grid cell width in m
 
 # grid descriptor variables
-dxC = np.ones((sNx+2*OLx, sNy+2*OLy)) * gridcellWidth #distance between two adjacent cell centers in x direction across western cell wall [m]
-dyC = np.ones((sNx+2*OLx, sNy+2*OLy)) * gridcellWidth #distance between two adjacent cell centers in y direction across southern cell wall [m]
-dxG = np.ones((sNx+2*OLx, sNy+2*OLy)) * gridcellWidth #distance between cell faces (cell width) in x direction along southern cell wall [m]
-dyG = np.ones((sNx+2*OLx, sNy+2*OLy)) * gridcellWidth #distance between cell faces (cell width) in y direction along western cell wall [m]
-dxF = np.ones((sNx+2*OLx, sNy+2*OLy)) * gridcellWidth #distance between cell faces (cell width) in x direction through cell center [m]
-dyF = np.ones((sNx+2*OLx, sNy+2*OLy)) * gridcellWidth #distance between cell faces (cell width) in y direction through cell center [m]
-dxV = np.ones((sNx+2*OLx, sNy+2*OLy)) * gridcellWidth #distance between two adjacent v points in x direction across south-west corner of the cell [m]
-dyU = np.ones((sNx+2*OLx, sNy+2*OLy)) * gridcellWidth #distance between two adjacent u points in y direction across south-west corner of the cell [m]
+dxC = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between two adjacent cell centers in x direction across western cell wall [m]
+dyC = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between two adjacent cell centers in y direction across southern cell wall [m]
+dxG = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between cell faces (cell width) in x direction along southern cell wall [m]
+dyG = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between cell faces (cell width) in y direction along western cell wall [m]
+dxF = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between cell faces (cell width) in x direction through cell center [m]
+dyF = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between cell faces (cell width) in y direction through cell center [m]
+dxV = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between two adjacent v points in x direction across south-west corner of the cell [m]
+dyU = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between two adjacent u points in y direction across south-west corner of the cell [m]
 recip_dxC = 1 / dxC
 recip_dyC = 1 / dyC
 recip_dxG = 1 / dxG
@@ -54,25 +54,32 @@ recip_dxV = 1 / dxV
 recip_dyU = 1 / dyU
 dxN = 1
 
-rAz = np.ones((sNx+2*OLx, sNy+2*OLy))
+rAz = np.ones((sNy+2*OLy,sNx+2*OLx))
 rA = dxF * dyF #R-face are f[X,Y] ( m^2 )
 #   Note: In a cartesian framework rA is simply dx*dy, however we use rA to allow for non-globally
 #   orthogonal coordinate frames (with appropriate metric terms)
 recip_rA = 1 / rA
 
-fCori = np.ones((sNx+2*OLx, sNy+2*OLy))*1e-4 #coriolis parameter at grid center point
-fCoriG = np.ones((sNx+2*OLx, sNy+2*OLy))*1e-4 #coriolis parameter at grid corner point (south west corner?)
+fCori = np.ones((sNy+2*OLy,sNx+2*OLx))*1e-4 #coriolis parameter at grid center point
+fCoriG = np.ones((sNy+2*OLy,sNx+2*OLx))*1e-4 #coriolis parameter at grid corner point (south west corner?)
 
-# masks
-maskInW = np.ones((sNx+2*OLx,sNy+2*OLy))
-maskInW[:,sNy+OLy] = 0
-maskInW[sNx+OLx-2:sNx+OLx,:] = 0
-maskInS = np.ones((sNx+2*OLx,sNy+2*OLy))
-maskInS[sNx+OLx,:] = 0
-maskInS[:,sNy+OLy:sNy+OLy+2] = 0
-maskInC = np.ones((sNx+2*OLx,sNy+2*OLy))
-maskInC[:,sNy+OLy] = 0
-maskInC[sNx+OLx,:] = 0
+# masks for introducing boundaries
+maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))
+maskInC[sNy+OLy-1,:] = 0
+maskInC[:,sNx+OLx-1] = 0
 maskInC = fill_overlap(maskInC)
-SeaIceMaskU = np.ones((sNx+2*OLx,sNy+2*OLy))
-SeaIceMaskV = np.ones((sNx+2*OLx,sNy+2*OLy))
+
+maskInW = np.ones((sNy+2*OLy,sNx+2*OLx))
+maskInW[sNy+OLy-1,:] = 0
+maskInW[:,sNx+OLx-2:] = 0
+maskInW = fill_overlap(maskInW)
+
+maskInS = np.ones((sNy+2*OLy,sNx+2*OLx))
+maskInS[:,sNx+OLx-1] = 0
+maskInS[sNy+OLy-2:,:] = 0
+maskInS = fill_overlap(maskInS)
+
+hIceMeanMask = maskInC.copy()
+SeaIceMaskU = maskInW.copy()
+SeaIceMaskV = maskInS.copy()
+

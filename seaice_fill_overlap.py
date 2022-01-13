@@ -1,36 +1,39 @@
 import numpy as np
 
-from seaice_size import *
-
 
 ### input:
-# A: field of size (sNx+2*OLx, sNy+2*OLy) where [OLx:-OLx,OLy:-OLy] is the actual cell
+# A: field of size (sNy+2*OLy, sNx+2*OLx) where [OLy:-OLy,OLx:-OLx] (=[OLy:sNy+OLy,OLx:sNx+OLx]) is the actual cell
 
 ### output:
 # A with filled overlaps (using the values from the actual cell)
-# this requires that the cell size is larger than the overlap!
+# this requires that the cell size is larger than the overlap (sN > OL)!
+
+sNx = 65 #Number of X points in tile
+sNy = 65 #Number of Y points in tile
+OLx = 2 #Tile overlap extent in X
+OLy = 2 #Tile overlap extent in Y
 
 def fill_overlap(A):
-    A[:OLx,:OLy] = A[sNx:sNx+OLx,sNy:sNy+OLy] #fill upper left overlap with lower right cell values
-    A[sNx+OLx:sNx+2*OLx,:OLy] = A[OLx:2*OLx,sNy:sNy+OLy] #fill lower left overlap with upper right cell values
-    A[:OLx,sNy+OLy:sNy+2*OLy] = A[sNx:sNx+OLx,OLy:2*OLy] #fill upper right overlap with lower left cell values
-    A[sNx+OLx:sNx+2*OLx,sNy+OLy:sNy+2*OLy] = A[OLx:2*OLx,OLy:2*OLy] #fill lower right overlap with upper left cell values
-    A[OLx:sNx+OLx,:OLy] = A[OLx:sNx+OLx,sNy:sNy+OLy] #fill left overlap with right cell values
-    A[OLx:sNx+OLx,sNy+OLy:sNy+2*OLy] = A[OLx:sNx+OLx,OLy:2*OLy] #fill right overlap with left cell values
-    A[:OLx,OLy:sNy+OLy] = A[sNx:sNx+OLx,OLy:sNy+OLy] #fill upper overlap with lower cell values
-    A[sNx+OLx:sNx+2*OLx,OLy:sNy+OLy] = A[OLx:2*OLx,OLy:sNy+OLy] #fill lower right overlap with upper cell values
-    
+    A[:OLy,:OLx] = A[sNy:-OLy,sNx:-OLx] #fill upper left overlap with lower right cell values
+    A[:OLy,-OLx:] = A[sNy:-OLy,OLx:2*OLx] #fill lower left overlap with upper right cell values
+    A[-OLy:,:OLx] = A[OLy:2*OLy,sNx:-OLx] #fill upper right overlap with lower left cell values
+    A[-OLy:,-OLx:] = A[OLy:2*OLy,OLx:2*OLx] #fill lower right overlap with upper left cell values
+    A[:OLy,OLx:-OLx] = A[sNy:-OLy,OLx:-OLx] #fill left overlap with right cell values
+    A[-OLy:,OLx:-OLx] = A[OLy:2*OLy,OLx:-OLx] #fill right overlap with left cell values
+    A[OLy:-OLy,:OLx] = A[OLy:-OLy,sNx:-OLx] #fill upper overlap with lower cell values
+    A[OLy:-OLy,-OLx:] = A[OLy:-OLy,OLx:2*OLx] #fill lower overlap with upper cell values
+
     return A
 
 
 def fill_overlap3d(A):
-    A[:,:OLx,:OLy] = A[:,sNx:sNx+OLx,sNy:sNy+OLy] #fill upper left overlap with lower right cell values
-    A[:,sNx+OLx:sNx+2*OLx,:OLy] = A[:,OLx:2*OLx,sNy:sNy+OLy] #fill lower left overlap with upper right cell values
-    A[:,:OLx,sNy+OLy:sNy+2*OLy] = A[:,sNx:sNx+OLx,OLy:2*OLy] #fill upper right overlap with lower left cell values
-    A[:,sNx+OLx:sNx+2*OLx,sNy+OLy:sNy+2*OLy] = A[:,OLx:2*OLx,OLy:2*OLy] #fill lower right overlap with upper left cell values
-    A[:,OLx:sNx+OLx,:OLy] = A[:,OLx:sNx+OLx,sNy:sNy+OLy] #fill left overlap with right cell values
-    A[:,OLx:sNx+OLx,sNy+OLy:sNy+2*OLy] = A[:,OLx:sNx+OLx,OLy:2*OLy] #fill right overlap with left cell values
-    A[:,:OLx,OLy:sNy+OLy] = A[:,sNx:sNx+OLx,OLy:sNy+OLy] #fill upper overlap with lower cell values
-    A[:,sNx+OLx:sNx+2*OLx,OLy:sNy+OLy] = A[:,OLx:2*OLx,OLy:sNy+OLy] #fill lower right overlap with upper cell values
-    
+    A[:,:OLy,:OLx] = A[:,sNy:-OLy,sNx:-OLx] #fill upper left overlap with lower right cell values
+    A[:,:OLy,-OLx:] = A[:,sNy:-OLy,OLx:2*OLx] #fill lower left overlap with upper right cell values
+    A[:,-OLy:,:OLx] = A[:,OLy:2*OLy,sNx:-OLx] #fill upper right overlap with lower left cell values
+    A[:,-OLy:,-OLx:] = A[:,OLy:2*OLy,OLx:2*OLx] #fill lower right overlap with upper left cell values
+    A[:,:OLy,OLx:-OLx] = A[:,sNy:-OLy,OLx:-OLx] #fill left overlap with right cell values
+    A[:,-OLy:,OLx:-OLx] = A[:,OLy:2*OLy,OLx:-OLx] #fill right overlap with left cell values
+    A[:,OLy:-OLy,:OLx] = A[:,OLy:-OLy,sNx:-OLx] #fill upper overlap with lower cell values
+    A[:,OLy:-OLy,-OLx:] = A[:,OLy:-OLy,OLx:2*OLx] #fill lower overlap with upper cell values
+
     return A

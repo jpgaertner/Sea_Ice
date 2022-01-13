@@ -65,8 +65,8 @@ SEAICE_hice_reg = 0.10
 
 #The change of mean ice thickness due to out-of-bounds values following
 #sea ice dynamics and advection
-d_hIcebyDyn = np.ones((sNx, sNy))
-d_hSnowbyDyn = np.ones((sNx, sNy))
+d_hIcebyDyn = np.ones((sNy,sNx))
+d_hSnowbyDyn = np.ones((sNy,sNx))
 
 SINegFac = 1 #value is actually one, but what is it?
 swFracAbsTopOcean = 0 #the fraction of incoming shortwave radiation absorbed in the uppermost ocean grid cell

@@ -10,7 +10,7 @@ from seaice_size import *
 # SEAICE_VARIABLE_SALINITY = false?
 
 
-###### cleaning up after advection and driver for ice ridging #####
+# cleaning up after advection and driver for ice ridging
 
 ### input
 # hIceMean
@@ -24,8 +24,8 @@ from seaice_size import *
 # Area
 # TIceSnow
 
-def ridging(hIceMean, hSnowMean, Area, TIceSnow):
 
+def ridging(hIceMean, hSnowMean, Area, TIceSnow):
 
     ##### pathological cases #####
 
@@ -53,5 +53,6 @@ def ridging(hIceMean, hSnowMean, Area, TIceSnow):
     ##### ridging #####
 
     Area = np.minimum(Area, 1)
+
 
     return hIceMean, hSnowMean, Area, TIceSnow
