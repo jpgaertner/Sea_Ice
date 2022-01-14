@@ -1,11 +1,13 @@
 import numpy  as np
 import matplotlib.pyplot as plt
 
-a = np.ones((5,10))
-#a = np.transpose(a)
+a = np.arange(9)
+a = np.reshape(a, (3,3))
 
-plt.contourf(a)
-#plt.show()
+print(a)
 
-if True:
-    print(1)
+b = np.sum(a[:,:], axis=0)
+
+print(b)
+
+

@@ -184,9 +184,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     ##### calculate surface temperature and heat fluxes ##### 
 
     # record prior ice surface temperatures
-    TIceIn_mult = TIceSnow.copy()
-    TIceOut_mult = TIceSnow.copy()
-    #propably only use one
+    TIce_mult = TIceSnow.copy()
 
     for l in range(0, nITC):
         # set relative thickness of ice and snow categories
@@ -199,8 +197,8 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     TempFrz = tempFrz0 + dTempFrz_dS * salt + celsius2K
 
     for l in range(0, nITC):
-        TIceOut_mult[:,:,l], F_io_net_mult[:,:,l], F_ia_net_mult[:,:,l], F_ia_mult[:,:,l], qswi_mult[:,:,l], FWsublim_mult[:,:,l] = (
-        solve4temp(hIceActual_mult[:,:,l], hSnowActual_mult[:,:,l], TIceIn_mult[:,:,l], TempFrz, ug, SWDown, LWDown, ATemp, aqh))
+        TIce_mult[:,:,l], F_io_net_mult[:,:,l], F_ia_net_mult[:,:,l], F_ia_mult[:,:,l], qswi_mult[:,:,l], FWsublim_mult[:,:,l] = (
+        solve4temp(hIceActual_mult[:,:,l], hSnowActual_mult[:,:,l], TIce_mult[:,:,l], TempFrz, ug, SWDown, LWDown, ATemp, aqh))
 
 
     ##### evaluate precipitation as snow or rain #####
@@ -209,7 +207,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     PrecipRateOverIceSurfaceToSea = precip.copy()
 
     # if there is ice and the temperature is below the freezing point, the precipitation falls and accumulates as snow:
-    tmp = np.where((AreapreTH > 0) & (TIceOut_mult[:,:,0] < celsius2K))
+    tmp = np.where((AreapreTH > 0) & (TIce_mult[:,:,0] < celsius2K))
     SnowAccRateOverIce[tmp] = snowPrecip[tmp] * rhoFresh2rhoSnow
     PrecipRateOverIceSurfaceToSea[tmp] = 0
     #maybe change if criteria
@@ -221,13 +219,12 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     #####  temperature and find the average flux across it     #####
 
     # update surface temperature and fluxes
-    TIceSnow = TIceOut_mult.copy()
-    for l in range(0,nITC):
-        F_io_net = F_io_net + F_io_net_mult[:,:,l] * recip_nITC
-        F_ia_net = F_ia_net + F_ia_net_mult[:,:,l] * recip_nITC
-        F_ia = F_ia + F_ia_mult[:,:,l] * recip_nITC
-        qswi = qswi + qswi_mult[:,:,l] * recip_nITC
-        FWsublim = FWsublim + FWsublim_mult[:,:,l] * recip_nITC
+    TIceSnow = TIce_mult.copy()
+    F_io_net = np.sum(F_io_net_mult*recip_nITC, axis=2)
+    F_ia_net = np.sum(F_ia_net_mult*recip_nITC, axis=2)
+    F_ia = np.sum(F_ia_mult*recip_nITC, axis=2)
+    qswi = np.sum(qswi_mult*recip_nITC, axis=2)
+    FWsublim = np.sum(FWsublim_mult*recip_nITC, axis=2)
 
     # the ice growth rate beneath ice is given by the upward conductive flux F_io_net and qi:
     IceGrowthRateUnderExistingIce = F_io_net * qi
