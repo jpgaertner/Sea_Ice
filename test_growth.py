@@ -24,26 +24,26 @@ from seaice_params import *
 from seaice_growth import growth
 import matplotlib.pyplot as plt
 
-# sNx = 1
-# sNy = 1
-# OLx = 2
-# OLy = 2
+sNx = 1
+sNy = 1
+OLx = 2
+OLy = 2
 
 
 
 hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy))*1.3
-Area = np.ones((sNx+2*OLx,sNy+2*OLy))*0.7
+Area = np.ones((sNx+2*OLx,sNy+2*OLy))*1
 hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy))*0.1
 
 hIceMeanMask = np.ones((sNx+2*OLx,sNy+2*OLy))*1
 salt = np.ones((sNx+2*OLx,sNy+2*OLy))*29
-TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC))*234.4680938720703
+TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC))*236.07375781322108
 precip = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #order 1e-6
 snowPrecip = np.ones((sNx+2*OLx,sNy+2*OLy))*0
 evap = np.ones((sNx+2*OLx,sNy+2*OLy))*0
 runoff = np.ones((sNx+2*OLx,sNy+2*OLy))*0
 wspeed = np.ones((sNx+2*OLx,sNy+2*OLy))*2
-theta = np.ones((sNx+2*OLx,sNy+2*OLy))*celsius2K-1.96
+theta = np.ones((sNx+2*OLx,sNy+2*OLy))*celsius2K-1.66 #-1.96
 Qnet = np.ones((sNx+2*OLx,sNy+2*OLy))* 153.536072
 Qsw = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #winter condition
 SWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #winter

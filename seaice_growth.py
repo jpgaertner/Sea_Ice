@@ -5,10 +5,10 @@ from seaice_params import *
 
 from seaice_solve4temp import solve4temp
 
-# sNx = 1
-# sNy = 1
-# OLx = 2
-# OLy = 2
+sNx = 1
+sNy = 1
+OLx = 2
+OLy = 2
 
 ### input
 # hIceMean: mean ice thickness [m3/m2] (= hIceActual * Area with Area the sea ice cover fraction and hIceActual = Vol_ice / x_len y_len)
