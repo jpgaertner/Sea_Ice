@@ -24,10 +24,10 @@ from seaice_params import *
 from seaice_growth import growth
 import matplotlib.pyplot as plt
 
-sNx = 1
-sNy = 1
-OLx = 2
-OLy = 2
+# sNx = 1
+# sNy = 1
+# OLx = 2
+# OLy = 2
 
 
 

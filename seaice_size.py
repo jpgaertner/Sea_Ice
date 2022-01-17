@@ -28,7 +28,8 @@ OLy = 2 #Tile overlap extent in Y
 Nr  =  26 #Number of points in vertical direction
 
 # number of ice thickness categories
-# instead of assuming just one thickness for a grid cell, a distribution of nITD thicknesses (centered around the mean value and containing equal fractions of the area) is assumed.
+# instead of assuming just one thickness for a grid cell, a distribution of
+# nITD thicknesses (centered around the mean value and containing equal fractions of the area) is assumed.
 # Bitz et al. (2001, JGR) suggest a minimum of nITD = 5
 nITC = 1
 recip_nITC = 1 / nITC
@@ -54,14 +55,12 @@ recip_dxV = 1 / dxV
 recip_dyU = 1 / dyU
 dxN = 1
 
-rAz = np.ones((sNy+2*OLy,sNx+2*OLx))
 rA = dxF * dyF #R-face are f[X,Y] ( m^2 )
 #   Note: In a cartesian framework rA is simply dx*dy, however we use rA to allow for non-globally
 #   orthogonal coordinate frames (with appropriate metric terms)
 recip_rA = 1 / rA
 
 fCori = np.ones((sNy+2*OLy,sNx+2*OLx))*1e-4 #coriolis parameter at grid center point
-fCoriG = np.ones((sNy+2*OLy,sNx+2*OLx))*1e-4 #coriolis parameter at grid corner point (south west corner?)
 
 # masks for introducing boundaries
 maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))

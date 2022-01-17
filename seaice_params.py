@@ -3,11 +3,11 @@ import numpy as np
 from seaice_size import *
 
 # densities [g/m3]
-rhoIce = 910 
+rhoIce = 900 
 rhoSnow = 330
-rhoFresh = 999.8
+rhoFresh = 1000
 recip_rhoFresh = 1 / rhoFresh
-rhoConst = 1027.0 #constant reference density for sea water (Boussinesq)
+rhoConst = 1026 #constant reference density for sea water (Boussinesq)
 recip_rhoConst = 1 / rhoConst
 rhoice2rhosnow     = rhoIce / rhoSnow
 rhoIce2rhoFresh = rhoIce / rhoFresh
@@ -22,16 +22,11 @@ drySnowAlb = 0.84
 drySnowAlb_south = 0.84
 wetSnowAlb = 0.7
 wetSnowAlb_south = 0.7
-
 wetAlbTemp = 0
 
-#ifdef ALLOW_EXF
-#Use parameters that have already been set in data.exf:
-#else:
 lhFusion = 3.34 * 10**5
 lhEvap = 2.5 * 10**6
 lhSublim = lhEvap + lhFusion
-F_lh_cap = True
 cpAir = 1004
 rhoAir = 1.3
 stefBoltz = 5.67e-8
@@ -88,9 +83,6 @@ recip_h0 = 1 / h0
 h0_south = 0.5
 recip_h0_south = 1 / h0_south
 
-
-############# dynsolver ##############
-
 airTurnAngle = 0 #turning angle of air-ice interfacial stress
 waterTurnAngle = 0 #turning angle of the water-ice interfacial stress 
 eps = 1e-8
@@ -98,35 +90,11 @@ eps_sq = eps**2
 si_eps = 1e-5
 area_floor = si_eps
 
-airOceanDrag = 0.001 #air-ocean drag coefficient
-airIceDrag = 0.001 #air-ice drag coefficient
+airOceanDrag = 0.0012 #air-ocean drag coefficient
+airIceDrag = 0.0012 #air-ice drag coefficient
 airIceDrag_south = 0.001 
 waterIceDrag = 0.0055 #water-ice drag coefficient
 waterIceDrag_south = 0.0055
 
-seaice_strenght = 2.75e4 #'pstar'?
-pStar = seaice_strenght
-seaice_cStar = 20 #sea ice strength parameter
-
-zetaMax = 2.5e8 #factor determining the maximum viscosity (?)
-zetaMin = 0 #lower bound for viscosity
-
-linearIterMax = 1500 #number of allowed linear solver iterations for implicit (JFNK and Picard)
-nonLinearIterMax = 2 #number of allowed non-linear solver iterations for implicit solvers (JFNK and Picard)
-#can have different values (ifdef... )
-
-seaIceEccen = 2 #sea-ice eccentricity of the elliptical yield curve
-
-deltatDyn = 1 #value? #timestep for dynamic solver [s]
-recip_deltatDyn = 1 / deltatDyn
-
-#### sea ice dynsolver ####
 seaIceLoadFac = 1 #factor to scale (and turn off) seaIceLoading
 gravity = 9.8156
-
-#### sea ice lsr ####
-seaIceOLx = OLx - 2
-seaIceOLy = OLy - 2
-LSRrelaxU = 0.95 #relaxation parameter for LSR-solver: U/V-component
-LSRrelaxV = 0.95
-

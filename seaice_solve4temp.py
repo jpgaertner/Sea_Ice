@@ -5,10 +5,10 @@ import numpy as np
 from seaice_size import *
 from seaice_params import *
 
-sNx = 1
-sNy = 1
-OLx = 2
-OLy = 2
+# sNx = 1
+# sNy = 1
+# OLx = 2
+# OLy = 2
 
 ### input
 #hIceActual     : actual ice thickness [m]
