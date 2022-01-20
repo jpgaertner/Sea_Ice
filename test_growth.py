@@ -24,10 +24,10 @@ from seaice_params import *
 from seaice_growth import growth
 import matplotlib.pyplot as plt
 
-# sNx = 1
-# sNy = 1
-# OLx = 2
-# OLy = 2
+sNx = 1
+sNy = 1
+OLx = 2
+OLy = 2
 
 
 
@@ -60,7 +60,7 @@ area = np.array([Area[0,0]])
 qsw = np.array([Qsw[0,0]])
 days = np.array([0])
 
-timesteps = 720
+timesteps = 720*2
 
 # in F, runtime = 360d with deltat = 12h and dump frequency = 10d 
 for i in range(timesteps):
@@ -77,18 +77,19 @@ for i in range(timesteps):
     days = np.append(days,(i+1)/2)
 
 
-# fig, axs = plt.subplots(3,2, figsize=(10,6))
-# axs[0,0].plot(ice)
-# axs[0,0].set_ylabel("Ice Thickness")
-# axs[0,1].plot(snow)
-# axs[0,1].set_ylabel("Snow Thickness")
-# axs[1,0].plot(area)
-# axs[1,0].set_ylabel("Area")
-# axs[1,1].plot(qnet)
-# axs[1,1].set_ylabel("Qnet")
-# axs[2,0].plot(iceTemp)
-# axs[2,0].set_ylabel("Ice Temperature")
-# axs[2,1].plot(qsw)
-# axs[2,1].plot("Qsw")
-# fig.tight_layout()
-# plt.show()
+fig, axs = plt.subplots(3,2, figsize=(10,6))
+axs[0,0].plot(ice)
+axs[0,0].set_ylabel("Ice Thickness")
+axs[0,1].plot(snow)
+axs[0,1].set_ylabel("Snow Thickness")
+axs[1,0].plot(area)
+axs[1,0].set_ylabel("Area")
+axs[1,1].plot(qnet)
+axs[1,1].set_ylabel("Qnet")
+axs[2,0].plot(iceTemp)
+axs[2,0].set_ylabel("Ice Temperature")
+axs[2,1].plot(qsw)
+axs[2,1].plot("Qsw")
+
+fig.tight_layout()
+plt.show()
