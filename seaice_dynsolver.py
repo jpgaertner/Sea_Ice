@@ -9,23 +9,23 @@ from seaice_ocean_stress import ocean_stress
 
 
 ### input:
-# uIce: zonal ice velocity [m/s] at south-west B-grid (or c grid? ifdef cgrid) u point? (what does the grid look like) (>0 = from west to east)
-# vIce: meridional ice velocty [m/s] at south-west B-grid v point (>0 = from south to north)
-# hIceMean: mean ice thickness [m3/m2]
-# hSnowMean: mean snow thickness [m3/m2]
+# uIce: zonal ice velocity at south-west B-grid (or c grid? ifdef cgrid) u point? (what does the grid look like) (>0 = from west to east)
+# vIce: meridional ice velocty at south-west B-grid v point (>0 = from south to north)
+# hIceMean: mean ice thickness
+# hSnowMean: mean snow thickness
 # Area: ice cover fraction
 # etaN: ocean surface elevation
 # pLoad: surface pressure
 # SeaIceLoad: load of sea ice on ocean surface
 # useRealFreshWaterFlux: flag for using the sea ice load in the calculation of the ocean surface height
-# uVel: zonal ocean velocity [m/s]
-# vVel: meridional ocean velocity [m/s]
-# uWind: zonal wind velocity [m/s]
-# vWind: meridional wind velocity [m/s]
+# uVel: zonal ocean velocity
+# vVel: meridional ocean velocity
+# uWind: zonal wind velocity
+# vWind: meridional wind velocity
 
 ### output:
-# uIce: zonal ice velocity [m/s]
-# vIce: meridional ice velocity [m/s]
+# uIce: zonal ice velocity
+# vIce: meridional ice velocity
 
 
 def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux, useFreedrift, useEVP, fu, fv):
@@ -65,7 +65,7 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean, hSnowMean, Area, e
     else:
         phiSurf = phiSurf + pLoad * recip_rhoConst
 
-    # forcing by wind
+    # forcing by wind - isnt als the ocean forcing included in tauX,Y?
     #if SEAICEscaleSurfStress (true)
     IceSurfStressX0[1:,1:] = tauX[1:,1:] * 0.5 * (Area[1:,1:] + Area[1:,:-1]) #forcex0 in F
     IceSurfStressY0[1:,1:] = tauY[1:,1:] * 0.5 * (Area[1:,1:] + Area[:-1,1:]) #forcey0 in F
@@ -92,15 +92,12 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean, hSnowMean, Area, e
 
     #if SEAICEuseLSR
     #call SEAICE_LSR
-    #solver
 
     #if SEAICEuseKrylov
     #call SEAICE_KRYLOV
-    #solver
 
     #if SEAICEuseJFNK
     #call SEAICE_JFNK
-    #solver
 
     # update stress on ocean surface
     fu, fv = ocean_stress(uIce, vIce, uVel, vVel, Area, fu, fv)

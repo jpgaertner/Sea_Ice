@@ -57,6 +57,9 @@ SWDown = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
 LWDown = np.ones((sNy+2*OLy,sNx+2*OLx)) * 20
 ATemp = np.ones((sNy+2*OLy,sNx+2*OLx)) * celsius2K - 20.16
 aqh = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+fu = np.zeros((sNy+2*OLy,sNx+2*OLx))
+fv = np.zeros((sNy+2*OLy,sNx+2*OLx))
+
 
 useFreedrift = False
 useEVP = True
@@ -77,7 +80,7 @@ for i in range(2):
     # days[i] = i
 
 
-    uIce, vIce = dynsolver(uIce, vIce, uVel, vVel, uWind[0,:,:], vWind[0,:,:], hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux, useFreedrift, useEVP)
+    uIce, vIce = dynsolver(uIce, vIce, uVel, vVel, uWind[0,:,:], vWind[0,:,:], hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux, useFreedrift, useEVP, fu, fv)
 
     hIceMean, hSnowMean, Area = advdiff(uIce, vIce, hIceMean, hSnowMean, Area)
 
@@ -97,4 +100,4 @@ for i in range(2):
 plt.contourf(hIceMean[OLy:-OLy,OLx:-OLx])
 #plt.contourf(vWind[0,OLy:-OLy,OLx:-OLx])
 plt.colorbar()
-plt.show()
+#plt.show()

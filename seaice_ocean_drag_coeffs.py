@@ -22,7 +22,7 @@ def ocean_drag_coeffs(uIce, vIce, uVel, vVel):
 
     # calculate linear drag coefficient
     cDrag = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    cDrag[:-1,:-1] = dragCoeff * np.sqrt(0.25 * (((uIce[:-1,:-1] - uVel[:-1,:-1])**2 + (uIce[:-1,1:] - uVel[:-1,1:])**2)* maskInW + ((vIce[:-1,:-1] - vVel[:-1,:-1])**2 + (vIce[1:,:-1] - vVel[1:,:-1])**2) * maskInS))
+    cDrag[:-1,:-1] = dragCoeff[:-1,:-1] * np.sqrt(0.25 * (((uIce[:-1,:-1] - uVel[:-1,:-1])**2 * maskInW[:-1,:-1] + (uIce[:-1,1:] - uVel[:-1,1:])**2 * maskInW[:-1,1:]) + ((vIce[:-1,:-1] - vVel[:-1,:-1])**2 * maskInS[:-1,:-1] + (vIce[1:,:-1] - vVel[1:,:-1])**2 * maskInS[1:,:-1])))
     tmp = np.where(dragCoeff * cDrag <= cDragMin**2)
     cDrag[tmp] = cDragMin
     cDrag = cDrag * hIceMeanMask

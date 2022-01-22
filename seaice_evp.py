@@ -16,7 +16,7 @@ from seaice_bottomdrag_coeffs import bottomdrag_coeffs
 # Area: ice cover fraction
 # press0: ocean surface pressure
 # secondOrderBC: flag
-# IceSurfStressX0: zonal stress on ice surface at c point?
+# IceSurfStressX0: zonal stress on ice surface at c point, difference tauX?
 # IceSurfStressY0: meridional stress on ice surface at c point
 
 ### output:
@@ -59,22 +59,20 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC, IceSurfSt
 
     PlasDefCoeffSq = PlasDefCoeff**2
     recip_PlasDefCoeffSq = 1 / PlasDefCoeffSq
-    deltaMinSq = deltaMin**2 #what does deltaMin mean?
 
     #nEVPSteps = SEAICEnEVPstarSteps with SEAICEnEVPstarSteps = INT(SEAICE_deltaTdyn/SEAICE_deltaTevp)
     #SEAICE_deltaTevp = ?
 
     evpAlpha = 2 * evpTauRelax / deltaTevp
-    #what does evpTauRelax mean?
     recip_evpAlpha = 1 / evpAlpha
     evpStarFac = 1
     evpRevFac = 1
     recip_evpRevFac = recip_PlasDefCoeffSq
 
     denom1 = np.ones((sNy+2*OLy,sNx+2*OLx)) / (evpAlpha)
-    denom2 = denom1.copy() #why?
+    denom2 = denom1.copy()
 
-    evpBeta = evpAlpha #why?
+    evpBeta = evpAlpha #needed?
     betaFac = evpBeta * recip_deltaTdyn
     betaFacU = betaFac
     betaFacV = betaFac
