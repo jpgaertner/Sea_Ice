@@ -55,6 +55,7 @@ recip_dxV = 1 / dxV
 recip_dyU = 1 / dyU
 dxN = 1
 
+
 rA = dxF * dyF #R-face are f[X,Y] ( m^2 )
 #   Note: In a cartesian framework rA is simply dx*dy, however we use rA to allow for non-globally
 #   orthogonal coordinate frames (with appropriate metric terms)
@@ -82,3 +83,7 @@ hIceMeanMask = maskInC.copy()
 SeaIceMaskU = maskInW.copy()
 SeaIceMaskV = maskInS.copy()
 
+k1AtC = np.ones((sNy+2*OLy,sNx+2*OLx))
+k2AtC = np.ones((sNy+2*OLy,sNx+2*OLx))
+k1AtZ = np.ones((sNy+2*OLy,sNx+2*OLx))
+k2AtZ = np.ones((sNy+2*OLy,sNx+2*OLx))

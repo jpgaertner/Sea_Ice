@@ -36,29 +36,29 @@ def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):
     ##### calculate advective flux in x direction #####
 
     # advective flux in x direction
-    afx = fluxlimit_adv_x(uFld, localTij, uTrans, deltatTherm, maskLocW)
+    afx = fluxlimit_adv_x(uFld, localTij, uTrans, deltaTtherm, maskLocW)
 
     # update the local seaice field
     if extensiveFld:
-        localTij[:,1:-1] = localTij[:,1:-1] - deltatTherm * maskInC[:,1:-1] * recip_rA[:,1:-1] * (afx[:,2:] - afx[:,1:-1])
+        localTij[:,1:-1] = localTij[:,1:-1] - deltaTtherm * maskInC[:,1:-1] * recip_rA[:,1:-1] * (afx[:,2:] - afx[:,1:-1])
     else:
-        localTij[:,1:-1] = localTij[:,1:-1] - deltatTherm * maskInC[:,1:-1] * recip_rA[:,1:-1] * r_hFld[:,1:-1] * ((afx[:,2:] - afx[:,1:-1]) - (uTrans[:,2:] - uTrans[:,1:-1]) * iceFld[:,1:-1])
+        localTij[:,1:-1] = localTij[:,1:-1] - deltaTtherm * maskInC[:,1:-1] * recip_rA[:,1:-1] * r_hFld[:,1:-1] * ((afx[:,2:] - afx[:,1:-1]) - (uTrans[:,2:] - uTrans[:,1:-1]) * iceFld[:,1:-1])
 
 
     ##### calculate advective flux in y direction #####
 
     # advective flux in y direction
-    afy = fluxlimit_adv_y(vFld, localTij, vTrans, deltatTherm, maskLocS)
+    afy = fluxlimit_adv_y(vFld, localTij, vTrans, deltaTtherm, maskLocS)
 
     # update the local seaice field
     if extensiveFld:
-        localTij[1:-1,:] = localTij[1:-1,:] - deltatTherm * maskInC[1:-1,:] * recip_rA[1:-1,:] * (afy[2:,:] - afy[1:-1,:])
+        localTij[1:-1,:] = localTij[1:-1,:] - deltaTtherm * maskInC[1:-1,:] * recip_rA[1:-1,:] * (afy[2:,:] - afy[1:-1,:])
     else:
-        localTij[1:-1,:] = localTij[1:-1,:] - deltatTherm * maskInC[1:-1,:] * recip_rA[1:-1,:] * r_hFld[1:-1,:] * ((afy[2:,:] - afy[1:-1,:]) - (vTrans[2:,:] - vTrans[1:-1,:]) * iceFld[1:-1,:])
+        localTij[1:-1,:] = localTij[1:-1,:] - deltaTtherm * maskInC[1:-1,:] * recip_rA[1:-1,:] * r_hFld[1:-1,:] * ((afy[2:,:] - afy[1:-1,:]) - (vTrans[2:,:] - vTrans[1:-1,:]) * iceFld[1:-1,:])
 
 
     # explicit advection is done, store tendency in gFld
-    gFld = (localTij - iceFld) / deltatTherm
+    gFld = (localTij - iceFld) / deltaTtherm
     gFld = fill_overlap(gFld)
 
 

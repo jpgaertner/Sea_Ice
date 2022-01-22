@@ -212,7 +212,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     PrecipRateOverIceSurfaceToSea[tmp] = 0
     #maybe change if criteria
 
-    SnowAccOverIce = SnowAccRateOverIce * AreapreTH * deltatTherm
+    SnowAccOverIce = SnowAccRateOverIce * AreapreTH * deltaTtherm
 
 
     ##### for every thickness category, record the ice surface #####
@@ -231,7 +231,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     # if there is a net heat flux convergence at the sea ice/snow surface (F_ia_net < 0), snow can be melted:
     PotSnowMeltRateFromSurf = - F_ia_net * qs
     # the depth of snow that can be melted in one time step:
-    PotSnowMeltFromSurf = PotSnowMeltRateFromSurf * deltatTherm
+    PotSnowMeltFromSurf = PotSnowMeltRateFromSurf * deltaTtherm
 
     noPriorArea = np.where(AreapreTH == 0)
     IceGrowthRateUnderExistingIce[noPriorArea] = 0
@@ -253,8 +253,8 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     # if there is an excess of heat flux convergence after snow melting, it will be used to melt ice
     allSnowMelted = np.where(PotSnowMeltFromSurf >= hSnowActual)
     SnowMeltFromSurface[allSnowMelted] = hSnowActual[allSnowMelted]
-    SnowMeltRateFromSurface[allSnowMelted] = SnowMeltFromSurface[allSnowMelted] * recip_deltatTherm
-    SurfHeatFluxConvergToSnowMelt[allSnowMelted] = - hSnowActual[allSnowMelted] * recip_deltatTherm / qs
+    SnowMeltRateFromSurface[allSnowMelted] = SnowMeltFromSurface[allSnowMelted] * recip_deltaTtherm
+    SurfHeatFluxConvergToSnowMelt[allSnowMelted] = - hSnowActual[allSnowMelted] * recip_deltaTtherm / qs
     
     # the surface heat flux convergence is reduced by the amount that is used for melting snow:
     F_ia_net = F_ia_net - SurfHeatFluxConvergToSnowMelt
@@ -319,9 +319,9 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
 
     ######  update sea ice cover fraction and mean ice and snow thickness #####
 
-    Area = AreapreTH + dArea_dt * hIceMeanMask * deltatTherm
-    hIceMean = hIceMeanpreTH + dhIceMean_dt * hIceMeanMask * deltatTherm
-    hSnowMean = hSnowMeanpreTH + dhSnowMean_dt * hIceMeanMask * deltatTherm
+    Area = AreapreTH + dArea_dt * hIceMeanMask * deltaTtherm
+    hIceMean = hIceMeanpreTH + dhIceMean_dt * hIceMeanMask * deltaTtherm
+    hSnowMean = hSnowMeanpreTH + dhSnowMean_dt * hIceMeanMask * deltaTtherm
 
     # set boundaries:
     Area.clip(0,1)
@@ -354,11 +354,11 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     EnergyInNewTotalIceVolume = ActualNewTotalVolumeChange / qi
 
     # the net energy flux out of the ocean [J/m2]
-    NetEnergyFluxOutOfOcean = (AreapreTH * (F_ia_net + F_io_net + qswi) + (1 - AreapreTH) * F_ao) * deltatTherm
+    NetEnergyFluxOutOfOcean = (AreapreTH * (F_ia_net + F_io_net + qswi) + (1 - AreapreTH) * F_ao) * deltaTtherm
     # if the net energy flux out of the ocean is balanced by the latent heat of fusion, the temperature of the mixed layer will not change
     ResidualEnergyOutOfOcean = NetEnergyFluxOutOfOcean - EnergyInNewTotalIceVolume
     #the total heat flux out of the ocean [W/m2]
-    Qnet = ResidualEnergyOutOfOcean * recip_deltatTherm
+    Qnet = ResidualEnergyOutOfOcean * recip_deltaTtherm
     # the freshwater flux from melting [m3/m2] (positive if the ice thickness decreases/ melting occurs)
     FreshwaterContribFromIce = - ActualNewTotalVolumeChange * rhoIce2rhoFresh
     # in the case of non-zero ice salinity, the freshwater contribution is reduced by the salinity ration of ice to water
@@ -369,15 +369,15 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     salt.clip(0) #leave in for now, remove when code is running and can be compared
 
     tmpscal0 = np.minimum(saltIce, salt)
-    saltflux = (ActualNewTotalVolumeChange + SIhIceMeanNeg) * tmpscal0 * hIceMeanMask * rhoIce * recip_deltatTherm
+    saltflux = (ActualNewTotalVolumeChange + SIhIceMeanNeg) * tmpscal0 * hIceMeanMask * rhoIce * recip_deltaTtherm
 
     # the freshwater contribution from snow melt [m3/m2]
     FreshwaterContribFromSnowMelt = ActualNewTotalSnowMelt / rhoFresh2rhoSnow
 
     # evaporation minus precipitation minus runoff (freshwater flux to ocean)
     EvPrecRun = hIceMeanMask *  ((evap - precip) * (1 - AreapreTH) - PrecipRateOverIceSurfaceToSea * AreapreTH - runoff - (
-        FreshwaterContribFromIce + FreshwaterContribFromSnowMelt) / deltatTherm) * rhoFresh + hIceMeanMask * (
-        SIhIceMeanNeg * rhoIce + SIhSnowMeanNeg * rhoSnow) * recip_deltatTherm
+        FreshwaterContribFromIce + FreshwaterContribFromSnowMelt) / deltaTtherm) * rhoFresh + hIceMeanMask * (
+        SIhIceMeanNeg * rhoIce + SIhSnowMeanNeg * rhoSnow) * recip_deltaTtherm
 
     # calculate sea ice load on the sea surface
     seaIceLoad = hIceMean * rhoIce + hSnowMean * rhoSnow

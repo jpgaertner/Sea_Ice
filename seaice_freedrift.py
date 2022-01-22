@@ -81,10 +81,5 @@ def seaIceFreeDrift(hIceMean, uVel, vVel, IceSurfStressX0, IceSurfStressY0):
     uIceFD = uIceFD * SeaIceMaskU
     vIceFD = vIceFD * SeaIceMaskV
 
-    # import matplotlib.pyplot as plt
-    # plt.contourf(uIceFD[OLy:-OLy,OLx:-OLx])
-    # plt.colorbar()
-    # plt.show()
-
 
     return uIceFD, vIceFD

@@ -68,8 +68,10 @@ swFracAbsTopOcean = 0 #the fraction of incoming shortwave radiation absorbed in 
 
 celsius2K = 273.16
 
-deltatTherm = 86400/2 #timestep for thermodynamic equations [s]
-recip_deltatTherm = 1 / deltatTherm
+deltaTtherm = 86400/2 #timestep for thermodynamic equations [s]
+recip_deltaTtherm = 1 / deltaTtherm
+deltaTdyn = deltaTtherm #timestep for dynamic equations [s]
+recip_deltaTdyn = 1 / deltaTdyn
 
 #constants needed for McPhee formulas for calculating turbulent ocean fluxes:
 stantonNr = 0.0056 #stanton number
@@ -84,7 +86,8 @@ h0_south = 0.5
 recip_h0_south = 1 / h0_south
 
 airTurnAngle = 0 #turning angle of air-ice interfacial stress
-waterTurnAngle = 0 #turning angle of the water-ice interfacial stress 
+waterTurnAngle = 0 #turning angle of the water-ice interfacial stress
+
 eps = 1e-8
 eps_sq = eps**2
 si_eps = 1e-5
@@ -95,6 +98,23 @@ airIceDrag = 0.0012 #air-ice drag coefficient
 airIceDrag_south = 0.001 
 waterIceDrag = 0.0055 #water-ice drag coefficient
 waterIceDrag_south = 0.0055
+cDragMin = 0.25 #minimum of liniear drag coefficient between ice and ocean
+stressFactor = 1
 
 seaIceLoadFac = 1 #factor to scale (and turn off) seaIceLoading
 gravity = 9.8156
+
+PlasDefCoeff = 2 #coefficient for plastic deformation, related to the relation of the critical stresses needed for plastic deformation when pushing ice together vs. pulling it apart
+evpTauRelax = -1
+
+deltaMin = eps
+evpAlphaMin = 5
+pressReplFac = 1
+
+cStar = 20
+
+# basal drag parameters
+basalDragU0 = 5e-5
+basalDragK1 = 8
+basalDragK2 = 0
+cBasalStar = cStar

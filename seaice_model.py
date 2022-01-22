@@ -1,4 +1,3 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -59,6 +58,8 @@ LWDown = np.ones((sNy+2*OLy,sNx+2*OLx)) * 20
 ATemp = np.ones((sNy+2*OLy,sNx+2*OLx)) * celsius2K - 20.16
 aqh = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
 
+useFreedrift = False
+useEVP = True
 
 # timesteps = 32
 
@@ -76,7 +77,7 @@ for i in range(2):
     # days[i] = i
 
 
-    uIce, vIce = dynsolver(uIce, vIce, uVel, vVel, uWind[0,:,:], vWind[0,:,:], hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux)
+    uIce, vIce = dynsolver(uIce, vIce, uVel, vVel, uWind[0,:,:], vWind[0,:,:], hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux, useFreedrift, useEVP)
 
     hIceMean, hSnowMean, Area = advdiff(uIce, vIce, hIceMean, hSnowMean, Area)
 
