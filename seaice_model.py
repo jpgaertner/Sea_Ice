@@ -60,27 +60,18 @@ aqh = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
 fu = np.zeros((sNy+2*OLy,sNx+2*OLx))
 fv = np.zeros((sNy+2*OLy,sNx+2*OLx))
 
+R_low = np.ones((sNy+2*OLy,sNx+2*OLx)) * -1000
+
+secondOrderBC = False
+
 
 useFreedrift = False
-useEVP = True
+useEVP = not useFreedrift
 
-# timesteps = 32
-
-# ice = [None] * timesteps
-# snow = [None] * timesteps
-# area = [None] * timesteps
-# days = [None] * timesteps
+for i in range(1):
 
 
-for i in range(2):
-
-    # ice[i] = hIceMean
-    # snow[i] = hIceMean
-    # area[i] = Area
-    # days[i] = i
-
-
-    uIce, vIce = dynsolver(uIce, vIce, uVel, vVel, uWind[0,:,:], vWind[0,:,:], hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux, useFreedrift, useEVP, fu, fv)
+    uIce, vIce, fu, fv = dynsolver(uIce, vIce, uVel, vVel, uWind[0,:,:], vWind[0,:,:], hIceMean, hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux, useFreedrift, useEVP, fu, fv, secondOrderBC, R_low)
 
     hIceMean, hSnowMean, Area = advdiff(uIce, vIce, hIceMean, hSnowMean, Area)
 
@@ -89,15 +80,13 @@ for i in range(2):
     hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet, seaIceLoad = growth(hIceMean, hIceMeanMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh)
 
 
-
-
 # print(np.mean(hIceMean))
 # print(np.mean(uWind))
 # print(np.mean(vWind))
-#print(np.max(uIce))
+# print(np.max(uIce))
 # print(np.max(vIce))
-#plt.contourf(vIce[OLy:-OLy,OLx:-OLx])
-plt.contourf(hIceMean[OLy:-OLy,OLx:-OLx])
+plt.pcolormesh(uIce[OLy:-OLy,OLx:-OLx])
+#plt.pcolormesh(hIceMean[OLy:-OLy,OLx:-OLx])
 #plt.contourf(vWind[0,OLy:-OLy,OLx:-OLx])
 plt.colorbar()
-#plt.show()
+plt.show()
