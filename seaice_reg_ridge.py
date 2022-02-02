@@ -30,9 +30,9 @@ def ridging(hIceMean, hSnowMean, Area, TIceSnow):
     ##### pathological cases #####
 
     # case 1: negative values
-    hIceMean.clip(0)
-    hSnowMean.clip(0)
-    Area.clip(0)
+    hIceMean = np.clip(hIceMean, 0, None)
+    hSnowMean = np.clip(hSnowMean, 0, None)
+    Area = np.clip(Area, 0, None)
 
     # case 2: very thin ice
     thinIce = np.where(hIceMean <= si_eps)

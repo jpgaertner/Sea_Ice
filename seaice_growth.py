@@ -81,7 +81,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     dhSnowMean_dt = np.zeros((sNy+2*OLy,sNx+2*OLx)) #S_hsnow in F
 
     # heat fluxes [W/m2]
-    F_ia = np.zeros((sNy+2*OLy,sNx+2*OLx)) #sea ice/snow surface heat flux to atmosphere (+ = upward)
+    #F_ia #sea ice/snow surface heat flux to atmosphere (+ = upward)
     F_ia_net = np.zeros((sNy+2*OLy,sNx+2*OLx)) #the net heat flux divergence at the sea ice/snow surface
     #                                   including sea ice conductive fluxes and atmospheric fluxes
     #                                   = 0: surface heat loss is balanced by upward conductive fluxes
@@ -94,7 +94,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     #F_ao: heat flux from atmosphere to ocean
     F_oi = np.zeros((sNy+2*OLy,sNx+2*OLx)) #heat flux from ocean to the ice (change of mixed layer temperature) (+ = upward)
 
-    FWsublim = np.zeros((sNy+2*OLy,sNx+2*OLx)) #freshwater flux due to sublimation [kg/m2] (+ = upward)
+    #FWsublim #freshwater flux due to sublimation [kg/m2] (+ = upward)
 
     hIceActual_mult = np.zeros((sNy+2*OLy,sNx+2*OLx, nITC))
     hSnowActual_mult = np.zeros((sNy+2*OLy,sNx+2*OLx, nITC))
@@ -130,8 +130,8 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     SIhSnowMeanNeg = d_hSnowbyDyn * SINegFac
 
     # set lower boundaries
-    hIceMean.clip(0)
-    Area.clip(0)
+    hIceMean = np.clip(hIceMean, 0, None)
+    Area = np.clip(Area, 0, None)
 
     noIce = np.where((hIceMean == 0) | (Area == 0))
     Area[noIce] = 0
@@ -153,10 +153,10 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     regAreaSqrt =  np.sqrt(AreapreTH[isIce]**2 + area_reg_sq)
     recip_regAreaSqrt = 1 / regAreaSqrt
     hIceActual[isIce] = hIceMeanpreTH[isIce] * recip_regAreaSqrt #hIceMeanpreTh / Area does not work if Area = 0, therefore the regularization
-    hIceActual.clip(0.05)
+    hIceActual = np.clip(hIceActual, 0.05, None)
     recip_hIceActual = AreapreTH / np.sqrt(hIceMeanpreTH**2 + hice_reg_sq) #regularizing the inverse of hIceActual
-    hSnowActual[isIce] = hSnowMeanpreTH[isIce] * recip_regAreaSqrt
-
+    #hSnowActual[isIce] = hSnowMeanpreTH[isIce] * recip_regAreaSqrt
+    hSnowActual[isIce] = hSnowMeanpreTH[isIce] / AreapreTH[isIce]
 
     ##### Retrieve the air-sea heat and shortwave radiative fluxes        #####
     #####  and calculate the corresponding ice growth rate for open water #####
@@ -164,11 +164,12 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     # set wind speed
     ug = np.maximum(eps, wspeed)
 
+    # set fluxed in (qswo) and out (F_ao) of the ocean
     F_ao = Qnet.copy()
     qswo = Qsw.copy()
     qswi = np.zeros((sNy+2*OLy,sNx+2*OLx))
 
-    swFracAbsTopOcean = 0 #-> qswo_in_first_layer = qswo?
+    swFracAbsTopOcean = 0 #-> qswo_in_first_layer = qswo? (l. 177)
 
     #qswo_below_first_layer = qswo * swFracAbsTopOcean
     qswo_in_first_layer = qswo * (1 - swFracAbsTopOcean)
@@ -177,8 +178,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     #print("IceGrowthRateOpenWater",IceGrowthRateOpenWater)
     #qswo and qswo_in_first_layer opposite sign?
     #also defined for non open water, to reduce the ice cover (dArea_oaFlux)
-    #the cell can be partly covered by water and ice!!
-    #IceGrowthRateOpenWater is for one whole cell
+    #the cell can be partly covered by water and ice (IceGrowthRateOpenWater is one value for the whole cell)!
 
 
     ##### calculate surface temperature and heat fluxes ##### 
@@ -197,6 +197,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     TempFrz = tempFrz0 + dTempFrz_dS * salt + celsius2K
 
     for l in range(0, nITC):
+
         TIce_mult[:,:,l], F_io_net_mult[:,:,l], F_ia_net_mult[:,:,l], F_ia_mult[:,:,l], qswi_mult[:,:,l], FWsublim_mult[:,:,l] = (
         solve4temp(hIceActual_mult[:,:,l], hSnowActual_mult[:,:,l], TIce_mult[:,:,l], TempFrz, ug, SWDown, LWDown, ATemp, aqh))
 
@@ -275,7 +276,6 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     F_oi = - tmpscal2 * (surf_theta - TempFrz) * mltf #mixed layer turbulence factor (determines how much of the temperature difference is used for heat flux)
     IceGrowthRateMixedLayer = F_oi * qi
 
-
     ##### calculate d(Area)/dt #####
 
     # calculate thickness derivatives of ice and snow #
@@ -324,9 +324,9 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     hSnowMean = hSnowMeanpreTH + dhSnowMean_dt * hIceMeanMask * deltaTtherm
 
     # set boundaries:
-    Area.clip(0,1)
-    hIceMean.clip(0)
-    hSnowMean.clip(0)
+    Area = np.clip(Area, 0, 1)
+    hIceMean = np.clip(hIceMean, 0, None)
+    hSnowMean = np.clip(hSnowMean, 0, None)
 
     noIce = np.where((hIceMean <= 0) | (Area <= 0))
     Area[noIce] = 0
@@ -366,7 +366,7 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     FreshwaterContribFromIce[saltInWater] = - ActualNewTotalVolumeChange[saltInWater] * rhoIce2rhoFresh * (1 - saltIce/salt[saltInWater])
     # if the liquid cell has a lower salinity than the specified salinity of sea ice, then assume the sea ice is completely fresh (if the water is fresh, no salty sea ice can form)
 
-    salt.clip(0) #leave in for now, remove when code is running and can be compared
+    salt = np.clip(salt, 0, None) #leave in for now, remove when code is running and can be compared
 
     tmpscal0 = np.minimum(saltIce, salt)
     saltflux = (ActualNewTotalVolumeChange + SIhIceMeanNeg) * tmpscal0 * hIceMeanMask * rhoIce * recip_deltaTtherm
