@@ -21,11 +21,11 @@ def ocean_drag_coeffs(uIce, vIce, uVel, vVel):
     dragCoeff[south] = waterIceDrag_south * rhoConst
 
     # calculate linear drag coefficient
-    cDrag = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    cDrag[:-1,:-1] = dragCoeff[:-1,:-1] * np.sqrt(0.25 * (((uIce[:-1,:-1] - uVel[:-1,:-1])**2 * maskInW[:-1,:-1] + (uIce[:-1,1:] - uVel[:-1,1:])**2 * maskInW[:-1,1:]) + ((vIce[:-1,:-1] - vVel[:-1,:-1])**2 * maskInS[:-1,:-1] + (vIce[1:,:-1] - vVel[1:,:-1])**2 * maskInS[1:,:-1])))
-    tmp = np.where(dragCoeff * cDrag <= cDragMin**2)
-    cDrag[tmp] = cDragMin
-    cDrag = cDrag * hIceMeanMask
+    cDrag = np.ones((sNy+2*OLy,sNx+2*OLx)) * cDragMin
+    tmpVar = 0.25 * (((uIce[:-1,:-1] - uVel[:-1,:-1])**2 * maskInW[:-1,:-1] + (uIce[:-1,1:] - uVel[:-1,1:])**2 * maskInW[:-1,1:]) + ((vIce[:-1,:-1] - vVel[:-1,:-1])**2 * maskInS[:-1,:-1] + (vIce[1:,:-1] - vVel[1:,:-1])**2 * maskInS[1:,:-1]))
+    tmp = np.where(dragCoeff[:-1,:-1]**2 * tmpVar > cDragMin**2)
+    cDrag[:-1,:-1][tmp] = dragCoeff[:-1,:-1][tmp] * np.sqrt(tmpVar[tmp])
+    cDrag[:-1,:-1] = cDrag[:-1,:-1] * hIceMeanMask[:-1,:-1]
 
 
     return cDrag
