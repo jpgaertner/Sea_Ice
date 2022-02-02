@@ -11,28 +11,27 @@ from seaice_params import *
 # OLy = 2
 
 ### input
-#hIceActual     : actual ice thickness [m]
-#hSnowActual    : actual snow thickness [m]
-#TSurfIn        : surface temperature of ice/snow [K]
-#TempFrz        : freezing temperature [K]
-#ug             : atmospheric wind speed [m/s]
-#SWDown         : shortwave radiative downward flux [W/m2]
-#LWDown         : longwave radiative downward flux [W/m2]
-#ATemp          : atmospheric temperature [K]
-#aqh            : atmospheric specific humidity [g/kg]
+# hIceActual     : actual ice thickness [m]
+# hSnowActual    : actual snow thickness [m]
+# TSurfIn        : surface temperature of ice/snow [K]
+# TempFrz        : freezing temperature [K]
+# ug             : atmospheric wind speed [m/s]
+# SWDown         : shortwave radiative downward flux [W/m2]
+# LWDown         : longwave radiative downward flux [W/m2]
+# ATemp          : atmospheric temperature [K]
+# aqh            : atmospheric specific humidity [g/kg]
 
 ### output
-#TSurfOut       : updated surface temperature of ice/snow [K]
-#F_io_net       : upward conductive heat flux through sea ice and snow [W/m2]
-#F_ia_net       : net heat flux divergence at the sea ice/snow surface
-#                   including ice conductive fluxes and atmospheric fluxes [W/m2]
-#F_ia           : upward seaice/snow surface heat flux to atmosphere [W/m^2]
-#IcePenetSW     : short wave heat flux arriving at the ocean-ice interface (+ = upward) [W/m^2]
-#FWsublim       : fresh water (mass) flux due to sublimation (+ = upward) [kg/sm2]
+# TSurfOut       : updated surface temperature of ice/snow [K]
+# F_io_net       : upward conductive heat flux through sea ice and snow [W/m2]
+# F_ia_net       : net heat flux divergence at the sea ice/snow surface
+#                    including ice conductive fluxes and atmospheric fluxes [W/m2]
+# F_ia           : upward seaice/snow surface heat flux to atmosphere [W/m^2]
+# IcePenetSW     : short wave heat flux arriving at the ocean-ice interface (+ = upward) [W/m^2]
+# FWsublim       : fresh water (mass) flux due to sublimation (+ = upward) [kg/sm2]
 
 
 def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, ATemp, aqh):
-
 
     ##### define local constants used for calculations #####
 
@@ -80,9 +79,8 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
     # make local copies of downward longwave radiation, surface and atmospheric temperatures
     TSurfLoc = TSurfIn.copy()
     #TSurfLoc = np.minimum(celsius2k + maxTIce, TSurfIn)
-    LWDownLoc = np.maximum(minLwDown, LWDown)
+    LWDownLocBound = np.maximum(minLwDown, LWDown)
     ATempLoc = np.maximum(celsius2K + minTAir, ATemp)
-
 
     ##### determine fixed (relative to surface temperature) forcing term in heat budget #####
 
@@ -92,8 +90,8 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
     d3 = np.ones((sNy+2*OLy,sNx+2*OLx)) * iceEmiss * stefBoltz
     d3[isSnow] = snowEmiss * stefBoltz
 
-    LWDownLoc[isIce] = iceEmiss * LWDownLoc[isIce]
-    LWDownLoc[isSnow] = snowEmiss * LWDownLoc[isSnow]
+    LWDownLoc = iceEmiss * LWDownLocBound
+    LWDownLoc[isSnow] = snowEmiss * LWDownLocBound[isSnow]
 
 
     ##### determine albedo #####
@@ -175,7 +173,7 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
         return F_c, F_lh, F_ia, dFia_dTs
 
-    for i in range(10):
+    for i in range(6):
 
         t1 = TSurfLoc[isIce]
         F_c, F_lh, F_ia, dFia_dTs = fluxes(t1)
@@ -203,5 +201,7 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
     TSurfOut[isIce] = TSurfLoc[isIce]
     FWsublim[isIce] = F_lh[isIce] / lhSublim
 
+    # print('LWup', F_lwu[0,0])
+    # print('LWdown', LWDownLoc[0,0])
 
     return TSurfOut, F_io_net, F_ia_net, F_ia, IcePenetSW, FWsublim
