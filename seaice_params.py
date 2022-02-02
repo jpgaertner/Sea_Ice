@@ -3,11 +3,11 @@ import numpy as np
 from seaice_size import *
 
 # densities [g/m3]
-rhoIce = 900 
+rhoIce = 910 
 rhoSnow = 330
-rhoFresh = 1000
+rhoFresh = 999.8
 recip_rhoFresh = 1 / rhoFresh
-rhoConst = 1026 #constant reference density for sea water (Boussinesq)
+rhoConst = 1027 #constant reference density for sea water (Boussinesq)
 recip_rhoConst = 1 / rhoConst
 rhoice2rhosnow     = rhoIce / rhoSnow
 rhoIce2rhoFresh = rhoIce / rhoFresh
@@ -24,13 +24,13 @@ wetSnowAlb = 0.7
 wetSnowAlb_south = 0.7
 wetAlbTemp = 0
 
-lhFusion = 3.34 * 10**5
-lhEvap = 2.5 * 10**6
+lhFusion = 3.34e5
+lhEvap = 2.5e6
 lhSublim = lhEvap + lhFusion
-cpAir = 1004
-rhoAir = 1.3
+cpAir = 1005
+rhoAir = 1.2
 stefBoltz = 5.67e-8
-emissivity = 0.97
+emissivity = 0.95 #0.97
 iceEmiss = emissivity
 snowEmiss = emissivity
 
@@ -66,9 +66,9 @@ d_hSnowbyDyn = np.ones((sNy,sNx))
 SINegFac = 1 #value is actually one, but what is it?
 swFracAbsTopOcean = 0 #the fraction of incoming shortwave radiation absorbed in the uppermost ocean grid cell
 
-celsius2K = 273.16
+celsius2K = 273.15
 
-deltaTtherm = 86400/2 #timestep for thermodynamic equations [s]
+deltaTtherm = 7200 #timestep for thermodynamic equations [s]
 recip_deltaTtherm = 1 / deltaTtherm
 deltaTdyn = deltaTtherm #timestep for dynamic equations [s]
 recip_deltaTdyn = 1 / deltaTdyn
@@ -76,8 +76,7 @@ recip_deltaTdyn = 1 / deltaTdyn
 #constants needed for McPhee formulas for calculating turbulent ocean fluxes:
 stantonNr = 0.0056 #stanton number
 uStarBase = 0.0125 #typical friction velocity beneath sea ice [m/s]
-#McPheeTaperFac = 12.5 #tapering factor
-McPheeTaperFac = 0.92
+McPheeTaperFac = 12.5 #tapering factor
 
 # lead closing parameters:
 h0 = 0.5 # the thickness of new ice formed in open water [m]
@@ -88,7 +87,7 @@ recip_h0_south = 1 / h0_south
 airTurnAngle = 0 #turning angle of air-ice interfacial stress
 waterTurnAngle = 0 #turning angle of the water-ice interfacial stress
 
-eps = 1e-8
+eps = 1e-10 #8?
 eps_sq = eps**2
 si_eps = 1e-5
 area_floor = si_eps
@@ -105,16 +104,24 @@ seaIceLoadFac = 1 #factor to scale (and turn off) seaIceLoading
 gravity = 9.8156
 
 PlasDefCoeff = 2 #coefficient for plastic deformation, related to the relation of the critical stresses needed for plastic deformation when pushing ice together vs. pulling it apart
-evpTauRelax = -1
 
 deltaMin = eps
-evpAlphaMin = 5
+aEVPalphaMin = 5
 pressReplFac = 1
 
 cStar = 20
+aEVPcStar = 4
 
 # basal drag parameters
 basalDragU0 = 5e-5
 basalDragK1 = 8
 basalDragK2 = 0
 cBasalStar = cStar
+
+tensileStrFac = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0.5
+
+SeaIceStrength = 2.75e4
+zetaMaxfac = 2.5e8
+zetaMin = 0
+
+nEVPsteps = 500

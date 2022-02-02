@@ -8,8 +8,8 @@ import numpy as np
 # A with filled overlaps (using the values from the actual cell)
 # this requires that the cell size is larger than the overlap (sN > OL)!
 
-sNx = 65 #Number of X points in tile
-sNy = 65 #Number of Y points in tile
+sNx = 15 #Number of X points in tile
+sNy = 15 #Number of Y points in tile
 OLx = 2 #Tile overlap extent in X
 OLy = 2 #Tile overlap extent in Y
 

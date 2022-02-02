@@ -13,8 +13,15 @@
 import numpy as np
 from seaice_fill_overlap import fill_overlap
 
-sNx = 65 #Number of X points in tile
-sNy = 65 #Number of Y points in tile
+# # for the 1d model
+# sNx = 1
+# sNy = 1
+# OLx = 1
+# OLy = 1
+
+
+sNx = 15 #Number of X points in tile
+sNy = 15 #Number of Y points in tile
 OLx = 2 #Tile overlap extent in X
 OLy = 2 #Tile overlap extent in Y
 #nSx =   1 #Number of tiles per process in X
@@ -55,13 +62,18 @@ recip_dxV = 1 / dxV
 recip_dyU = 1 / dyU
 dxN = 1
 
-
-rA = dxF * dyF #R-face are f[X,Y] ( m^2 )
-#   Note: In a cartesian framework rA is simply dx*dy, however we use rA to allow for non-globally
-#   orthogonal coordinate frames (with appropriate metric terms)
+rA = dxF * dyF #grid width with c point at center
+rAz = dxV * dyU #grid width with z point at center
+rAw = dxC * dyG #grid width with u point at center
+rAs = dxG * dyC #grid width with v point at center
 recip_rA = 1 / rA
+recip_rAz = 1 / rAz
+recip_rAw = 1 / rAw
+recip_rAs = 1 / rAs
 
-fCori = np.ones((sNy+2*OLy,sNx+2*OLx))*1e-4 #coriolis parameter at grid center point
+
+
+fCori = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0 #1e-4 #coriolis parameter at grid center point
 
 # masks for introducing boundaries
 maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))
@@ -87,3 +99,11 @@ k1AtC = np.ones((sNy+2*OLy,sNx+2*OLx))
 k2AtC = np.ones((sNy+2*OLy,sNx+2*OLx))
 k1AtZ = np.ones((sNy+2*OLy,sNx+2*OLx))
 k2AtZ = np.ones((sNy+2*OLy,sNx+2*OLx))
+
+# # for the 1d model
+# maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))
+# maskInW = np.ones((sNy+2*OLy,sNx+2*OLx))
+# maskInS = np.ones((sNy+2*OLy,sNx+2*OLx))
+# hIceMeanMask = maskInC.copy()
+# SeaIceMaskU = maskInW.copy()
+# SeaIceMaskV = maskInS.copy()
