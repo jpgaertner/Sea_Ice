@@ -83,15 +83,17 @@ maskInC = fill_overlap(maskInC)
 
 maskInW = np.ones((sNy+2*OLy,sNx+2*OLx))
 maskInW[sNy+OLy-1,:] = 0
-maskInW[:,sNx+OLx-2:] = 0
+maskInW[:,sNx+OLx-1:] = 0
+maskInW[:,:OLx+1] = 0
 maskInW = fill_overlap(maskInW)
 
 maskInS = np.ones((sNy+2*OLy,sNx+2*OLx))
 maskInS[:,sNx+OLx-1] = 0
-maskInS[sNy+OLy-2:,:] = 0
+maskInS[sNy+OLy-1:,:] = 0
+maskInS[:OLy+1,:] = 0
 maskInS = fill_overlap(maskInS)
 
-hIceMeanMask = maskInC.copy()
+iceMask = maskInC.copy()
 SeaIceMaskU = maskInW.copy()
 SeaIceMaskV = maskInS.copy()
 
@@ -104,6 +106,6 @@ k2AtZ = np.ones((sNy+2*OLy,sNx+2*OLx))
 # maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))
 # maskInW = np.ones((sNy+2*OLy,sNx+2*OLx))
 # maskInS = np.ones((sNy+2*OLy,sNx+2*OLx))
-# hIceMeanMask = maskInC.copy()
+# iceMask = maskInC.copy()
 # SeaIceMaskU = maskInW.copy()
 # SeaIceMaskV = maskInS.copy()
