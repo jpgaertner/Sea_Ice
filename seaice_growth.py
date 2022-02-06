@@ -12,7 +12,7 @@ from seaice_solve4temp import solve4temp
 
 ### input
 # hIceMean: mean ice thickness [m3/m2] (= hIceActual * Area with Area the sea ice cover fraction and hIceActual = Vol_ice / x_len y_len)
-# hIceMeanMask: contains geometry of the set up
+# iceMask: contains geometry of the set up
 # hSnowMean: mean snow thickness [m3/m2]
 # Area: sea ice cover fraction (0 <= Area <= 1)
 # salt: surface salinity of the ocean [g/kg]
@@ -42,7 +42,7 @@ from seaice_solve4temp import solve4temp
 # seaIceLoad
 
 
-def growth(hIceMean, hIceMeanMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, 
+def growth(hIceMean, iceMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, 
 runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
 
     ##### constants and initializations #####
@@ -319,9 +319,9 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
 
     ######  update sea ice cover fraction and mean ice and snow thickness #####
 
-    Area = AreapreTH + dArea_dt * hIceMeanMask * deltaTtherm
-    hIceMean = hIceMeanpreTH + dhIceMean_dt * hIceMeanMask * deltaTtherm
-    hSnowMean = hSnowMeanpreTH + dhSnowMean_dt * hIceMeanMask * deltaTtherm
+    Area = AreapreTH + dArea_dt * iceMask * deltaTtherm
+    hIceMean = hIceMeanpreTH + dhIceMean_dt * iceMask * deltaTtherm
+    hSnowMean = hSnowMeanpreTH + dhSnowMean_dt * iceMask * deltaTtherm
 
     # set boundaries:
     Area = np.clip(Area, 0, 1)
@@ -369,14 +369,14 @@ runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh):
     salt = np.clip(salt, 0, None) #leave in for now, remove when code is running and can be compared
 
     tmpscal0 = np.minimum(saltIce, salt)
-    saltflux = (ActualNewTotalVolumeChange + SIhIceMeanNeg) * tmpscal0 * hIceMeanMask * rhoIce * recip_deltaTtherm
+    saltflux = (ActualNewTotalVolumeChange + SIhIceMeanNeg) * tmpscal0 * iceMask * rhoIce * recip_deltaTtherm
 
     # the freshwater contribution from snow melt [m3/m2]
     FreshwaterContribFromSnowMelt = ActualNewTotalSnowMelt / rhoFresh2rhoSnow
 
     # evaporation minus precipitation minus runoff (freshwater flux to ocean)
-    EvPrecRun = hIceMeanMask *  ((evap - precip) * (1 - AreapreTH) - PrecipRateOverIceSurfaceToSea * AreapreTH - runoff - (
-        FreshwaterContribFromIce + FreshwaterContribFromSnowMelt) / deltaTtherm) * rhoFresh + hIceMeanMask * (
+    EvPrecRun = iceMask *  ((evap - precip) * (1 - AreapreTH) - PrecipRateOverIceSurfaceToSea * AreapreTH - runoff - (
+        FreshwaterContribFromIce + FreshwaterContribFromSnowMelt) / deltaTtherm) * rhoFresh + iceMask * (
         SIhIceMeanNeg * rhoIce + SIhSnowMeanNeg * rhoSnow) * recip_deltaTtherm
 
     # calculate sea ice load on the sea surface

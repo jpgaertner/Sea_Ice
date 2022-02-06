@@ -1,6 +1,6 @@
 
 # hIceMean: mean ice thickness [m3/m2] (= hIceActual * Area with hIceActual = Vol_ice / x_len y_len)
-# hIceMeanMask: contains geometry of the set up
+# iceMask: contains geometry of the set up
 # hSnowMean: mean snow thickness [m3/m2]
 # Area: sea ice cover fraction (0 <= Area <= 1)
 # salt: surface salinity of the ocean [g/kg]
@@ -35,7 +35,7 @@ hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 1.3
 Area = np.ones((sNx+2*OLx,sNy+2*OLy))* 1
 hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
 
-hIceMeanMask = np.ones((sNx+2*OLx,sNy+2*OLy))*1
+iceMask = np.ones((sNx+2*OLx,sNy+2*OLy))*1
 salt = np.ones((sNx+2*OLx,sNy+2*OLy))*29
 TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC)) * 260.3
 precip = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #order 1e-6
@@ -65,7 +65,7 @@ timesteps = 60
 # in F, runtime = 360d with deltat = 12h and dump frequency = 10d 
 for i in range(timesteps):
     hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet_out, seaIceLoad = (
-        growth(hIceMean, hIceMeanMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, 
+        growth(hIceMean, iceMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, 
         runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh))
 
     ice = np.append(ice, hIceMean[0,0])

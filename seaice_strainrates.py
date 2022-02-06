@@ -47,7 +47,7 @@ def strainrates(uFld, vFld, secondOrderBC):
     e12 = np.ones((sNy+2*OLy,sNx+2*OLx))
     hFacU = SeaIceMaskU[1:,1:] - SeaIceMaskU[:-1,1:]
     hFacV = SeaIceMaskV[1:,1:] - SeaIceMaskV[1:,:-1]
-    e12[1:,1:] = 0.5 * (dudy[1:,1:] + dvdx[1:,1:] - k1AtZ[1:,1:] * vave[1:,1:] - k2AtZ[1:,1:] * uave[1:,1:]) * hIceMeanMask[1:,1:] * hIceMeanMask[1:,:-1] * hIceMeanMask[:-1,1:] * hIceMeanMask[:-1,:-1] + noSlipFac * (2 * uave[1:,1:] * recip_dyU[1:,1:] * hFacU + 2 * vave[1:,1:] * recip_dxV[1:,1:] * hFacV)
+    e12[1:,1:] = 0.5 * (dudy[1:,1:] + dvdx[1:,1:] - k1AtZ[1:,1:] * vave[1:,1:] - k2AtZ[1:,1:] * uave[1:,1:]) * iceMask[1:,1:] * iceMask[1:,:-1] * iceMask[:-1,1:] * iceMask[:-1,:-1] + noSlipFac * (2 * uave[1:,1:] * recip_dyU[1:,1:] * hFacU + 2 * vave[1:,1:] * recip_dxV[1:,1:] * hFacV)
 
     if secondOrderBC:
         hFacU = (SeaIceMaskU[2:-1,2:-1] - SeaIceMaskU[1:-2,2:-1]) / 3
@@ -56,6 +56,6 @@ def strainrates(uFld, vFld, secondOrderBC):
         hFacV = hFacV * (SeaIceMaskV[2:-1,:-3] * SeaIceMaskV[2:-1,1:-2] + SeaIceMaskV[2:-1,3:] * SeaIceMaskV[2:-1,2:-1])
 
         e12[2:-1,2:-1] = e12[2:-1,2:-1] + 0.5 * (recip_dyU[2:-1,2:-1] * (6 * uave[2:-1,2:-1] - uFld[:-3,2:-1] * SeaIceMaskU[1:-2,2:-1] - uFld[3:,2:-1] * SeaIceMaskU[2:-1,2:-1]) * hFacU + recip_dxV[2:-1,2:-1] * (6 * vave[2:-1,2:-1] - vFld[2:-1,:-3] * SeaIceMaskV[2:-1,1:-2] - vFld[2:-1,3:] * SeaIceMaskV[2:-1,2:-1]) * hFacV)
-
+        
 
     return e11, e22, e12

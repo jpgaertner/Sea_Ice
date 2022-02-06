@@ -36,8 +36,8 @@ hSnowMean = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
 Area = np.ones((sNy+2*OLy,sNx+2*OLx))
 TIceSnow = np.ones((sNy+2*OLy,sNx+2*OLx,nITC))*celsius2K
 
-uIce = np.zeros((sNy+2*OLy,sNx+2*OLx))
-vIce = np.zeros((sNy+2*OLy,sNx+2*OLx))
+uIce = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0.0
+vIce = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0.0
 
 etaN = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
 pLoad = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
@@ -77,16 +77,18 @@ for i in range(1):
 
     hIceMean, hSnowMean, Area, TIceSnow = ridging(hIceMean, hSnowMean, Area, TIceSnow)
 
-    hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet, seaIceLoad = growth(hIceMean, hIceMeanMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh)
+    hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet, seaIceLoad = growth(hIceMean, iceMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh)
 
 
-# print(np.mean(hIceMean))
-# print(np.mean(uWind))
-# print(np.mean(vWind))
-# print(np.max(uIce))
-# print(np.max(vIce))
-plt.pcolormesh(uIce[OLy:-OLy,OLx:-OLx])
-#plt.pcolormesh(hIceMean[OLy:-OLy,OLx:-OLx])
-#plt.contourf(vWind[0,OLy:-OLy,OLx:-OLx])
-plt.colorbar()
+fig, axs = plt.subplots(1,3, figsize = (10,3))
+ax1 = axs[0].pcolormesh(uIce[OLy:-OLy,OLx:-OLx])
+axs[0].set_title('uIce')
+plt.colorbar(ax1, ax = axs[0])
+ax2 = axs[1].pcolormesh(vIce[OLy:-OLy,OLx:-OLx])
+axs[1].set_title('vIce')
+plt.colorbar(ax2, ax = axs[1])
+ax3 = axs[2].pcolormesh(hIceMean[OLy:-OLy,OLx:-OLx])
+axs[2].set_title('hIceMean')
+plt.colorbar(ax3, ax = axs[2])
+fig.tight_layout()
 plt.show()

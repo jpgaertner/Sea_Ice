@@ -25,7 +25,7 @@ def ocean_drag_coeffs(uIce, vIce, uVel, vVel):
     tmpVar = 0.25 * (((uIce[:-1,:-1] - uVel[:-1,:-1])**2 * maskInW[:-1,:-1] + (uIce[:-1,1:] - uVel[:-1,1:])**2 * maskInW[:-1,1:]) + ((vIce[:-1,:-1] - vVel[:-1,:-1])**2 * maskInS[:-1,:-1] + (vIce[1:,:-1] - vVel[1:,:-1])**2 * maskInS[1:,:-1]))
     tmp = np.where(dragCoeff[:-1,:-1]**2 * tmpVar > cDragMin**2)
     cDrag[:-1,:-1][tmp] = dragCoeff[:-1,:-1][tmp] * np.sqrt(tmpVar[tmp])
-    cDrag[:-1,:-1] = cDrag[:-1,:-1] * hIceMeanMask[:-1,:-1]
+    cDrag[:-1,:-1] = cDrag[:-1,:-1] * iceMask[:-1,:-1]
 
 
     return cDrag

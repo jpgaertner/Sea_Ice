@@ -33,7 +33,7 @@ def bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low):
     # soft maximum
     # add an explanation
     cBot = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    cBot[:-1,:-1][isArea] = tmpFld[:-1,:-1][isArea] * np.log(np.exp(fac * (hIceMean[:-1,:-1][isArea] - hCrit)) + 1) * recip_fac * np.exp(-cBasalStar * (1 - Area[:-1,:-1][isArea]))  * hIceMeanMask[:-1,:-1][isArea]
+    cBot[:-1,:-1][isArea] = tmpFld[:-1,:-1][isArea] * np.log(np.exp(fac * (hIceMean[:-1,:-1][isArea] - hCrit)) + 1) * recip_fac * np.exp(-cBasalStar * (1 - Area[:-1,:-1][isArea]))  * iceMask[:-1,:-1][isArea]
 
 
     return cBot

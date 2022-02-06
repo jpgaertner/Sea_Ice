@@ -81,7 +81,7 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean, hSnowMean, Area, e
     IceSurfStressY0[1:,1:] = IceSurfStressY0[1:,1:] - SeaIceMassV[1:,1:] * recip_dyC[1:,1:] * (phiSurf[1:,1:] - phiSurf[:-1,1:])
 
     # calculate ice strength
-    press0 = SeaIceStrength * hIceMean * np.exp(-cStar * (1 - Area)) * hIceMeanMask
+    press0 = SeaIceStrength * hIceMean * np.exp(-cStar * (1 - Area)) * iceMask
 
     #if SEAICEuseDYNAMICS (true)
     if useFreedrift:
