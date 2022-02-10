@@ -235,9 +235,6 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
             evpBetaU = 0.5 * ( evpAlphaC + np.roll(evpAlphaC,1,1) )
             evpBetaV = 0.5 * ( evpAlphaC + np.roll(evpAlphaC,1,0) )
 
-
-        SeaIceMassU=np.ones(SeaIceMassU.shape)
-        SeaIceMassV=np.ones(SeaIceMassV.shape)
         rMassU = 1./locMaskU
         rMassV = 1./locMaskV
         denomU = ( 1. + ( 0.
@@ -289,20 +286,25 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         uIcePm1 = SeaIceMaskU * ( uIce - uIcePm1 ) * evpBetaU
         vIcePm1 = SeaIceMaskV * ( vIce - vIcePm1 ) * evpBetaV
 
+        # if not explicitDrag:
+        #     IceSurfStressX = IceSurfStressX - uIce*( 0.
+        #         + 0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat * areaW
+        #         + 0.5 * ( cBotC + np.roll(cBotC,1,1) )          * areaW
+        #                                             )
+        #     IceSurfStressY = IceSurfStressY - vIce*( 0.
+        #         + 0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * areaS
+        #         + 0.5 * ( cBotC + np.roll(cBotC,1,0) )          * areaS
+        #                                             )
+        # uIcePm1 = ( SeaIceMassU * (uIce - uIceNm1)*recip_deltaTdyn
+        #             - (IceSurfStressX + stressDivX)
+        #            ) * SeaIceMaskU
+        # vIcePm1 = ( SeaIceMassV * (vIce - vIceNm1)*recip_deltaTdyn
+        #             - (IceSurfStressY + stressDivY)
+        #            ) * SeaIceMaskV
         resSig[i] = (sig1Pm1**2 + sig2Pm1**2
                      + sig12Pm1**2)[OLy:-OLy,OLx:-OLx].sum()
         resU[i]   = ( uIcePm1**2
                     + vIcePm1**2 )[OLy:-OLy,OLx:-OLx].sum()
-        # ures = SeaIceMassU * (uIce - uIceNm1)*recip_deltaTdyn \
-        #     - IceSurfStressX + stressDivX - uIce * (
-        #           0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat * areaW
-        #         + 0.5 * ( cBotC + np.roll(cBotC,1,1) )          * areaW )
-        # vres = SeaIceMassV * (vIce - vIceNm1)*recip_deltaTdyn \
-        #     - IceSurfStressY + stressDivY - vIce * (
-        #           0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * areaS
-        #         + 0.5 * ( cBotC + np.roll(cBotC,1,0) )          * areaS )
-        # resU[i]   = ( ures**2
-        #             + vres**2 )[OLy:-OLy,OLx:-OLx].sum()
         resU[i]   = global_sum(resU[i])
         resSig[i] = global_sum(resSig[i])
 
