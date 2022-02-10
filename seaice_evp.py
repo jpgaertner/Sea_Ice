@@ -243,18 +243,19 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         dragV = 0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * areaS \
               + 0.5 * ( cBotC + np.roll(cBotC,1,0) )          * areaS
 
-        denomU = 1. + dragU * deltaTdyn*rMassU/evpBetaU
-        denomV = 1. + dragV * deltaTdyn*rMassV/evpBetaV
-
         # denomU[denomU == 0] = 1
         # denomV[denomV == 0] = 1
 
-        explicitDrag=False
+        explicitDrag=True
         if explicitDrag:
             IceSurfStressX = IceSurfStressX - uIce * dragU
             IceSurfStressY = IceSurfStressY - vIce * dragV
             denomU = 1.
-            denumV = 1.
+            denomV = 1.
+        else:
+            denomU = 1. + dragU * deltaTdyn*rMassU/evpBetaU
+            denomV = 1. + dragV * deltaTdyn*rMassV/evpBetaV
+
 
         uIce = SeaIceMaskU * (
             uIce + (
