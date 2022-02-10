@@ -3,7 +3,7 @@ import numpy as np
 from seaice_params import *
 from seaice_size import *
 
-### input 
+### input
 # uFld: zonal ice field velocity
 # vFld: meridional ice Field velocity
 # secondOrderBC: flag
@@ -18,44 +18,51 @@ def strainrates(uFld, vFld, secondOrderBC):
 
     # initializations
     noSlipFac = 1
-    dudx = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    dudy = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    dvdx = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    dvdy = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    uave = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    vave = np.zeros((sNy+2*OLy,sNx+2*OLx))
 
     # abbreviations at c points
-    dudx[:-1,:-1] = (uFld[:-1,1:] - uFld[:-1,:-1]) * recip_dxF[:-1,:-1]
-    uave[:-1,:-1] = 0.5 * (uFld[:-1,:-1] + uFld[:-1,1:])
-    dvdy[:-1,:-1] = (vFld[1:,:-1] - vFld[:-1,:-1]) * recip_dyF[:-1,:-1]
-    vave[:-1,:-1] = 0.5 * (vFld[:-1,:-1] + vFld[1:,:-1])
+    dudx = ( np.roll(uFld,-1,axis=1) - uFld ) * recip_dxF
+    uave = ( np.roll(uFld,-1,axis=1) + uFld ) * 0.5
+    dvdy = ( np.roll(vFld,-1,axis=0) - vFld ) * recip_dyF
+    vave = ( np.roll(vFld,-1,axis=0) + vFld ) * 0.5
 
     # evaluate strain rates at c points
-    e11 = np.ones((sNy+2*OLy,sNx+2*OLx))
-    e22 = np.ones((sNy+2*OLy,sNx+2*OLx))
-    e11[:-1,:-1] = (dudx[:-1,:-1] + vave[:-1,:-1] * k2AtC[:-1,:-1]) * maskInC[:-1,:-1]
-    e22[:-1,:-1] = (dvdy[:-1,:-1] + uave[:-1,:-1] * k1AtC[:-1,:-1]) * maskInC[:-1,:-1]
+    e11 = (dudx + vave * k2AtC) * maskInC
+    e22 = (dvdy + uave * k1AtC) * maskInC
 
     # abbreviations at z points
-    dudy[1:,1:] = (uFld[1:,1:] - uFld[:-1,1:]) * recip_dyU[1:,1:]
-    uave[1:,1:] = 0.5 * (uFld[1:,1:] + uFld[:-1,1:])
-    dvdx[1:,1:] = (vFld[1:,1:] - vFld[1:,:-1]) * recip_dxV[1:,1:]
-    vave[1:,1:] = 0.5 * (vFld[1:,1:] + vFld[1:,:-1])
+    dudy = ( uFld - np.roll(uFld,1,axis=0) ) * recip_dyU
+    uave = ( uFld + np.roll(uFld,1,axis=0) ) * 0.5
+    dvdx = ( vFld - np.roll(vFld,1,axis=1) ) * recip_dxV
+    vave = ( vFld + np.roll(vFld,1,axis=1) ) * 0.5
 
     # evaluate strain rate at z points
-    e12 = np.ones((sNy+2*OLy,sNx+2*OLx))
-    hFacU = SeaIceMaskU[1:,1:] - SeaIceMaskU[:-1,1:]
-    hFacV = SeaIceMaskV[1:,1:] - SeaIceMaskV[1:,:-1]
-    e12[1:,1:] = 0.5 * (dudy[1:,1:] + dvdx[1:,1:] - k1AtZ[1:,1:] * vave[1:,1:] - k2AtZ[1:,1:] * uave[1:,1:]) * iceMask[1:,1:] * iceMask[1:,:-1] * iceMask[:-1,1:] * iceMask[:-1,:-1] + noSlipFac * (2 * uave[1:,1:] * recip_dyU[1:,1:] * hFacU + 2 * vave[1:,1:] * recip_dxV[1:,1:] * hFacV)
+    hFacU = SeaIceMaskU - np.roll(SeaIceMaskU,1,axis=0)
+    hFacV = SeaIceMaskV - np.roll(SeaIceMaskV,1,axis=1)
+    mskZ = iceMask*np.roll(iceMask,1,axis=1)
+    mskZ =    mskZ*np.roll(   mskZ,1,axis=0)
+    e12 = 0.5 * (dudy + dvdx - k1AtZ * vave - k2AtZ * uave ) * mskZ \
+        + noSlipFac * (
+              2.0 * uave * recip_dyU * hFacU
+            + 2.0 * vave * recip_dxV * hFacV
+        )
 
-    if secondOrderBC:
-        hFacU = (SeaIceMaskU[2:-1,2:-1] - SeaIceMaskU[1:-2,2:-1]) / 3
-        hFacV = (SeaIceMaskV[2:-1,2:-1] - SeaIceMaskV[2:-1,1:-2]) / 3
-        hFacU = hFacU * (SeaIceMaskU[:-3,2:-1] * SeaIceMaskU[1:-2,2:-1] + SeaIceMaskU[3:,2:-1] * SeaIceMaskU[2:-1,2:-1])
-        hFacV = hFacV * (SeaIceMaskV[2:-1,:-3] * SeaIceMaskV[2:-1,1:-2] + SeaIceMaskV[2:-1,3:] * SeaIceMaskV[2:-1,2:-1])
+    if secondOrderBC: print('not implemented yet')
+    # if secondOrderBC:
+    #     hFacU = (SeaIceMaskU[2:-1,2:-1] - SeaIceMaskU[1:-2,2:-1]) / 3.
+    #     hFacV = (SeaIceMaskV[2:-1,2:-1] - SeaIceMaskV[2:-1,1:-2]) / 3.
+    #     hFacU = hFacU * (SeaIceMaskU[:-3,2:-1] * SeaIceMaskU[1:-2,2:-1]
+    #                      + SeaIceMaskU[3:,2:-1] * SeaIceMaskU[2:-1,2:-1])
+    #     hFacV = hFacV * (SeaIceMaskV[2:-1,:-3] * SeaIceMaskV[2:-1,1:-2]
+    #                      + SeaIceMaskV[2:-1,3:] * SeaIceMaskV[2:-1,2:-1])
 
-        e12[2:-1,2:-1] = e12[2:-1,2:-1] + 0.5 * (recip_dyU[2:-1,2:-1] * (6 * uave[2:-1,2:-1] - uFld[:-3,2:-1] * SeaIceMaskU[1:-2,2:-1] - uFld[3:,2:-1] * SeaIceMaskU[2:-1,2:-1]) * hFacU + recip_dxV[2:-1,2:-1] * (6 * vave[2:-1,2:-1] - vFld[2:-1,:-3] * SeaIceMaskV[2:-1,1:-2] - vFld[2:-1,3:] * SeaIceMaskV[2:-1,2:-1]) * hFacV)
-        
+    #     e12[2:-1,2:-1] = e12[2:-1,2:-1] + 0.5 * (
+    #         recip_dyU[2:-1,2:-1] * (6 * uave[2:-1,2:-1]
+    #                                 - uFld[:-3,2:-1] * SeaIceMaskU[1:-2,2:-1]
+    #                                 - uFld[3:,2:-1] * SeaIceMaskU[2:-1,2:-1]
+    #                                 ) * hFacU \
+    #         + recip_dxV[2:-1,2:-1] * (
+    #             6 * vave[2:-1,2:-1]
+    #             - vFld[2:-1,:-3] * SeaIceMaskV[2:-1,1:-2]
+    #             - vFld[2:-1,3:] * SeaIceMaskV[2:-1,2:-1]) * hFacV)
 
     return e11, e22, e12

@@ -44,14 +44,15 @@ recip_nITC = 1 / nITC
 gridcellWidth = 8000 #grid cell width in m
 
 # grid descriptor variables
-dxC = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between two adjacent cell centers in x direction across western cell wall [m]
-dyC = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between two adjacent cell centers in y direction across southern cell wall [m]
-dxG = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between cell faces (cell width) in x direction along southern cell wall [m]
-dyG = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between cell faces (cell width) in y direction along western cell wall [m]
-dxF = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between cell faces (cell width) in x direction through cell center [m]
-dyF = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between cell faces (cell width) in y direction through cell center [m]
-dxV = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between two adjacent v points in x direction across south-west corner of the cell [m]
-dyU = np.ones((sNy+2*OLy,sNx+2*OLx)) * gridcellWidth #distance between two adjacent u points in y direction across south-west corner of the cell [m]
+deltaX = np.ones((sNy+2*OLy,sNx+2*OLx))*gridcellWidht
+dxC = deltaX #distance between two adjacent cell centers in x direction across western cell wall [m]
+dyC = deltaX #distance between two adjacent cell centers in y direction across southern cell wall [m]
+dxG = deltaX #distance between cell faces (cell width) in x direction along southern cell wall [m]
+dyG = deltaX #distance between cell faces (cell width) in y direction along western cell wall [m]
+dxF = deltaX #distance between cell faces (cell width) in x direction through cell center [m]
+dyF = deltaX #distance between cell faces (cell width) in y direction through cell center [m]
+dxV = deltaX #distance between two adjacent v points in x direction across south-west corner of the cell [m]
+dyU = deltaX #distance between two adjacent u points in y direction across south-west corner of the cell [m]
 recip_dxC = 1 / dxC
 recip_dyC = 1 / dyC
 recip_dxG = 1 / dxG
@@ -71,9 +72,8 @@ recip_rAz = 1 / rAz
 recip_rAw = 1 / rAw
 recip_rAs = 1 / rAs
 
-
-
-fCori = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0 #1e-4 #coriolis parameter at grid center point
+#coriolis parameter at grid center point
+fCori = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0. #1e-4
 
 # masks for introducing boundaries
 maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))
@@ -81,26 +81,20 @@ maskInC[sNy+OLy-1,:] = 0
 maskInC[:,sNx+OLx-1] = 0
 maskInC = fill_overlap(maskInC)
 
-maskInW = np.ones((sNy+2*OLy,sNx+2*OLx))
-maskInW[sNy+OLy-1,:] = 0
-maskInW[:,sNx+OLx-1:] = 0
-maskInW[:,:OLx+1] = 0
+maskInW = maskInC*np.roll(maskInC,1,axis=1)
 maskInW = fill_overlap(maskInW)
 
-maskInS = np.ones((sNy+2*OLy,sNx+2*OLx))
-maskInS[:,sNx+OLx-1] = 0
-maskInS[sNy+OLy-1:,:] = 0
-maskInS[:OLy+1,:] = 0
+maskInS = maskInC*np.roll(maskInC,1,axis=0)
 maskInS = fill_overlap(maskInS)
 
 iceMask = maskInC.copy()
 SeaIceMaskU = maskInW.copy()
 SeaIceMaskV = maskInS.copy()
 
-k1AtC = np.ones((sNy+2*OLy,sNx+2*OLx))
-k2AtC = np.ones((sNy+2*OLy,sNx+2*OLx))
-k1AtZ = np.ones((sNy+2*OLy,sNx+2*OLx))
-k2AtZ = np.ones((sNy+2*OLy,sNx+2*OLx))
+k1AtC = np.zeros((sNy+2*OLy,sNx+2*OLx))
+k2AtC = np.zeros((sNy+2*OLy,sNx+2*OLx))
+k1AtZ = np.zeros((sNy+2*OLy,sNx+2*OLx))
+k2AtZ = np.zeros((sNy+2*OLy,sNx+2*OLx))
 
 # # for the 1d model
 # maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))
