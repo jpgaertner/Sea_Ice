@@ -129,6 +129,7 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
         # smooth regularization of delta for better differentiability
         deltaCreg = deltaC + deltaMin
+        # deltaCreg = np.sqrt( deltaSq + deltaMin**2 )
 
         zetaC = 0.5 * (press0 * (1 + tensileStrFac)) / deltaCreg
 
@@ -148,9 +149,9 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         # divergence strain rates at c points times p / divided by delta minus 1
         div = (2 * zetaC * ep - pressC) * iceMask
         # tension strain rates at c points times p / divided by delta
-        tension = 2 * zetaC * em * iceMask
+        tension = 2 * zetaC * em * iceMask * recip_evpRevFac
         # shear strain rates at z points times p / divided by delta
-        shear = 2. * zetaZ * e12
+        shear = 2. * zetaZ * e12 * recip_evpRevFac
 
 
         ##### first step stress equations #####
@@ -159,12 +160,12 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
             evpAlphaC = np.sqrt(zetaC * EVPcFac / np.maximum(
                 SeaIceMassC, 1e-4) * recip_rA) * iceMask
             evpAlphaC = np.maximum(evpAlphaC, aEVPalphaMin)
-            denom1 = 1 / evpAlphaC
+            denom1 = 1. / evpAlphaC
             denom2 = denom1.copy()
 
         # calculate sigma1, sigma2 on c points
-        sigma1 = sigma1 + (div                     - sigma1) * denom1 * iceMask
-        sigma2 = sigma2 + (tension*recip_evpRevFac - sigma2) * denom2 * iceMask
+        sigma1 = sigma1 + (div     - sigma1) * denom1 * iceMask
+        sigma2 = sigma2 + (tension - sigma2) * denom2 * iceMask
 
         sigma1 = fill_overlap(sigma1)
         sigma2 = fill_overlap(sigma2)
@@ -175,7 +176,7 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
             evpAlphaZ = 0.5*( evpAlphaZ + np.roll(evpAlphaC,1,1) )
             denom2 = 1. / evpAlphaZ
 
-        sigma12 = sigma12 + (shear*recip_evpRevFac - sigma12) * denom2
+        sigma12 = sigma12 + (shear - sigma12) * denom2
 
         # import matplotlib.pyplot as plt
         # plt.clf(); plt.pcolormesh(sigma1); plt.colorbar(); plt.show()
