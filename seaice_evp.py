@@ -186,11 +186,11 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         # calculate divergence of stress tensor
         stressDivX = (
               sig11*dyF   - np.roll(  sig11*dyF, 1,axis=1)
-            + sigma12*dxV - np.roll(sigma12*dxV,-1,axis=0)
+            - sigma12*dxV + np.roll(sigma12*dxV,-1,axis=0)
             ) * recip_rAw
         stressDivY = (
               sig22*dxF   - np.roll(  sig22*dxF, 1,axis=0)
-            + sigma12*dyU - np.roll(sigma12*dyU,-1,axis=1)
+            - sigma12*dyU + np.roll(sigma12*dyU,-1,axis=1)
             ) * recip_rAs
 
         # set up right hand side for stepping the velocity field
@@ -207,20 +207,20 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
         # set up anti symmetric drag force and add in ice ocean stress
         # (average to correct velocity points)
+        duAtC = 0.5 * ( uVel-uIce + np.roll(uVel-uIce,-1,1) )
         dvAtC = 0.5 * ( vVel-vIce + np.roll(vVel-vIce,-1,0) )
         IceSurfStressX = IceSurfStressX0 + (
             0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat *  uVel
             - np.sign(fCori) * sinWat * 0.5 * (
                 cDrag * dvAtC + np.roll(cDrag * dvAtC,1,1)
-            )
-        ) * locMaskU * areaW
-        duAtC = 0.5 * ( uVel-uIce + np.roll(uVel-uIce,-1,1) )
+            ) * locMaskU
+        ) * areaW
         IceSurfStressY = IceSurfStressY0 + (
             0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * vVel
             + np.sign(fCori) * sinWat * 0.5 * (
                 cDrag * duAtC  + np.roll(cDrag * duAtC,1,0)
-            )
-        ) * locMaskV * areaS
+            ) * locMaskV
+        ) * areaS
 
         # add coriolis terms
         fvAtC = SeaIceMassC * fCori * 0.5 * ( vIce + np.roll(vIce,-1,0) )
@@ -299,7 +299,7 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
         # import matplotlib.pyplot as plt
         # fig2, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
-        # csf0=ax[0].pcolormesh(np.sqrt(e12Csq))
+        # csf0=ax[0].pcolormesh(e12)
         # ax[0].set_title('e12')
         # plt.colorbar(csf0,ax=ax[0])
         # csf1=ax[1].pcolormesh(uIce)
