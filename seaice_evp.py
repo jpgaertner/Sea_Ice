@@ -38,6 +38,7 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     ##### initializations #####
 
     useAdaptiveEVP = False
+    computeResidual = True
     # change to input with default value = False?
     if useAdaptiveEVP:
         aEvpCoeff = 0.5
@@ -89,16 +90,14 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     resU = np.array([None]*nEVPsteps)
 
     for i in range(nEVPsteps):
-        # save previous (p-1) iteration for residual computation
-        sig1Pm1 = sigma1.copy()
-        sig2Pm1 = sigma2.copy()
-        sig12Pm1 = sigma12.copy()
-        uIcePm1 = uIce.copy()
-        vIcePm1 = vIce.copy()
 
-        # e11 = zero2d.copy()
-        # e22 = zero2d.copy()
-        # e12 = zero2d.copy()
+        if computeResidual:
+            # save previous (p-1) iteration for residual computation
+            sig1Pm1 = sigma1.copy()
+            sig2Pm1 = sigma2.copy()
+            sig12Pm1 = sigma12.copy()
+            uIcePm1 = uIce.copy()
+            vIcePm1 = vIce.copy()
 
         # calculate strain rates and bulk moduli/ viscosities
         e11, e22, e12 = strainrates(uIce, vIce, secondOrderBC)
@@ -142,6 +141,7 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
 
         ##### first step stress equations #####
+        # following Kimmritz et al. (2016)
 
         if useAdaptiveEVP:
             evpAlphaC = np.sqrt(zetaC * EVPcFac / np.maximum(
@@ -169,6 +169,9 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         # plt.clf(); plt.pcolormesh(sigma1); plt.colorbar(); plt.show()
         # sigma12 = fill_overlap(sigma12)
 
+        # set up right hand side for stepping the velocity field
+        # following Kimmritz et al. (2016)
+
         # recover sigma11 and sigma22
         sig11 = 0.5 * (sigma1 + sigma2)
         sig22 = 0.5 * (sigma1 - sigma2)
@@ -183,11 +186,11 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
             - sigma12*dyU + np.roll(sigma12*dyU,-1,axis=1)
             ) * recip_rAs
 
-        # set up right hand side for stepping the velocity field
+        # drag coefficients for implicit/explicit treatment of drag
         cDrag = ocean_drag_coeffs(uIce, vIce, uVel, vVel)
         cBotC = bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low)
 
-        # over open ocean...
+        # over open ocean..., see comments in MITgcm: pkg/seaice/seaice_evp.F
         locMaskU = SeaIceMassU.copy()
         locMaskV = SeaIceMassV.copy()
         maskU = np.where(locMaskU != 0)
@@ -218,7 +221,6 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         IceSurfStressX = IceSurfStressX + 0.5 * ( fvAtC + np.roll(fvAtC,1,1) )
         IceSurfStressY = IceSurfStressY - 0.5 * ( fuAtC + np.roll(fuAtC,1,0) )
 
-        # step momentum equations with ice-ocean stress treated implicitly
         if useAdaptiveEVP:
             evpBetaU = 0.5 * ( evpAlphaC + np.roll(evpAlphaC,1,1) )
             evpBetaV = 0.5 * ( evpAlphaC + np.roll(evpAlphaC,1,0) )
@@ -230,19 +232,19 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         dragV = 0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * areaS \
               + 0.5 * ( cBotC + np.roll(cBotC,1,0) )          * areaS
 
-        # denomU[denomU == 0] = 1
-        # denomV[denomV == 0] = 1
-
+        # step momentum equations with ice-ocean stress treated ...
         if explicitDrag:
+            # ... explicitly
             IceSurfStressX = IceSurfStressX - uIce * dragU
             IceSurfStressY = IceSurfStressY - vIce * dragV
             denomU = 1.
             denomV = 1.
         else:
+            # ... or implicitly
             denomU = 1. + dragU * deltaTdyn*rMassU/evpBetaU
             denomV = 1. + dragV * deltaTdyn*rMassV/evpBetaV
 
-
+        # step momentum equations following Kimmritz et al. (2016)
         uIce = SeaIceMaskU * (
             uIce + (
                 deltaTdyn*rMassU * ( IceSurfStressX + stressDivX )
@@ -259,61 +261,66 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         uIce = fill_overlap(uIce)
         vIce = fill_overlap(vIce)
 
-        sig1Pm1 = (sigma1 - sig1Pm1) * evpAlphaC * iceMask
-        sig2Pm1 = (sigma2 - sig2Pm1) * evpAlphaC * iceMask
-        sig12Pm1 = (sigma12 - sig12Pm1) * evpAlphaZ #* maskZ
+        # residual computation
+        if computeResidual:
+            sig1Pm1 = (sigma1 - sig1Pm1) * evpAlphaC * iceMask
+            sig2Pm1 = (sigma2 - sig2Pm1) * evpAlphaC * iceMask
+            sig12Pm1 = (sigma12 - sig12Pm1) * evpAlphaZ #* maskZ
 
-        uIcePm1 = SeaIceMaskU * ( uIce - uIcePm1 ) * evpBetaU
-        vIcePm1 = SeaIceMaskV * ( vIce - vIcePm1 ) * evpBetaV
+            uIcePm1 = SeaIceMaskU * ( uIce - uIcePm1 ) * evpBetaU
+            vIcePm1 = SeaIceMaskV * ( vIce - vIcePm1 ) * evpBetaV
 
-        # if not explicitDrag:
-        #     IceSurfStressX = IceSurfStressX - uIce * dragU
-        #     IceSurfStressY = IceSurfStressY - vIce * dragV
+            # if not explicitDrag:
+            #     IceSurfStressX = IceSurfStressX - uIce * dragU
+            #     IceSurfStressY = IceSurfStressY - vIce * dragV
 
-        # uIcePm1 = ( SeaIceMassU * (uIce - uIceNm1)*recip_deltaTdyn
-        #             - (IceSurfStressX + stressDivX)
-        #            ) * SeaIceMaskU
-        # vIcePm1 = ( SeaIceMassV * (vIce - vIceNm1)*recip_deltaTdyn
-        #             - (IceSurfStressY + stressDivY)
-        #            ) * SeaIceMaskV
-        resSig[i] = (sig1Pm1**2 + sig2Pm1**2
-                     + sig12Pm1**2)[OLy:-OLy,OLx:-OLx].sum()
-        resU[i]   = ( uIcePm1**2
-                    + vIcePm1**2 )[OLy:-OLy,OLx:-OLx].sum()
-        resU[i]   = global_sum(resU[i])
-        resSig[i] = global_sum(resSig[i])
+            # uIcePm1 = ( SeaIceMassU * (uIce - uIceNm1)*recip_deltaTdyn
+            #             - (IceSurfStressX + stressDivX)
+            #            ) * SeaIceMaskU
+            # vIcePm1 = ( SeaIceMassV * (vIce - vIceNm1)*recip_deltaTdyn
+            #             - (IceSurfStressY + stressDivY)
+            #            ) * SeaIceMaskV
+            resSig[i] = (sig1Pm1**2 + sig2Pm1**2
+                         + sig12Pm1**2)[OLy:-OLy,OLx:-OLx].sum()
+            resU[i]   = ( uIcePm1**2
+                          + vIcePm1**2 )[OLy:-OLy,OLx:-OLx].sum()
+            resU[i]   = global_sum(resU[i])
+            resSig[i] = global_sum(resSig[i])
 
-        # print(i)
-        # print(uIce.max(),vIce.max())
-        # print(sigma1.max(), sigma2.max(), sigma12.max())
+            # print(i)
+            # print(uIce.max(),vIce.max())
+            # print(sigma1.max(), sigma2.max(), sigma12.max())
 
-        # import matplotlib.pyplot as plt
-        # fig2, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
-        # csf0=ax[0].pcolormesh(e12)
-        # ax[0].set_title('e12')
-        # plt.colorbar(csf0,ax=ax[0])
-        # csf1=ax[1].pcolormesh(uIce)
-        # plt.colorbar(csf1,ax=ax[1])
-        # ax[1].set_title('uIce')
-        # plt.show()
+            # import matplotlib.pyplot as plt
+            # fig2, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
+            # csf0=ax[0].pcolormesh(e12)
+            # ax[0].set_title('e12')
+            # plt.colorbar(csf0,ax=ax[0])
+            # csf1=ax[1].pcolormesh(uIce)
+            # plt.colorbar(csf1,ax=ax[1])
+            # ax[1].set_title('uIce')
+            # plt.show()
 
 
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
-    ax[0].semilogy(resU[:],'x-')
-    ax[0].set_title('resU')
-    ax[1].semilogy(resSig[:],'x-')
-    ax[1].set_title('resSig')
-    # s12 = sigma12 + np.roll(sigma12,-1,0)
-    # s12 = 0.25*(s12 + np.roll(s12,-1,1))
-    # s1=( sigma1 + np.sqrt(sigma2**2 + 4*s12**2) )/pressC
-    # s2=( sigma1 - np.sqrt(sigma2**2 + 4*s12**2) )/pressC
-    # csf0=ax[0].plot(s1.ravel(),s2.ravel(),'.'); #plt.colorbar(csf0,ax=ax[0])
-    # ax[0].plot([-1.4,0.1],[-1.4,0.1],'k-'); #plt.colorbar(csf0,ax=ax[0])
-    # ax[0].set_title('sigma1')
-    # csf1=ax[1].pcolormesh(sigma12); plt.colorbar(csf1,ax=ax[1])
-    # ax[1].set_title('sigma2')
-    plt.show()
-    # print(resU)
-    # print(resSig)
+    if computeResidual:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
+        ax[0].semilogy(resU[:],'x-')
+        ax[0].set_title('resU')
+        ax[1].semilogy(resSig[:],'x-')
+        ax[1].set_title('resSig')
+        # s12 = sigma12 + np.roll(sigma12,-1,0)
+        # s12 = 0.25*(s12 + np.roll(s12,-1,1))
+        # s1=( sigma1 + np.sqrt(sigma2**2 + 4*s12**2) )/pressC
+        # s2=( sigma1 - np.sqrt(sigma2**2 + 4*s12**2) )/pressC
+        # csf0=ax[0].plot(s1.ravel(),s2.ravel(),'.');#plt.colorbar(csf0,ax=ax[0])
+        # ax[0].plot([-1.4,0.1],[-1.4,0.1],'k-'); #plt.colorbar(csf0,ax=ax[0])
+        # ax[0].set_title('sigma1')
+        # csf1=ax[1].pcolormesh(sigma12); plt.colorbar(csf1,ax=ax[1])
+        # ax[1].set_title('sigma2')
+        plt.show()
+        # print(resU)
+        # print(resSig)
+
+
     return uIce, vIce
