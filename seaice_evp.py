@@ -97,15 +97,11 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
     # initializations
     zero2d = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    e12Csq = zero2d
-    stressDivX = zero2d
-    stressDivY = zero2d
-    pressC = zero2d
+    # should initialised elsewhere (but this will work, too, just more
+    # expensive)
     sigma1 = zero2d
     sigma2 = zero2d
     sigma12 = zero2d
-    denomU = zero2d
-    denomV = zero2d
     resSig = np.array([None]*nEVPsteps)
     resU = np.array([None]*nEVPsteps)
 
@@ -124,8 +120,9 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         em = e11 - e22
 
         # use area weighted average of squares of e12 (more accurate)
-        e12sq =      rAz * e12**2 + np.roll(rAz * e12**2,-1,0)
-        e12sq = 0.25 * recip_rA * (e12sq + np.roll(e12sq,-1,1) )
+        e12Csq = rAz * e12**2
+        e12Csq =                    e12Csq + np.roll(e12Csq,-1,0)
+        e12Csq = 0.25 * recip_rA * (e12Csq + np.roll(e12Csq,-1,1) )
 
         deltaSq = ep**2 + recip_PlasDefCoeffSq * ( em**2 + 4. * e12Csq )
         deltaC = np.sqrt(deltaSq)
