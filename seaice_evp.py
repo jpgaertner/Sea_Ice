@@ -46,31 +46,22 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         EVPcFac = 0
     # ... aEVPCoeff
 
-    ones2d = np.ones((sNy+2*OLy,sNx+2*OLx))
-    maskZ = iceMask.copy()
-    maskZ[1:,1:] = maskZ[1:,1:] + iceMask[:-1,1:] \
-        + iceMask[:-1,:-1] + iceMask[1:,:-1]
-    maskZ[maskZ>0.]=1.
-
     sinWat = np.sin(np.deg2rad(waterTurnAngle))
     cosWat = np.cos(np.deg2rad(waterTurnAngle))
 
-    PlasDefCoeffSq = PlasDefCoeff**2
-    recip_PlasDefCoeffSq = 1 / PlasDefCoeffSq
+    recip_PlasDefCoeffSq = 1 / PlasDefCoeff**2
 
+    explicitDrag = False
     evpAlpha = 500
-    recip_evpAlpha = 1 / evpAlpha
-    explicitDrag = True
-    evpStarFac = 1
-    evpRevFac = 1
+    evpBeta  = evpAlpha
     recip_evpRevFac = recip_PlasDefCoeffSq
-    # evpRevFac = 0
     # recip_evpRevFac = 1
+
+    ones2d = np.ones((sNy+2*OLy,sNx+2*OLx))
+    zero2d = np.zeros((sNy+2*OLy,sNx+2*OLx))
 
     denom1 = ones2d / evpAlpha
     denom2 = denom1.copy()
-
-    evpBeta = evpAlpha
 
     # copy previous time step (n-1) of uIce, vIce
     uIceNm1 = uIce.copy()
@@ -89,7 +80,6 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     ##### main loop #####
 
     # initializations
-    zero2d = np.zeros((sNy+2*OLy,sNx+2*OLx))
     # should initialised elsewhere (but this will work, too, just more
     # expensive)
     sigma1 = zero2d
@@ -314,6 +304,15 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     ax[0].set_title('resU')
     ax[1].semilogy(resSig[:],'x-')
     ax[1].set_title('resSig')
+    # s12 = sigma12 + np.roll(sigma12,-1,0)
+    # s12 = 0.25*(s12 + np.roll(s12,-1,1))
+    # s1=( sigma1 + np.sqrt(sigma2**2 + 4*s12**2) )/pressC
+    # s2=( sigma1 - np.sqrt(sigma2**2 + 4*s12**2) )/pressC
+    # csf0=ax[0].plot(s1.ravel(),s2.ravel(),'.'); #plt.colorbar(csf0,ax=ax[0])
+    # ax[0].plot([-1.4,0.1],[-1.4,0.1],'k-'); #plt.colorbar(csf0,ax=ax[0])
+    # ax[0].set_title('sigma1')
+    # csf1=ax[1].pcolormesh(sigma12); plt.colorbar(csf1,ax=ax[1])
+    # ax[1].set_title('sigma2')
     plt.show()
     # print(resU)
     # print(resSig)
