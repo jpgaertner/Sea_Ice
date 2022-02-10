@@ -40,11 +40,13 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     useAdaptiveEVP = False
     # change to input with default value = False?
     if useAdaptiveEVP:
-        EVPcFac = deltaTdyn
+        aEvpCoeff = 0.5
+        EVPcFac = deltaTdyn * aEVPcStar * ( np.pi * aEvpCoeff ) ** 2
     else:
         EVPcFac = 0
     # ... aEVPCoeff
 
+    ones2d = np.ones((sNy+2*OLy,sNx+2*OLx))
     maskZ = iceMask.copy()
     maskZ[1:,1:] = maskZ[1:,1:] + iceMask[:-1,1:] \
         + iceMask[:-1,:-1] + iceMask[1:,:-1]
@@ -65,7 +67,7 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     # evpRevFac = 0
     # recip_evpRevFac = 1
 
-    denom1 = np.ones((sNy+2*OLy,sNx+2*OLx)) / evpAlpha
+    denom1 = ones2d / evpAlpha
     denom2 = denom1.copy()
 
     evpBeta = evpAlpha
@@ -81,10 +83,10 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     vIceNm1 = vIce.copy()
 
     # initialize adaptive EVP specific fields
-    evpAlphaC = np.ones((sNy+2*OLy,sNx+2*OLx)) * evpAlpha
-    evpAlphaZ = np.ones((sNy+2*OLy,sNx+2*OLx)) * evpAlpha
-    evpBetaU = np.ones((sNy+2*OLy,sNx+2*OLx)) * evpBeta
-    evpBetaV = np.ones((sNy+2*OLy,sNx+2*OLx)) * evpBeta
+    evpAlphaC = ones2d * evpAlpha
+    evpAlphaZ = ones2d * evpAlpha
+    evpBetaU  = ones2d * evpBeta
+    evpBetaV  = ones2d * evpBeta
 
     # initialize fractional areas at velocity points
     areaW = 0.5 * (Area + np.roll(Area,1,1))
@@ -94,36 +96,36 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     ##### main loop #####
 
     # initializations
-    e12Csq = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    stressDivX = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    stressDivY = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    pressC = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    sigma1 = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    sigma2 = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    sigma12 = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    denomU = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    denomV = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    zero2d = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    e12Csq = zero2d
+    stressDivX = zero2d
+    stressDivY = zero2d
+    pressC = zero2d
+    sigma1 = zero2d
+    sigma2 = zero2d
+    sigma12 = zero2d
+    denomU = zero2d
+    denomV = zero2d
     resSig = np.array([None]*nEVPsteps)
     resU = np.array([None]*nEVPsteps)
 
     for i in range(nEVPsteps):
-        # calculate strain rates and bulk moduli/ viscosities
-        e11, e22, e12 = strainrates(uIce, vIce, secondOrderBC)
-
-        # save previous (p-1) iteration
+        # save previous (p-1) iteration for residual computation
         sig1Pm1 = sigma1.copy()
         sig2Pm1 = sigma2.copy()
         sig12Pm1 = sigma12.copy()
         uIcePm1 = uIce.copy()
         vIcePm1 = vIce.copy()
 
+        # calculate strain rates and bulk moduli/ viscosities
+        e11, e22, e12 = strainrates(uIce, vIce, secondOrderBC)
+
         ep = e11 + e22
         em = e11 - e22
 
         # use area weighted average of squares of e12 (more accurate)
-        e12sq = rAz * e12**2
-        e12sq = e12sq + np.roll(rAz * e12sq,-1,0)
-        e12sq = 0.25 * recip_rA * ( e12sq + np.roll(e12sq,-1,1) )
+        e12sq =      rAz * e12**2 + np.roll(rAz * e12**2,-1,0)
+        e12sq = 0.25 * recip_rA * (e12sq + np.roll(e12sq,-1,1) )
 
         deltaSq = ep**2 + recip_PlasDefCoeffSq * ( em**2 + 4. * e12Csq )
         deltaC = np.sqrt(deltaSq)
@@ -137,7 +139,9 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         zetaZ = c_point_to_z_point(zetaC)
         # import matplotlib.pyplot as plt
         # plt.clf(); plt.pcolormesh(zetaZ); plt.colorbar(); plt.show()
-#        deltaZ = c_point_to_z_point(deltaC)
+        # deltaZ = c_point_to_z_point(deltaC)
+        # pressZ = c_point_to_z_point(press0 * (1 + tensileStrFac))
+        # zetaZ = 0.5 * pressZ / ( deltaZ + deltaMin )
 
         # recalculate pressure
         pressC = ( press0 * (1 - pressReplFac)
@@ -237,8 +241,8 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
         SeaIceMassU=np.ones(SeaIceMassU.shape)
         SeaIceMassV=np.ones(SeaIceMassV.shape)
-        rMassU = 1./np.where(SeaIceMassU > 0., SeaIceMassU, np.Inf)
-        rMassV = 1./np.where(SeaIceMassV > 0., SeaIceMassV, np.Inf)
+        rMassU = 1./locMaskU
+        rMassV = 1./locMaskV
         denomU = ( 1. + ( 0.
             + 0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat * areaW
             + 0.5 * ( cBotC + np.roll(cBotC,1,1) )          * areaW
