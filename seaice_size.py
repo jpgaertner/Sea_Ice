@@ -44,7 +44,7 @@ recip_nITC = 1 / nITC
 gridcellWidth = 8000 #grid cell width in m
 
 # grid descriptor variables
-deltaX = np.ones((sNy+2*OLy,sNx+2*OLx))*gridcellWidht
+deltaX = np.ones((sNy+2*OLy,sNx+2*OLx))*gridcellWidth
 dxC = deltaX #distance between two adjacent cell centers in x direction across western cell wall [m]
 dyC = deltaX #distance between two adjacent cell centers in y direction across southern cell wall [m]
 dxG = deltaX #distance between cell faces (cell width) in x direction along southern cell wall [m]
