@@ -236,7 +236,7 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         # step momentum equations with ice-ocean stress treated implicitly
         if useAdaptiveEVP:
             evpBetaU = 0.5 * ( evpAlphaC + np.roll(evpAlphaC,1,1) )
-            evpBetaV = 0.5 * ( evpAlphaC + np.roll(evpAlphaC,0,1) )
+            evpBetaV = 0.5 * ( evpAlphaC + np.roll(evpAlphaC,1,0) )
 
 
         SeaIceMassU=np.ones(SeaIceMassU.shape)
@@ -302,8 +302,8 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         #         + 0.5 * ( cBotC + np.roll(cBotC,1,1) )          * areaW )
         # vres = SeaIceMassV * (vIce - vIceNm1)*recip_deltaTdyn \
         #     - IceSurfStressY + stressDivY - vIce * (
-        #           0.5 * ( cDrag + np.roll(cDrag,0,1) ) * cosWat * areaS
-        #         + 0.5 * ( cBotC + np.roll(cBotC,0,1) )          * areaS )
+        #           0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * areaS
+        #         + 0.5 * ( cBotC + np.roll(cBotC,1,0) )          * areaS )
         # resU[i]   = ( ures**2
         #             + vres**2 )[OLy:-OLy,OLx:-OLx].sum()
         resU[i]   = global_sum(resU[i])
