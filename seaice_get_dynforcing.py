@@ -44,10 +44,10 @@ def get_dynforcing(uIce, vIce, uWind, vWind, uVel, vVel):
 
     # compute ice surface stress
     tauX = CDAir * (cosWin * urel - np.sign(fCori) * sinWin * vrel )
-    tauY = CDAir * (cosWin * vrel - np.sign(fCori) * sinWin * urel )
+    tauY = CDAir * (cosWin * vrel + np.sign(fCori) * sinWin * urel )
+
     # interpolate to u points
     tauX = 0.5 * ( tauX + np.roll(tauX,1,1) ) * SeaIceMaskU
-
     # interpolate to v points
     tauY = 0.5 * ( tauY + np.roll(tauY,1,0) ) * SeaIceMaskV
 
