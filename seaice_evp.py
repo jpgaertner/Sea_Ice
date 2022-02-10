@@ -236,31 +236,23 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
             evpBetaU = 0.5 * ( evpAlphaC + np.roll(evpAlphaC,1,1) )
             evpBetaV = 0.5 * ( evpAlphaC + np.roll(evpAlphaC,1,0) )
 
-        rMassU = 1./locMaskU
-        rMassV = 1./locMaskV
-        denomU = ( 1. + ( 0.
-            + 0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat * areaW
-            + 0.5 * ( cBotC + np.roll(cBotC,1,1) )          * areaW
-        ) * deltaTdyn*rMassU/evpBetaU
-                  )
-        denomV = ( 1. + ( 0.
-            + 0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * areaS
-            + 0.5 * ( cBotC + np.roll(cBotC,1,0) )          * areaS
-        ) * deltaTdyn*rMassV/evpBetaV
-                  )
-        denomU[denomU == 0] = 1
-        denomV[denomV == 0] = 1
+        rMassU = 1./np.where(SeaIceMassU==0,np.Inf,SeaIceMassU)
+        rMassV = 1./np.where(SeaIceMassV==0,np.Inf,SeaIceMassV)
+        dragU = 0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat * areaW \
+              + 0.5 * ( cBotC + np.roll(cBotC,1,1) )          * areaW
+        dragV = 0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * areaS \
+              + 0.5 * ( cBotC + np.roll(cBotC,1,0) )          * areaS
+
+        denomU = 1. + dragU * deltaTdyn*rMassU/evpBetaU
+        denomV = 1. + dragV * deltaTdyn*rMassV/evpBetaV
+
+        # denomU[denomU == 0] = 1
+        # denomV[denomV == 0] = 1
 
         explicitDrag=False
         if explicitDrag:
-            IceSurfStressX = IceSurfStressX - uIce*( 0.
-                + 0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat * areaW
-                + 0.5 * ( cBotC + np.roll(cBotC,1,1) )          * areaW
-                                               )
-            IceSurfStressY = IceSurfStressY - vIce*( 0.
-                + 0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * areaS
-                + 0.5 * ( cBotC + np.roll(cBotC,1,0) )          * areaS
-                                               )
+            IceSurfStressX = IceSurfStressX - uIce * dragU
+            IceSurfStressY = IceSurfStressY - vIce * dragV
             denomU = 1.
             denumV = 1.
 
@@ -288,14 +280,9 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         vIcePm1 = SeaIceMaskV * ( vIce - vIcePm1 ) * evpBetaV
 
         # if not explicitDrag:
-        #     IceSurfStressX = IceSurfStressX - uIce*( 0.
-        #         + 0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat * areaW
-        #         + 0.5 * ( cBotC + np.roll(cBotC,1,1) )          * areaW
-        #                                             )
-        #     IceSurfStressY = IceSurfStressY - vIce*( 0.
-        #         + 0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * areaS
-        #         + 0.5 * ( cBotC + np.roll(cBotC,1,0) )          * areaS
-        #                                             )
+        #     IceSurfStressX = IceSurfStressX - uIce * dragU
+        #     IceSurfStressY = IceSurfStressY - vIce * dragV
+
         # uIcePm1 = ( SeaIceMassU * (uIce - uIceNm1)*recip_deltaTdyn
         #             - (IceSurfStressX + stressDivX)
         #            ) * SeaIceMaskU
@@ -318,9 +305,9 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         # csf0=ax[0].pcolormesh(sigma1)
         # ax[0].set_title('sigma1')
         # plt.colorbar(csf0,ax=ax[0])
-        # csf1=ax[1].pcolormesh(sigma12)
+        # csf1=ax[1].pcolormesh(uIce)
         # plt.colorbar(csf1,ax=ax[1])
-        # ax[1].set_title('sigma12')
+        # ax[1].set_title('uIce')
         # plt.show()
 
 
