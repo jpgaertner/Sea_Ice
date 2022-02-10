@@ -17,7 +17,7 @@ from seaice_size import *
 def strainrates(uFld, vFld, secondOrderBC):
 
     # initializations
-    noSlipFac = 1
+    noSlip = True
 
     # abbreviations at c points
     dudx = ( np.roll(uFld,-1,axis=1) - uFld ) * recip_dxF
@@ -36,15 +36,14 @@ def strainrates(uFld, vFld, secondOrderBC):
     vave = ( vFld + np.roll(vFld,1,axis=1) ) * 0.5
 
     # evaluate strain rate at z points
-    hFacU = SeaIceMaskU - np.roll(SeaIceMaskU,1,axis=0)
-    hFacV = SeaIceMaskV - np.roll(SeaIceMaskV,1,axis=1)
     mskZ = iceMask*np.roll(iceMask,1,axis=1)
     mskZ =    mskZ*np.roll(   mskZ,1,axis=0)
-    e12 = 0.5 * (dudy + dvdx - k1AtZ * vave - k2AtZ * uave ) * mskZ \
-        + noSlipFac * (
-              2.0 * uave * recip_dyU * hFacU
-            + 2.0 * vave * recip_dxV * hFacV
-        )
+    e12 = 0.5 * (dudy + dvdx - k1AtZ * vave - k2AtZ * uave ) * mskZ
+    if noSlip:
+        hFacU = SeaIceMaskU - np.roll(SeaIceMaskU,1,axis=0)
+        hFacV = SeaIceMaskV - np.roll(SeaIceMaskV,1,axis=1)
+        e12   = e12 + ( 2.0 * uave * recip_dyU * hFacU
+                      + 2.0 * vave * recip_dxV * hFacV )
 
     if secondOrderBC:
         hFacU = ( SeaIceMaskU - np.roll(SeaIceMaskU,1,0) ) / 3.
