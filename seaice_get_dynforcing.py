@@ -49,6 +49,6 @@ def get_dynforcing(uIce, vIce, uWind, vWind, uVel, vVel):
     tauX = 0.5 * ( tauX + np.roll(tauX,1,1) ) * SeaIceMaskU
 
     # interpolate to v points
-    tauY = 0.5 * ( tauY + np.roll(tauY,1,1) ) * SeaIceMaskV
+    tauY = 0.5 * ( tauY + np.roll(tauY,1,0) ) * SeaIceMaskV
 
     return tauX, tauY
