@@ -60,7 +60,7 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
     evpAlpha = 500
     recip_evpAlpha = 1 / evpAlpha
-    implFac = 0.
+    explicitDrag = True
     evpStarFac = 1
     evpRevFac = 1
     recip_evpRevFac = recip_PlasDefCoeffSq
@@ -71,12 +71,6 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     denom2 = denom1.copy()
 
     evpBeta = evpAlpha
-    betaFac = evpBeta * recip_deltaTdyn
-    betaFacU = betaFac
-    betaFacV = betaFac
-    betaFacP1 = betaFac + evpStarFac * recip_deltaTdyn
-    betaFacP1U = betaFacP1
-    betaFacP1V = betaFacP1
 
     # copy previous time step (n-1) of uIce, vIce
     uIceNm1 = uIce.copy()
@@ -91,7 +85,6 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     # initialize fractional areas at velocity points
     areaW = 0.5 * (Area + np.roll(Area,1,1))
     areaS = 0.5 * (Area + np.roll(Area,1,0))
-
 
     ##### main loop #####
 
@@ -113,6 +106,10 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         uIcePm1 = uIce.copy()
         vIcePm1 = vIce.copy()
 
+        # e11 = zero2d.copy()
+        # e22 = zero2d.copy()
+        # e12 = zero2d.copy()
+
         # calculate strain rates and bulk moduli/ viscosities
         e11, e22, e12 = strainrates(uIce, vIce, secondOrderBC)
 
@@ -121,8 +118,8 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
         # use area weighted average of squares of e12 (more accurate)
         e12Csq = rAz * e12**2
-        e12Csq =                    e12Csq + np.roll(e12Csq,-1,0)
-        e12Csq = 0.25 * recip_rA * (e12Csq + np.roll(e12Csq,-1,1) )
+        e12Csq =                     e12Csq + np.roll(e12Csq,-1,0)
+        e12Csq = 0.25 * recip_rA * ( e12Csq + np.roll(e12Csq,-1,1) )
 
         deltaSq = ep**2 + recip_PlasDefCoeffSq * ( em**2 + 4. * e12Csq )
         deltaC = np.sqrt(deltaSq)
@@ -143,13 +140,13 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
         # recalculate pressure
         pressC = ( press0 * (1 - pressReplFac)
-                   + 2 * zetaC * deltaC * pressReplFac / (1 + tensileStrFac)
+                   + 2. * zetaC * deltaC * pressReplFac / (1 + tensileStrFac)
                   ) * (1 - tensileStrFac)
 
         # divergence strain rates at c points times p / divided by delta minus 1
-        div = (2 * zetaC * ep - pressC) * iceMask
+        div = (2. * zetaC * ep - pressC) * iceMask
         # tension strain rates at c points times p / divided by delta
-        tension = 2 * zetaC * em * iceMask * recip_evpRevFac
+        tension = 2. * zetaC * em * iceMask * recip_evpRevFac
         # shear strain rates at z points times p / divided by delta
         shear = 2. * zetaZ * e12 * recip_evpRevFac
 
@@ -246,7 +243,6 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         # denomU[denomU == 0] = 1
         # denomV[denomV == 0] = 1
 
-        explicitDrag=True
         if explicitDrag:
             IceSurfStressX = IceSurfStressX - uIce * dragU
             IceSurfStressY = IceSurfStressY - vIce * dragV
@@ -303,8 +299,8 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
         # import matplotlib.pyplot as plt
         # fig2, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
-        # csf0=ax[0].pcolormesh(sigma1)
-        # ax[0].set_title('sigma1')
+        # csf0=ax[0].pcolormesh(np.sqrt(e12Csq))
+        # ax[0].set_title('e12')
         # plt.colorbar(csf0,ax=ax[0])
         # csf1=ax[1].pcolormesh(uIce)
         # plt.colorbar(csf1,ax=ax[1])
