@@ -3,7 +3,7 @@ import numpy as np
 from seaice_size import *
 
 # densities [g/m3]
-rhoIce = 910 
+rhoIce = 910
 rhoSnow = 330
 rhoFresh = 999.8
 recip_rhoFresh = 1 / rhoFresh
@@ -94,7 +94,7 @@ area_floor = si_eps
 
 airOceanDrag = 0.0012 #air-ocean drag coefficient
 airIceDrag = 0.0012 #air-ice drag coefficient
-airIceDrag_south = 0.001 
+airIceDrag_south = 0.001
 waterIceDrag = 0.0055 #water-ice drag coefficient
 waterIceDrag_south = 0.0055
 cDragMin = 0.25 #minimum of liniear drag coefficient between ice and ocean
@@ -105,9 +105,9 @@ gravity = 9.8156
 
 PlasDefCoeff = 2 #coefficient for plastic deformation, related to the relation of the critical stresses needed for plastic deformation when pushing ice together vs. pulling it apart
 
-deltaMin = eps
+deltaMin = 2.e-9
 aEVPalphaMin = 5
-pressReplFac = 1
+pressReplFac = 0
 
 cStar = 20
 aEVPcStar = 4
@@ -118,10 +118,10 @@ basalDragK1 = 8
 basalDragK2 = 0
 cBasalStar = cStar
 
-tensileStrFac = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0.5
+tensileStrFac = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0. #5
 
 SeaIceStrength = 2.75e4
 zetaMaxfac = 2.5e8
 zetaMin = 0
 
-nEVPsteps = 500
+nEVPsteps = 200

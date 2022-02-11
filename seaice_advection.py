@@ -40,10 +40,13 @@ def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):
 
     # update the local seaice field
     if extensiveFld:
-        localTij[:,1:-1] = localTij[:,1:-1] - deltaTtherm * maskInC[:,1:-1] * recip_rA[:,1:-1] * (afx[:,2:] - afx[:,1:-1])
+        localTij = localTij - deltaTtherm * maskInC * recip_rA \
+            * ( np.roll(afx,-1,1) - afx )
     else:
-        localTij[:,1:-1] = localTij[:,1:-1] - deltaTtherm * maskInC[:,1:-1] * recip_rA[:,1:-1] * r_hFld[:,1:-1] * ((afx[:,2:] - afx[:,1:-1]) - (uTrans[:,2:] - uTrans[:,1:-1]) * iceFld[:,1:-1])
-
+        localTij= localTij- deltaTtherm * maskInC * recip_rA * r_hFld * (
+            ( np.roll(afx,-1,1) - afx )
+            - ( np.roll(uTrans,-1,1) - uTrans ) * iceFld
+        )
 
     ##### calculate advective flux in y direction #####
 
@@ -52,14 +55,13 @@ def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):
 
     # update the local seaice field
     if extensiveFld:
-        localTij[1:-1,:] = localTij[1:-1,:] - deltaTtherm * maskInC[1:-1,:] * recip_rA[1:-1,:] * (afy[2:,:] - afy[1:-1,:])
+        localTij = localTij - deltaTtherm * maskInC * recip_rA \
+            * ( np.roll(afy,-1,0) - afy )
     else:
-        localTij[1:-1,:] = localTij[1:-1,:] - deltaTtherm * maskInC[1:-1,:] * recip_rA[1:-1,:] * r_hFld[1:-1,:] * ((afy[2:,:] - afy[1:-1,:]) - (vTrans[2:,:] - vTrans[1:-1,:]) * iceFld[1:-1,:])
-
+        localTij = localTij - deltaTtherm * maskInC * recip_rA * r_hFld * (
+            ( np.roll(afy,-1,0) - afy )
+            - ( np.roll(vTrans,-1,0) - vTrans) * iceFld
+        )
 
     # explicit advection is done, store tendency in gFld
-    gFld = (localTij - iceFld) / deltaTtherm
-    gFld = fill_overlap(gFld)
-
-
-    return gFld
+    return (localTij - iceFld) / deltaTtherm

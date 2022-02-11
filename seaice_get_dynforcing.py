@@ -1,11 +1,12 @@
 import numpy as np
 
-from seaice_size import *
-from seaice_params import *
+from seaice_size import SeaIceMaskU, SeaIceMaskV
+from seaice_params import eps_sq, eps, airTurnAngle, rhoAir, \
+    airIceDrag, airIceDrag_south, fCori
 
 # compute surface stresses from atmospheric forcing fields
 
-### input 
+### input
 # uIce: zonal ice velocity [m/s]
 # vIce: meridional ice velocity [m/s]
 # uWind: zonal wind velocity [m/s]
@@ -13,7 +14,7 @@ from seaice_params import *
 # uVel: zonal ocean velocity [m/s]
 # vVel: meridional ocean velocity [m/s]
 
-### output 
+### output
 # tauX: zonal wind stress iver ice at u point [N/m2]
 # tauY: meridional wind stress over ice at v point [N/m2]
 
@@ -24,35 +25,30 @@ def get_dynforcing(uIce, vIce, uWind, vWind, uVel, vVel):
     sinWin = np.sin(np.deg2rad(airTurnAngle))
     cosWin = np.cos(np.deg2rad(airTurnAngle))
 
-    # initialize fields
-    CDAir = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    tauX = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    tauY = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    u1 = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    v1 = np.zeros((sNy+2*OLy,sNx+2*OLx))
-
-
     ##### set up forcing fields #####
 
-    # wind stress is computed on the center of the grid cell and interpolated to u and v points later
-    # compute ice surface stress
-    u1[:-1,:-1] = uWind[:-1,:-1] + 0.5 * (uVel[:-1,:-1] + uVel[:-1,1:]) - 0.5 * (uIce[:-1,:-1] + uIce[:-1,1:])
-    v1[:-1,:-1] = vWind[:-1,:-1] + 0.5 * (vVel[:-1,:-1] + vVel[1:,:-1]) - 0.5 * (vIce[:-1,:-1] + vIce[1:,:-1])
-    aaa = u1**2 + v1**2
+    # wind stress is computed on the center of the grid cell and
+    # interpolated to u and v points later
+    # comute relative wind first
+    urel = uWind - 0.5 * (uIce + np.roll(uIce,-1,1))
+    vrel = vWind - 0.5 * (vIce + np.roll(vIce,-1,0))
+    windSpeed = urel**2 + vrel**2
 
-    tmp = np.where(aaa < eps_sq)
-    aaa = np.sqrt(aaa)
-    aaa[tmp] = eps
+    tmp = np.where(windSpeed < eps_sq)
+    windSpeed = np.sqrt(windSpeed)
+    windSpeed[tmp] = eps
 
-    CDAir[:-1,:-1] = rhoAir * waterIceDrag * aaa[:-1,:-1]
+    CDAir = rhoAir * airIceDrag * windSpeed
     south = np.where(fCori < 0)
-    CDAir[south] = rhoAir * waterIceDrag_south * aaa[south]
+    CDAir[south] = rhoAir * airIceDrag_south * windSpeed[south]
+
+    # compute ice surface stress
+    tauX = CDAir * (cosWin * urel - np.sign(fCori) * sinWin * vrel )
+    tauY = CDAir * (cosWin * vrel + np.sign(fCori) * sinWin * urel )
 
     # interpolate to u points
-    tauX[1:-1,1:-1] = 0.5 * (CDAir[1:-1,1:-1] * (cosWin * (uWind[1:-1,1:-1] + 0.5 * (uVel[1:-1,1:-1] + uVel[1:-1,2:]) - 0.5 * (uIce[1:-1,1:-1] + uIce[1:-1,2:])) - np.sign(fCori[1:-1,1:-1]) * sinWin * (vWind[1:-1,1:-1] + 0.5 * (vVel[1:-1,1:-1] + vVel[2:,1:-1]) - 0.5 *(vIce[1:-1,1:-1] + vIce[2:,1:-1]))) + CDAir[1:-1,:-2] * (cosWin * (uWind[1:-1,:-2] + 0.5 * (uVel[1:-1,:-2] + uVel[1:-1,1:-1]) - 0.5 * (uIce[1:-1,:-2] + uIce[1:-1,1:-1])) - np.sign(fCori[1:-1,1:-1]) * sinWin * (vWind[1:-1,:-2] + 0.5 * (vVel[1:-1,:-2] + vVel[2:,:-2]) - 0.5 * (vIce[1:-1,:-2] + vIce[2:,:-2])))) * SeaIceMaskU[1:-1,1:-1]
-
+    tauX = 0.5 * ( tauX + np.roll(tauX,1,1) ) * SeaIceMaskU
     # interpolate to v points
-    tauY[1:-1,1:-1] = 0.5 * (CDAir[1:-1,1:-1] * (np.sign(fCori[1:-1,1:-1]) * sinWin * (uWind[1:-1,1:-1] + 0.5 * (uVel[1:-1,1:-1] + uVel[1:-1,2:]) - 0.5 * (uIce[1:-1,1:-1] + uIce[1:-1,2:])) + cosWin * (vWind[1:-1,1:-1] + 0.5 * (vVel[1:-1,1:-1] + vVel[2:,1:-1]) - 0.5 * (vIce[1:-1,1:-1] + vIce[2:,1:-1]))) + CDAir[:-2,1:-1] * np.sign(fCori[:-2,1:-1] * sinWin * (uWind[:-2,1:-1] + 0.5 * (uVel[:-2,1:-1] + uVel[:-2,2:]) - 0.5 * (uIce[:-2,1:-1] + uIce[:-2,2:])) + cosWin * (vWind[:-2,1:-1] + 0.5 * (vVel[:-2,1:-1] + vVel[1:-1,1:-1]) - 0.5 * (vIce[:-2,1:-1] + vIce[1:-1,1:-1])))) * SeaIceMaskV[1:-1,1:-1]
-
+    tauY = 0.5 * ( tauY + np.roll(tauY,1,0) ) * SeaIceMaskV
 
     return tauX, tauY

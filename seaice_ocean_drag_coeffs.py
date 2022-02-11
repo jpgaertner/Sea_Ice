@@ -16,16 +16,20 @@ from seaice_size import *
 def ocean_drag_coeffs(uIce, vIce, uVel, vVel):
 
     # get ice-water drag coefficient times density
-    dragCoeff = np.ones((sNy+2*OLy,sNx+2*OLx)) * waterIceDrag * rhoConst
+    dragCoeff = np.ones(uIce.shape) * waterIceDrag * rhoConst
     south = np.where(fCori < 0)
     dragCoeff[south] = waterIceDrag_south * rhoConst
 
     # calculate linear drag coefficient
-    cDrag = np.ones((sNy+2*OLy,sNx+2*OLx)) * cDragMin
-    tmpVar = 0.25 * (((uIce[:-1,:-1] - uVel[:-1,:-1])**2 * maskInW[:-1,:-1] + (uIce[:-1,1:] - uVel[:-1,1:])**2 * maskInW[:-1,1:]) + ((vIce[:-1,:-1] - vVel[:-1,:-1])**2 * maskInS[:-1,:-1] + (vIce[1:,:-1] - vVel[1:,:-1])**2 * maskInS[1:,:-1]))
-    tmp = np.where(dragCoeff[:-1,:-1]**2 * tmpVar > cDragMin**2)
-    cDrag[:-1,:-1][tmp] = dragCoeff[:-1,:-1][tmp] * np.sqrt(tmpVar[tmp])
-    cDrag[:-1,:-1] = cDrag[:-1,:-1] * iceMask[:-1,:-1]
+    cDrag = np.ones(uIce.shape) * cDragMin
+    du = (uIce - uVel)*maskInW
+    dv = (vIce - vVel)*maskInS
+    tmpVar = 0.25 * ( du**2 + np.roll(du,-1,1)**2
+                    + dv**2 + np.roll(dv,-1,0)**2 )
+
+    tmp = np.where(dragCoeff**2 * tmpVar > cDragMin**2)
+    cDrag[tmp] = dragCoeff[tmp] * np.sqrt(tmpVar[tmp])
+    cDrag = cDrag * iceMask
 
 
     return cDrag

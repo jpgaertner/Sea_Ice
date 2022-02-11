@@ -1,6 +1,6 @@
 import numpy as np
 
-from seaice_size import sNy, sNx, OLx, OLy, iceMask
+from seaice_size import iceMask
 from seaice_fill_overlap import fill_overlap
 
 
@@ -8,15 +8,13 @@ from seaice_fill_overlap import fill_overlap
 
 def c_point_to_z_point(Cfield):
 
-    Zfield = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    sumNorm = iceMask + np.roll(iceMask,1,1)
+    sumNorm = sumNorm + np.roll(sumNorm,1,0)
+    sumNorm = np.where(sumNorm>0,1./sumNorm,0.)
+    Zfield =             Cfield + np.roll(Cfield,1,1)
+    Zfield = sumNorm * ( Zfield + np.roll(Zfield,1,0) )
 
-    sumNorm = iceMask[OLy:-OLy,OLx:-OLx] + iceMask[OLy:-OLy,OLx-1:-OLx-1] + iceMask[OLy-1:-OLy-1,OLx:-OLx] + iceMask[OLy-1:-OLy-1,OLx-1:-OLx-1]
-    tmp = np.where(sumNorm > 0)
-    sumNorm[tmp] = 1 / sumNorm[tmp]
-
-    Zfield[OLy:-OLy,OLx:-OLx] = sumNorm * (Cfield[OLy:-OLy,OLx:-OLx] + Cfield[OLy:-OLy,OLx-1:-OLx-1] + Cfield[OLy-1:-OLy-1,OLx:-OLx] + Cfield[OLy-1:-OLy-1,OLx-1:-OLx-1])
-    
-    Zfield = fill_overlap(Zfield)
+    # Zfield = fill_overlap(Zfield)
 
 
     return Zfield
