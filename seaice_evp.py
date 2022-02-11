@@ -37,8 +37,8 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
     ##### initializations #####
 
-    useAdaptiveEVP = False
-    computeResidual = True
+    useAdaptiveEVP = True
+    computeResidual = False
     # change to input with default value = False?
     if useAdaptiveEVP:
         aEvpCoeff = 0.5
