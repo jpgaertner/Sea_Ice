@@ -58,21 +58,20 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     recip_evpRevFac = recip_PlasDefCoeffSq
     # recip_evpRevFac = 1
 
-    ones2d = np.ones((sNy+2*OLy,sNx+2*OLx))
     zero2d = np.zeros((sNy+2*OLy,sNx+2*OLx))
 
-    denom1 = ones2d / evpAlpha
-    denom2 = denom1.copy()
+    denom1 = 1 / evpAlpha
+    denom2 = denom1
 
     # copy previous time step (n-1) of uIce, vIce
     uIceNm1 = uIce.copy()
     vIceNm1 = vIce.copy()
 
     # initialize adaptive EVP specific fields
-    evpAlphaC = ones2d * evpAlpha
-    evpAlphaZ = ones2d * evpAlpha
-    evpBetaU  = ones2d * evpBeta
-    evpBetaV  = ones2d * evpBeta
+    evpAlphaC = evpAlpha
+    evpAlphaZ = evpAlpha
+    evpBetaU  = evpBeta
+    evpBetaV  = evpBeta
 
     # initialize fractional areas at velocity points
     areaW = 0.5 * (Area + np.roll(Area,1,1))
@@ -83,9 +82,9 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     # initializations
     # should initialised elsewhere (but this will work, too, just more
     # expensive)
-    sigma1 = zero2d
-    sigma2 = zero2d
-    sigma12 = zero2d
+    sigma1 = zero2d.copy()
+    sigma2 = zero2d.copy()
+    sigma12 = zero2d.copy()
     resSig = np.array([None]*nEVPsteps)
     resU = np.array([None]*nEVPsteps)
 

@@ -45,14 +45,14 @@ gridcellWidth = 8000. #grid cell width in m
 
 # grid descriptor variables
 deltaX = np.ones((sNy+2*OLy,sNx+2*OLx))*gridcellWidth
-dxC = deltaX #distance between two adjacent cell centers in x direction across western cell wall [m]
-dyC = deltaX #distance between two adjacent cell centers in y direction across southern cell wall [m]
-dxG = deltaX #distance between cell faces (cell width) in x direction along southern cell wall [m]
-dyG = deltaX #distance between cell faces (cell width) in y direction along western cell wall [m]
-dxF = deltaX #distance between cell faces (cell width) in x direction through cell center [m]
-dyF = deltaX #distance between cell faces (cell width) in y direction through cell center [m]
-dxV = deltaX #distance between two adjacent v points in x direction across south-west corner of the cell [m]
-dyU = deltaX #distance between two adjacent u points in y direction across south-west corner of the cell [m]
+dxC = deltaX.copy() #distance between two adjacent cell centers in x direction across western cell wall [m]
+dyC = deltaX.copy() #distance between two adjacent cell centers in y direction across southern cell wall [m]
+dxG = deltaX.copy() #distance between cell faces (cell width) in x direction along southern cell wall [m]
+dyG = deltaX.copy() #distance between cell faces (cell width) in y direction along western cell wall [m]
+dxF = deltaX.copy() #distance between cell faces (cell width) in x direction through cell center [m]
+dyF = deltaX.copy() #distance between cell faces (cell width) in y direction through cell center [m]
+dxV = deltaX.copy() #distance between two adjacent v points in x direction across south-west corner of the cell [m]
+dyU = deltaX.copy() #distance between two adjacent u points in y direction across south-west corner of the cell [m]
 recip_dxC = 1 / dxC
 recip_dyC = 1 / dyC
 recip_dxG = 1 / dxG
