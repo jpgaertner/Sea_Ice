@@ -31,7 +31,8 @@ def calc_stressdiv(sig11, sig22, sig12, iStep, myTime, myIter):
     ) * recip_rAs
     return stressDivX, stressDivY
 
-def calc_lhs(uIce, vIce, hIceMean, Area, areaW, areaS, press0,
+def calc_lhs(uIce, vIce, uIceLin, vIceLin,
+             hIceMean, Area, areaW, areaS, press0,
              SeaIceMassC, SeaIceMassU, SeaIceMassV,
              cDrag, R_low,
              iStep, myTime, myIter):
@@ -43,14 +44,15 @@ def calc_lhs(uIce, vIce, hIceMean, Area, areaW, areaS, press0,
 
     #
     secondOrderBC=False
-    e11, e22, e12          = strainrates(uIce, vIce, secondOrderBC)
+    e11, e22, e12          = strainrates(uIceLin, vIceLin, secondOrderBC)
     zeta, eta, press       = viscosities(
         e11, e22, e12, press0, iStep, myIter, myTime)
     sig11, sig22, sig12    = calc_stress(
         e11, e22, e12, zeta, eta, press, iStep, myIter, myTime)
     stressDivX, stressDivY = calc_stressdiv(
         sig11, sig22, sig12, iStep, myIter, myTime)
-    cBotC = bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low)
+    #
+    cBotC = bottomdrag_coeffs(uIceLin, vIceLin, hIceMean, Area, R_low)
     # sum up for symmetric drag contributions
     symDrag = cDrag*cosWat + cBotC
 
@@ -129,7 +131,8 @@ def calc_residual(uIce, vIce, hIceMean, Area,
     areaS = 0.5 * (Area + np.roll(Area,1,0))
     cDrag = ocean_drag_coeffs(uIce, vIce, uVel, vVel)
 
-    Au, Av = calc_lhs(uIce, vIce, hIceMean, Area, areaW, areaS, press0,
+    Au, Av = calc_lhs(uIce, vIce, uIceLin, vIceLin,
+                      hIceMean, Area, areaW, areaS, press0,
                       SeaIceMassC, SeaIceMassU, SeaIceMassV,
                       cDrag, R_low,
                       iStep, myIter, myTime)
@@ -154,24 +157,25 @@ def _2dToVec(u,v):
                      v[OLy:-OLy,OLx:-OLx].ravel()))
     return vec
 
-def linOp_lhs(xIn, hIceMean, Area, areaW, areaS, press0,
-             SeaIceMassC, SeaIceMassU, SeaIceMassV,
-             cDrag, R_low,
-             iStep, myTime, myIter):
+def linOp_lhs(xIn, uIceLin, vIceLin,
+              hIceMean, Area, areaW, areaS, press0,
+              SeaIceMassC, SeaIceMassU, SeaIceMassV,
+              cDrag, R_low,
+              iStep, myTime, myIter):
     # get size for convenience
     n = xIn.shape[0]
     # unpack the vector
-    u,v = _vecTo2d(xIn)
-    Au, Av = calc_lhs(u, v, hIceMean, Area, areaW, areaS,
-                      press0,
-                      SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                      cDrag, R_low,
-                      iStep, myIter, myTime)
     def matvec(xIn):
-        Ax = _2dToVec(Au,Av)
-        return Ax
+        u,v = _vecTo2d(xIn)
+        Au, Av = calc_lhs(u, v, uIceLin, vIceLin,
+                          hIceMean, Area, areaW, areaS,
+                          press0,
+                          SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                          cDrag, R_low,
+                          iStep, myIter, myTime)
+        return _2dToVec(Au,Av)
 
-    return LinearOperator((n,n), matvec=matvec, dtype = 'float64')
+    return LinearOperator((n,n), matvec=matvec) #, dtype = 'float64')
 
 
 def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
@@ -188,14 +192,21 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     # copy previous time step (n-1) of uIce, vIce
     uIceNm1 = uIce.copy()
     vIceNm1 = vIce.copy()
+    uIceLin = uIce.copy()
+    vIceLin = vIce.copy()
 
-    nPicard = 10
+    nPicard = 20
     nLinear = 50
     residual = np.array([None]*nPicard)
+    areaW = 0.5 * (Area + np.roll(Area,1,1))
+    areaS = 0.5 * (Area + np.roll(Area,1,0))
     for iPicard in range(nPicard):
-        areaW = 0.5 * (Area + np.roll(Area,1,1))
-        areaS = 0.5 * (Area + np.roll(Area,1,0))
-        cDrag = ocean_drag_coeffs(uIce, vIce, uVel, vVel)
+        wght=0.5
+        uIceLin = wght*uIce+(1.-wght)*uIceLin
+        vIceLin = wght*vIce+(1.-wght)*vIceLin
+        # uIceLin = uIce.copy()
+        # vIceLin = vIce.copy()
+        cDrag = ocean_drag_coeffs(uIceLin, vIceLin, uVel, vVel)
         bu, bv = calc_rhs(forcingU, forcingV, uIceNm1, vIceNm1,
                           areaW, areaS, SeaIceMassU, SeaIceMassV,
                           uVel, vVel, cDrag,
@@ -204,17 +215,19 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         b = _2dToVec(bu,bv)
         u0 = _2dToVec(uIce,vIce)
         # set up linear operator
-        A =  linOp_lhs(u0, hIceMean, Area, areaW, areaS, press0,
+        A =  linOp_lhs(u0, uIceLin, vIceLin,
+                       hIceMean, Area, areaW, areaS, press0,
              SeaIceMassC, SeaIceMassU, SeaIceMassV,
              cDrag, R_low,
              iPicard, myTime, myIter)
         # matrix free solver that calls calc_lhs
-        linTol = 0.99
-        u1, exitCode = spla.gmres(A,b,x0=u0,maxiter=nLinear,atol=linTol)
-        print( exitCode )
+        linTol = 1e-2
+        #u1, exitCode = spla.bicgstab(A,b,x0=u0,maxiter=nLinear,tol=linTol)
+        u1, exitCode = spla.gmres(A,b,x0=u0,maxiter=nLinear,tol=linTol)
         # for iLin in range(nLinear):
         uIce, vIce = _vecTo2d(u1)
-        Au, Av = calc_lhs(uIce, vIce, hIceMean, Area, areaW, areaS,
+        Au, Av = calc_lhs(uIce, vIce, uIceLin, vIceLin,
+                          hIceMean, Area, areaW, areaS,
                           press0,
                           SeaIceMassC, SeaIceMassU, SeaIceMassV,
                           cDrag, R_low,
@@ -222,13 +235,17 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         if computePicardResidual:
             # print(np.allclose(A.dot(u1), b))
             residual[iPicard] = np.sqrt( ( (A.matvec(u1)-b)**2 ).sum() )
-            print(np.sqrt(((Au-bu)**2+(Av-bv)**2)[OLy:-OLy,OLx:-OLx].sum()),
-                  residual[iPicard])
+            if exitCode>0: print(
+                    'exitCode = %3i,linear residual = %e'%(exitCode,
+                    residual[iPicard]))
+            # print(np.sqrt(((Au-bu)**2+(Av-bv)**2)[OLy:-OLy,OLx:-OLx].sum()),
+            #       residual[iPicard])
 
-    # if computePicardResidual:
-    #     import matplotlib.pyplot as plt
-    #     fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
-    #     ax[0].semilogy(residual[:],'x-')
-    #     ax[0].set_title('residual')
+    if computePicardResidual:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
+        ax[0].semilogy(residual[:],'x-')
+        ax[0].set_title('residual')
+        plt.show()
 
     return uIce, vIce
