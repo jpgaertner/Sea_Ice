@@ -12,6 +12,9 @@ from seaice_viscosities import viscosities
 from seaice_ocean_drag_coeffs import ocean_drag_coeffs
 from seaice_bottomdrag_coeffs import bottomdrag_coeffs
 from seaice_global_sum import global_sum
+from seaice_fill_overlap import fill_overlap_uv
+
+secondOrderBC = False
 
 def calc_stress(e11, e22, e12, zeta, eta, press, iStep, myTime, myIter):
     from seaice_averaging import c_point_to_z_point
@@ -31,10 +34,10 @@ def calc_stressdiv(sig11, sig22, sig12, iStep, myTime, myIter):
     ) * recip_rAs
     return stressDivX, stressDivY
 
-def calc_lhs(uIce, vIce, uIceLin, vIceLin,
+def calc_lhs(uIce, vIce, zeta, eta, press,
              hIceMean, Area, areaW, areaS, press0,
              SeaIceMassC, SeaIceMassU, SeaIceMassV,
-             cDrag, R_low,
+             cDrag, cBotC, R_low,
              iStep, myTime, myIter):
 
     recip_deltaT = 1./deltaTdyn
@@ -43,16 +46,14 @@ def calc_lhs(uIce, vIce, uIceLin, vIceLin,
     cosWat = np.cos(np.deg2rad(waterTurnAngle))
 
     #
-    secondOrderBC=False
-    e11, e22, e12          = strainrates(uIceLin, vIceLin, secondOrderBC)
-    zeta, eta, press       = viscosities(
-        e11, e22, e12, press0, iStep, myIter, myTime)
+    e11, e22, e12          = strainrates(uIce, vIce, secondOrderBC)
+    # zeta, eta, press       = viscosities(
+    #     e11, e22, e12, press0, iStep, myIter, myTime)
     sig11, sig22, sig12    = calc_stress(
         e11, e22, e12, zeta, eta, press, iStep, myIter, myTime)
     stressDivX, stressDivY = calc_stressdiv(
         sig11, sig22, sig12, iStep, myIter, myTime)
-    #
-    cBotC = bottomdrag_coeffs(uIceLin, vIceLin, hIceMean, Area, R_low)
+
     # sum up for symmetric drag contributions
     symDrag = cDrag*cosWat + cBotC
 
@@ -123,10 +124,10 @@ def calc_residual(uIce, vIce, hIceMean, Area,
     areaS = 0.5 * (Area + np.roll(Area,1,0))
     cDrag = ocean_drag_coeffs(uIce, vIce, uVel, vVel)
 
-    Au, Av = calc_lhs(uIce, vIce, uIceLin, vIceLin,
+    Au, Av = calc_lhs(uIce, vIce, zeta, eta, press,
                       hIceMean, Area, areaW, areaS, press0,
                       SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                      cDrag, R_low,
+                      cDrag, cBotC, R_low,
                       iStep, myIter, myTime)
     bu, bv = calc_rhs(forcingU, forcingV, areaW, areaS,
                       uVel, vVel, cDrag,
@@ -141,6 +142,7 @@ def _vecTo2d(vec):
     v = np.zeros((sNy+2*OLy,sNx+2*OLx))
     u[OLy:-OLy,OLx:-OLx]=vec[:n].reshape((sNy,sNx))
     v[OLy:-OLy,OLx:-OLx]=vec[n:].reshape((sNy,sNx))
+    u,v=fill_overlap_uv(u,v)
     return u,v
 
 def _2dToVec(u,v):
@@ -148,26 +150,30 @@ def _2dToVec(u,v):
                      v[OLy:-OLy,OLx:-OLx].ravel()))
     return vec
 
-def linOp_lhs(xIn, uIceLin, vIceLin,
+def linOp_lhs(xIn, zeta, eta, press,
               hIceMean, Area, areaW, areaS, press0,
               SeaIceMassC, SeaIceMassU, SeaIceMassV,
-              cDrag, R_low,
+              cDrag, cBotC, R_low,
               iStep, myTime, myIter):
     # get size for convenience
-    n = xIn.shape[0]
+    nn = xIn.shape[0]
     # unpack the vector
     def matvec(xIn):
         u,v = _vecTo2d(xIn)
-        Au, Av = calc_lhs(u, v, uIceLin, vIceLin,
+        Au, Av = calc_lhs(u, v, zeta, eta, press,
                           hIceMean, Area, areaW, areaS,
                           press0,
                           SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                          cDrag, R_low,
+                          cDrag, cBotC, R_low,
                           iStep, myIter, myTime)
         return _2dToVec(Au,Av)
 
-    return LinearOperator((n,n), matvec=matvec) #, dtype = 'float64')
+    return LinearOperator((nn,nn), matvec=matvec) #, dtype = 'float64')
 
+def preconditionerMatrix(x, P):
+    n = x.shape[0]
+    M_x = lambda x: spla.spsolve(P, x)
+    return spla.LinearOperator((n, n), M_x)
 
 def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                   press0, forcingU, forcingV,
@@ -190,45 +196,55 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     # mass*(vIceNm1)/deltaT
     vIceRHS = forcingV + SeaIceMassV*vIce*recip_deltaT
 
-    nPicard = 5
-    nLinear = 50
+    nPicard = 100
+    nLinear = 20
     residual = np.array([None]*nPicard)
     areaW = 0.5 * (Area + np.roll(Area,1,1))
     areaS = 0.5 * (Area + np.roll(Area,1,0))
+    exitCode = 1
+    linTol = 1e-1
     for iPicard in range(nPicard):
-        wght=1.5
+        # smoothing
+        wght=0.5
         uIceLin = wght*uIce+(1.-wght)*uIceLin
         vIceLin = wght*vIce+(1.-wght)*vIceLin
+        #
         cDrag = ocean_drag_coeffs(uIceLin, vIceLin, uVel, vVel)
+        cBotC = bottomdrag_coeffs(uIceLin, vIceLin, hIceMean, Area, R_low)
+        e11, e22, e12    = strainrates(uIceLin, vIceLin, secondOrderBC)
+        zeta, eta, press = viscosities(
+            e11, e22, e12, press0, iPicard, myIter, myTime)
         bu, bv = calc_rhs(uIceRHS, vIceRHS, areaW, areaS,
                           uVel, vVel, cDrag,
                           iPicard, myIter, myTime)
         # transform to vectors without overlaps
         b = _2dToVec(bu,bv)
-        u0 = _2dToVec(uIce,vIce)
+        u = _2dToVec(uIce,vIce)
         # set up linear operator
-        A =  linOp_lhs(u0, uIceLin, vIceLin,
+        A =  linOp_lhs(u, zeta, eta, press,
                        hIceMean, Area, areaW, areaS, press0,
-             SeaIceMassC, SeaIceMassU, SeaIceMassV,
-             cDrag, R_low,
-             iPicard, myTime, myIter)
+                       SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                       cDrag, cBotC, R_low,
+                       iPicard, myTime, myIter)
+        # M = preconditionerMatrix( u, A )
         # matrix free solver that calls calc_lhs
-        linTol = 1e-1
-        #u1, exitCode = spla.bicgstab(A,b,x0=u0,maxiter=nLinear,tol=linTol)
-        u1, exitCode = spla.gmres(A,b,x0=u0,maxiter=nLinear,tol=linTol)
+        if exitCode == 0: linTol = linTol*(1-.7)
+        #u1, exitCode = spla.bicgstab(A,b,x0=u,maxiter=nLinear,tol=linTol)
+        u1, exitCode = spla.gmres(A,b,x0=u,maxiter=nLinear,tol=linTol)
         # for iLin in range(nLinear):
         uIce, vIce = _vecTo2d(u1)
         if computePicardResidual:
             # print(np.allclose(A.dot(u1), b))
             residual[iPicard] = np.sqrt( ( (A.matvec(u1)-b)**2 ).sum() )
-            if exitCode>0: print(
-                    'exitCode = %3i,linear residual = %e'%(exitCode,
-                    residual[iPicard]))
-            # Au, Av = calc_lhs(uIce, vIce, uIceLin, vIceLin,
+            # if exitCode>0: print(
+            if True: print(
+                    'iPicard = %3i, exitCode = %3i,linear residual = %e'%(
+                        iPicard, exitCode, residual[iPicard]))
+            # Au, Av = calc_lhs(uIce, vIce, zeta, eta, press,
             #                   hIceMean, Area, areaW, areaS,
             #                   press0,
             #                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
-            #                   cDrag, R_low,
+            #                   cDrag, cBotC, R_low,
             #                   iPicard, myIter, myTime)
             # print(np.sqrt(((Au-bu)**2+(Av-bv)**2)[OLy:-OLy,OLx:-OLx].sum()),
             #       residual[iPicard])
