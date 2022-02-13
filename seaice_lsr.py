@@ -15,13 +15,14 @@ from seaice_global_sum import global_sum
 from seaice_fill_overlap import fill_overlap_uv
 from seaice_averaging import c_point_to_z_point
 
-useStrengthImplicitCoupling = False
+useStrengthImplicitCoupling = True
 secondOrderBC = False
 lsrRelax = 1.05
 lsrRelaxU = lsrRelax
 lsrRelaxV = lsrRelax
-linTol = 1e-6
-nLsr = 10
+nonLinTol = 1e-5
+linTol = 1e-8
+nLsr = 100
 nLin = 100
 computeLsrResidual = True
 
@@ -150,7 +151,7 @@ def lsr_coefficents(zeta, eta, dragSym, seaiceMassU, seaiceMassV,
 
     # apply boundary conditions according to slip factor
     # for no slip, set u on boundary to zero: u(j+/-1)=-u(j)
-    # for the free slip case sigma_12 = 0
+    # for the free slip case sig12 = 0
     hFacM = np.roll(SeaIceMaskU, 1,0)
     hFacP = np.roll(SeaIceMaskU,-1,0)
 
@@ -163,16 +164,16 @@ def lsr_coefficents(zeta, eta, dragSym, seaiceMassU, seaiceMassV,
     # coefficients of uIce(i,j+1)
     uRt2 = np.roll( UYY - UYM,-1,0) * SeaIceMaskU * recip_rAw
     # coefficients for uIce(i,j)
-    BU = - AU - CU + ( (2.-hFacM)*uRt1 + (2.-hFacP)*uRt2 ) * SeaIceMaskU
+    BU = - AU - CU + (2.-hFacM)*uRt1 + (2.-hFacP)*uRt2
     # reset coefficients of uIce(i,j+/-1)
-    uRt1 = uRt1 * hFacM
-    uRt2 = uRt2 * hFacP
+    # uRt1 = uRt1 * hFacM
+    # uRt2 = uRt2 * hFacP
 
     # Coefficients for solving vIce :
 
     # apply boundary conditions according to slip factor
     # for no slip, set u on boundary to zero: v(i+/-1)=-v(i)
-    # for the free slip case sigma_12 = 0
+    # for the free slip case sig12 = 0
     hFacM = np.roll(SeaIceMaskV, 1,1)
     hFacP = np.roll(SeaIceMaskV,-1,1)
 
@@ -185,26 +186,28 @@ def lsr_coefficents(zeta, eta, dragSym, seaiceMassU, seaiceMassV,
     # coefficients for vIce(i+1,j)
     vRt2 = np.roll( VXX - VXM,-1,1) * SeaIceMaskV * recip_rAs
     # coefficients for vIce(i,j)
-    BV = - AV - CV + ( (2.-hFacM)*vRt1 + (2.-hFacP)*vRt2 ) * SeaIceMaskV
+    BV = - AV - CV + (2.-hFacM)*vRt1 + (2.-hFacP)*vRt2
     # reset coefficients of vIce(i+/-1,j)
-    vRt1 = vRt1 * hFacM
-    vRt2 = vRt2 * hFacP
+    # vRt1 = vRt1 * hFacM
+    # vRt2 = vRt2 * hFacP
 
     # here we need add the contribution from the time derivative (in
     # bdfAlphaOverDt) and the symmetric drag term; must be done after
     # normalizing
-    BU   = BU + SeaIceMaskU * ( bdfAlphaOverDt*seaiceMassU
+    BU   = SeaIceMaskU * ( BU + bdfAlphaOverDt*seaiceMassU
         + 0.5 * ( dragSym + np.roll(dragSym,1,1) )*areaW
     )
-    BV   = BV + SeaIceMaskV * ( bdfAlphaOverDt*seaiceMassV
+    BV   = SeaIceMaskV * ( BV + bdfAlphaOverDt*seaiceMassV
         + 0.5 * ( dragSym + np.roll(dragSym,1,0) )*areaS
     )
 
     # this is clearly a hack: make sure that diagonals BU/BV are non-zero.
     # When scaling the surface ice-ocean stress by AREA, then there will
     # be many cases of zero diagonal entries.
-    BU[BU==0] = 1.
-    BV[BV==0] = 1.
+    # BU[BU==0] = 1.
+    # BV[BV==0] = 1.
+    BU = np.where(BU==0, 1., BU)
+    BV = np.where(BV==0, 1., BV)
 
     # # not really necessary as long as we do not have open boundaries
     # BU[         maskInC*np.roll(maskInC,1,1)==0]=1.
@@ -254,12 +257,13 @@ def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
 
     iMin =  OLx
     iMax =  OLx + sNx
-    # initialisation and boundary conditions
+    # initialisation
     cuu         = CU.copy()
     # zebra loop
     if useLsrZebra: ks = 2
     else:           ks = 1
     for k in range(OLy,OLy+ks):
+        # boundary conditions
         uIc[k::ks,:]    = rhsU[k::ks,:] \
             + uRt1[k::ks,:]*np.roll(uIc, 1,0)[k::ks,:] \
             + uRt2[k::ks,:]*np.roll(uIc,-1,0)[k::ks,:]
@@ -270,13 +274,13 @@ def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
         cuu[k::ks,iMin] = cuu[k::ks,iMin]/BU[k::ks,iMin]
         uIc[k::ks,iMin] = uIc[k::ks,iMin]/BU[k::ks,iMin]
         # forward sweep
-        for i in range(iMin,iMax):
+        for i in range(iMin+1,iMax):
             bet = BU[k::ks,i]-AU[k::ks,i]*cuu[k::ks,i-1]
             cuu[k::ks,i] = cuu[k::ks,i]/bet
             uIc[k::ks,i] = (uIc[k::ks,i] - AU[k::ks,i]*uIc[k::ks,i-1])/bet
 
         # backward sweep
-        for i in range(iMax-1,iMin-1,-1):
+        for i in range(iMax-2,iMin-1,-1):
             uIc[k::ks,i]=uIc[k::ks,i]-cuu[k::ks,i]*uIc[k::ks,i+1]
 
     return uIc
@@ -285,12 +289,13 @@ def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
 
     jMin =  OLy
     jMax =  OLy + sNy
-    # initialisation and boundary conditions
+    # initialisation
     cvv         = CV.copy()
     # zebra loop
     if useLsrZebra: ks = 2
     else:           ks = 1
     for k in range(OLx,OLx+ks):
+        # boundary conditions
         vIc[:,k::ks]    = rhsV[:,k::ks] \
             + vRt1[:,k::ks]*np.roll(vIc, 1,1)[:,k::ks] \
             + vRt2[:,k::ks]*np.roll(vIc,-1,1)[:,k::ks]
@@ -301,13 +306,13 @@ def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
         cvv[jMin,k::ks] = cvv[jMin,k::ks]/BV[jMin,k::ks]
         vIc[jMin,k::ks] = vIc[jMin,k::ks]/BV[jMin,k::ks]
         # forward sweep
-        for j in range(jMin,jMax):
+        for j in range(jMin+1,jMax):
             bet = BV[j,k::ks]-AV[j,k::ks]*cvv[j-1,k::ks]
             cvv[j,k::ks] = cvv[j,k::ks]/bet
             vIc[j,k::ks] = (vIc[j,k::ks] - AV[j,k::ks]*vIc[j-1,k::ks])/bet
 
         # backward sweep
-        for j in range(jMax-1,jMin-1,-1):
+        for j in range(jMax-2,jMin-1,-1):
             vIc[j,k::ks]=vIc[j,k::ks]-cvv[j,k::ks]*vIc[j+1,k::ks]
 
     return vIc
@@ -329,8 +334,6 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     # copy previous time step (n-1) of uIce, vIce
     uIceNm1 = uIce.copy()
     vIceNm1 = vIce.copy()
-    uIceC   = uIce.copy()
-    vIceC   = vIce.copy()
 
     # this does not change in Picard iteration
     # mass*(uIceNm1)/deltaT
@@ -338,9 +341,12 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     # mass*(vIceNm1)/deltaT
     vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
 
-    residual = np.array([None]*nLsr)
+    residual = np.array([None]*(nLsr+1))
 
-    for iLsr in range(nLsr):
+    iLsr = -1
+    resNonLin = nonLinTol*2
+    while resNonLin > nonLinTol and iLsr < nLsr:
+        iLsr = iLsr+1
         if iLsr==0:
             # This is the predictor time step
             uIceC = uIce.copy()
@@ -361,8 +367,9 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             # uIceC = 0.5*( uIce+uIceNm1 )
             # vIceC = 0.5*( vIce+vIceNm1 )
             # This converges slightly faster than the previous lines.
-            uIceC = 0.5*( uIce+uIceC )
-            vIceC = 0.5*( vIce+vIceC )
+            wght = .5
+            uIceC = wght*uIce+(1.-wght)*uIceC
+            vIceC = wght*vIce+(1.-wght)*vIceC
 
         # drag coefficients for ice-ocean and basal drag
         cDrag = ocean_drag_coeffs(uIceC, vIceC, uVel, vVel)
@@ -372,19 +379,15 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         zeta, eta, press = viscosities(
             e11, e22, e12, press0, iLsr, myTime, myIter)
 
-        # zeta = zeta*0
-        # eta  = eta*0
-        AU, BU, CU, AV, BV, CV, uRt1, uRt2, vRt1, vRt2 = lsr_coefficents(
-            zeta, eta, cDrag+cBotC, SeaIceMassU, SeaIceMassV,
-            areaW, areaS,
-            iLsr, myTime, myIter)
-
-        # zeta = zeta*0
-        # eta  = eta*0
         uIceRHS, vIceRHS = calc_rhs_lsr(
             uIceRHSfix, vIceRHSfix, areaW, areaS,
             uIceC, vIceC, uVel, vVel, cDrag, zeta, eta, press,
             SeaIceMassC, iLsr, myTime, myIter)
+
+        AU, BU, CU, AV, BV, CV, uRt1, uRt2, vRt1, vRt2 = lsr_coefficents(
+            zeta, eta, cDrag+cBotC, SeaIceMassU, SeaIceMassV,
+            areaW, areaS,
+            iLsr, myTime, myIter)
 
         if computeLsrResidual:
             residUpre, residVpre, uRes, vRes = lsr_residual(
@@ -399,25 +402,23 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         while iLin < nLin and (doIterV or doIterV):
             iLin = iLin+1
 
-            if np.mod(iLin,2)==0:
+            if doIterU: uNm1 = uIce.copy()
+            if doIterV: vNm1 = vIce.copy()
+            if np.mod(iLin,1)==0:
                 if doIterU:
-                    uNm1 = uIce.copy()
                     uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
                                          uIce )
                 if doIterV:
-                    vNm1 = vIce.copy()
                     vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
                                          vIce )
-            else:
-                if doIterV:
-                    vNm1 = vIce.copy()
-                    vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
-                                         vIce )
+            # else:
+            #     if doIterV:
+            #         vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
+            #                              vIce )
 
-                if doIterU:
-                    uNm1 = uIce.copy()
-                    uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
-                                         uIce )
+            #     if doIterU:
+            #         uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
+            #                              uIce )
 
             # over relaxation step
             # lsrRelaxU = 1.05
@@ -428,11 +429,13 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             uIce, vIce = fill_overlap_uv( uIce, vIce )
 
             if iLin>1:
-                doIterU = np.sqrt((uIce-uNm1)**2).max() > linTol
-                doIterV = np.sqrt((uIce-uNm1)**2).max() > linTol
+                doIterU = np.sqrt((uIce-uNm1)**2
+                                  )[OLy:-OLy,OLx:-OLx].max() > linTol
+                doIterV = np.sqrt((vIce-vNm1)**2
+                                  )[OLy:-OLy,OLx:-OLx].max() > linTol
 
             # resU = np.sqrt((uIce-uNm1)**2).max()
-            # resV = np.sqrt((uIce-uNm1)**2).max()
+            # resV = np.sqrt((vIce-vNm1)**2).max()
             # print(resU,resV,doIterU,doIterV)
 
             # residU, residV, uRes, vRes = lsr_residual(
@@ -451,11 +454,17 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             print ( 'post lin: %i %4i %e %e'%(
                 iLsr, iLin, residUpost, residVpost ) )
 
-        residual[iLsr] = np.sqrt(residUpre**2 + residVpre**2)
+
+        resNonLin = np.sqrt(residUpre**2 + residVpre**2)
+        residual[iLsr] = resNonLin
+        if iLsr==0: resNonLin0 = resNonLin
+
+        resNonLin = resNonLin/resNonLin0
+
     if computeLsrResidual:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
-        ax[0].semilogy(residual[:],'x-')
+        ax[0].semilogy(residual[:iLsr-1]/residual[0],'x-')
         ax[0].set_title('residual')
         plt.show()
 
