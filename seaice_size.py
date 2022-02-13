@@ -20,8 +20,8 @@ from seaice_fill_overlap import fill_overlap
 # OLy = 1
 
 
-sNx = 65 #Number of X points in tile
-sNy = 65 #Number of Y points in tile
+sNx = 32+1 #Number of X points in tile
+sNy = sNx  #Number of Y points in tile
 OLx = 2 #Tile overlap extent in X
 OLy = 2 #Tile overlap extent in Y
 #nSx =   1 #Number of tiles per process in X
@@ -41,7 +41,7 @@ Nr  =  26 #Number of points in vertical direction
 nITC = 1
 recip_nITC = 1 / nITC
 
-gridcellWidth = 8000. #grid cell width in m
+gridcellWidth = 512e3/(sNx-1) #grid cell width in m
 
 # grid descriptor variables
 deltaX = np.ones((sNy+2*OLy,sNx+2*OLx))*gridcellWidth
