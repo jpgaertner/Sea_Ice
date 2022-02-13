@@ -5,6 +5,8 @@ from seaice_params import *
 
 from seaice_freedrift import seaIceFreeDrift
 from seaice_evp import evp
+from seaice_implicit_solver import picard_solver
+from seaice_lsr import lsr_solver
 from seaice_get_dynforcing import get_dynforcing
 from seaice_ocean_stress import ocean_stress
 
@@ -84,9 +86,9 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean,
         uIce, vIce = seaIceFreeDrift(hIceMean, uVel, vVel,
                                      IceSurfStressX0, IceSurfStressY0)
 
-    #ifdef ALLOW_OBCS
-    #call OBCS_APPLY_UVICE
-    #solver
+    # #ifdef ALLOW_OBCS
+    # #call OBCS_APPLY_UVICE
+    # #solver
 
     if useEVP:
         uIce, vIce = evp(uIce, vIce, uVel, vVel, hIceMean, Area,
@@ -94,11 +96,23 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean,
                          IceSurfStressX0, IceSurfStressY0,
                          SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low)
 
-    #if SEAICEuseLSR
-    #call SEAICE_LSR
+    myTime = 0.
+    myIter = 0
+    useLSR = True
+    # useLSR = False
+    if useLSR:
+        uIce, vIce = lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
+                                press0, IceSurfStressX0, IceSurfStressY0,
+                                SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                                R_low, myTime, myIter)
 
-    #if SEAICEuseKrylov
-    #call SEAICE_KRYLOV
+    usePicard=False
+    # usePicard=True
+    if usePicard:
+        uIce, vIce = picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
+                                   press0, IceSurfStressX0, IceSurfStressY0,
+                                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                                   R_low, myTime, myIter)
 
     #if SEAICEuseJFNK
     #call SEAICE_JFNK
