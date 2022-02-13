@@ -120,10 +120,21 @@ cBasalStar = cStar
 
 tensileStrFac = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0. #5
 
-SeaIceStrength = 2.75e4
+SeaIceStrength = 27.5e4
 zetaMaxfac = 2.5e8
 zetaMin = 0
 
+# solver
+useFreedrift = False
+useEVP       = False
+useLSR       = False
+usePicard    = False
+
+# useEVP = True
+useLSR = True
+# usePicard=True
+
 nEVPsteps = 200
+useLsrZebra = False
 
 noSlip = True

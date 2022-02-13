@@ -15,8 +15,15 @@ from seaice_global_sum import global_sum
 from seaice_fill_overlap import fill_overlap_uv
 from seaice_averaging import c_point_to_z_point
 
-useStrengthImplicitCoupling = True
+useStrengthImplicitCoupling = False
 secondOrderBC = False
+lsrRelax = 1.05
+lsrRelaxU = lsrRelax
+lsrRelaxV = lsrRelax
+linTol = 1e-6
+nLsr = 10
+nLin = 100
+computeLsrResidual = True
 
 def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
                  uIce, vIce, uVel, vVel, cDrag, zeta, eta, press,
@@ -151,19 +158,13 @@ def lsr_coefficents(zeta, eta, dragSym, seaiceMassU, seaiceMassV,
     AU = np.roll( - UXX + UXM,1,1 ) * SeaIceMaskU * recip_rAw
     # coefficients for uIce(i+1,j)
     CU =        ( - UXX - UXM     ) * SeaIceMaskU * recip_rAw
-    # # coefficients of uIce(i,j-1)
-    # uRt1 =        ( UYY + UYM )     * SeaIceMaskU * recip_rAw * hFacM
-    # # coefficients of uIce(i,j+1)
-    # uRt2 = np.roll( UYY - UYM,-1,0) * SeaIceMaskU * recip_rAw * hFacP
-    # # coefficients for uIce(i,j)
-    # BU = - AU - CU + uRt1 + uRt2
     # coefficients of uIce(i,j-1)
     uRt1 =        ( UYY + UYM )     * SeaIceMaskU * recip_rAw
     # coefficients of uIce(i,j+1)
     uRt2 = np.roll( UYY - UYM,-1,0) * SeaIceMaskU * recip_rAw
     # coefficients for uIce(i,j)
     BU = - AU - CU + ( (2.-hFacM)*uRt1 + (2.-hFacP)*uRt2 ) * SeaIceMaskU
-    # rest coefficients of uIce(i,j+/-1)
+    # reset coefficients of uIce(i,j+/-1)
     uRt1 = uRt1 * hFacM
     uRt2 = uRt2 * hFacP
 
@@ -179,19 +180,13 @@ def lsr_coefficents(zeta, eta, dragSym, seaiceMassU, seaiceMassV,
     AV = np.roll( - VYY + VYM,1,0 ) * SeaIceMaskV * recip_rAs
     # coefficients for vIce(i,j+1)
     CV =        ( - VYY - VYM     ) * SeaIceMaskV * recip_rAs
-    # # coefficients for vIce(i-1,j)
-    # vRt1 =        ( VXX + VXM )     * SeaIceMaskV * recip_rAs * hFacM
-    # # coefficients for vIce(i+1,j)
-    # vRt2 = np.roll( VXX - VXM,-1,1) * SeaIceMaskV * recip_rAs * hFacP
-    # # coefficients for vIce(i,j)
-    # BV = - AV - CV + vRt1 + vRt2
     # coefficients for vIce(i-1,j)
     vRt1 =        ( VXX + VXM )     * SeaIceMaskV * recip_rAs
     # coefficients for vIce(i+1,j)
     vRt2 = np.roll( VXX - VXM,-1,1) * SeaIceMaskV * recip_rAs
     # coefficients for vIce(i,j)
     BV = - AV - CV + ( (2.-hFacM)*vRt1 + (2.-hFacP)*vRt2 ) * SeaIceMaskV
-    # rest coefficients of vIce(i+/-1,j)
+    # reset coefficients of vIce(i+/-1,j)
     vRt1 = vRt1 * hFacM
     vRt2 = vRt2 * hFacP
 
@@ -255,61 +250,67 @@ def lsr_residual( rhsU, rhsV, uRt1, uRt2, vRt1, vRt2,
 
     return residU, residV, uRes, vRes
 
-def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIce):
+def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
 
     iMin =  OLx
     iMax =  OLx + sNx
-    cuu  = CU.copy()
-    uRt  = np.zeros(uIce.shape)
-    a3   = np.zeros(uIce.shape)
-    a3[:,iMin] = - AU[:,iMin]*uIce[:,iMin-1]
-    a3[:,iMax] = - CU[:,iMax]*uIce[:,iMax+1]
-    uRt = ( rhsU + a3 + uRt1*np.roll(uIce,1,0) + uRt2*np.roll(uIce,-1,0)
-           ) * SeaIceMaskU
+    # initialisation and boundary conditions
+    cuu         = CU.copy()
     # zebra loop
-    for k in range(2):
+    if useLsrZebra: ks = 2
+    else:           ks = 1
+    for k in range(OLy,OLy+ks):
+        uIc[k::ks,:]    = rhsU[k::ks,:] \
+            + uRt1[k::ks,:]*np.roll(uIc, 1,0)[k::ks,:] \
+            + uRt2[k::ks,:]*np.roll(uIc,-1,0)[k::ks,:]
+        uIc[k::ks,iMin] = uIc[k::ks,iMin] - AU[k::ks,iMin]*uIc[k::ks,iMin-1]
+        uIc[k::ks,iMax] = uIc[k::ks,iMax] - CU[k::ks,iMax]*uIc[k::ks,iMax+1]
+        uIc[k::ks,:]    = uIc[k::ks,:] * SeaIceMaskU[k::ks,:]
         # begin
-        cuu[k::2,iMin] = cuu[k::2,iMin]/BU[k::2,iMin]
-        uRt[k::2,iMin] = uRt[k::2,iMin]/BU[k::2,iMin]
+        cuu[k::ks,iMin] = cuu[k::ks,iMin]/BU[k::ks,iMin]
+        uIc[k::ks,iMin] = uIc[k::ks,iMin]/BU[k::ks,iMin]
         # forward sweep
-        for i in range(iMin+1,iMax):
-            bet = BU[k::2,i]-AU[k::2,i]*cuu[k::2,i-1]
-            cuu[k::2,i] = cuu[k::2,i]/bet
-            uRt[k::2,i] = (uRt[k::2,i]-AU[k::2,i]*uRt[k::2,i-1])/bet
+        for i in range(iMin,iMax):
+            bet = BU[k::ks,i]-AU[k::ks,i]*cuu[k::ks,i-1]
+            cuu[k::ks,i] = cuu[k::ks,i]/bet
+            uIc[k::ks,i] = (uIc[k::ks,i] - AU[k::ks,i]*uIc[k::ks,i-1])/bet
 
         # backward sweep
-        for i in range(iMin,iMax-1,-1):
-            uRt[k::2,i]=uRt[k::2,i]-cuu[k::2,i]*uRt[k::2,i+1]
+        for i in range(iMax-1,iMin-1,-1):
+            uIc[k::ks,i]=uIc[k::ks,i]-cuu[k::ks,i]*uIc[k::ks,i+1]
 
-    return uRt
+    return uIc
 
-def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIce):
+def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
 
     jMin =  OLy
     jMax =  OLy + sNy
-    cvv  = CV.copy()
-    vRt  = np.zeros(vIce.shape)
-    a3   = np.zeros(vIce.shape)
-    a3[jMin,:] = - AV[jMin,:]*vIce[jMin-1,:]
-    a3[jMax,:] = - CV[jMax,:]*vIce[jMax+1,:]
-    vRt = ( rhsV + a3 + vRt1*np.roll(vIce,1,1) + vRt2*np.roll(vIce,-1,1)
-           ) * SeaIceMaskV
+    # initialisation and boundary conditions
+    cvv         = CV.copy()
     # zebra loop
-    for k in range(2):
+    if useLsrZebra: ks = 2
+    else:           ks = 1
+    for k in range(OLx,OLx+ks):
+        vIc[:,k::ks]    = rhsV[:,k::ks] \
+            + vRt1[:,k::ks]*np.roll(vIc, 1,1)[:,k::ks] \
+            + vRt2[:,k::ks]*np.roll(vIc,-1,1)[:,k::ks]
+        vIc[jMin,k::ks] = vIc[jMin,k::ks] - AV[jMin,k::ks]*vIc[jMin-1,k::ks]
+        vIc[jMax,k::ks] = vIc[jMax,k::ks] - CV[jMax,k::ks]*vIc[jMax+1,k::ks]
+        vIc[:,k::ks]    = vIc[:,k::ks] * SeaIceMaskV[:,k::ks]
         # begin
-        cvv[jMin,k::2] = cvv[jMin,k::2]/BV[jMin,k::2]
-        vRt[jMin,k::2] = vRt[jMin,k::2]/BV[jMin,k::2]
+        cvv[jMin,k::ks] = cvv[jMin,k::ks]/BV[jMin,k::ks]
+        vIc[jMin,k::ks] = vIc[jMin,k::ks]/BV[jMin,k::ks]
         # forward sweep
-        for j in range(jMin+1,jMax):
-            bet = BV[j,k::2]-AV[j,k::2]*cvv[j-1,k::2]
-            cvv[j,k::2] = cvv[j,k::2]/bet
-            vRt[j,k::2] = (vRt[j,k::2]-AV[j,k::2]*vRt[j-1,k::2])/bet
+        for j in range(jMin,jMax):
+            bet = BV[j,k::ks]-AV[j,k::ks]*cvv[j-1,k::ks]
+            cvv[j,k::ks] = cvv[j,k::ks]/bet
+            vIc[j,k::ks] = (vIc[j,k::ks] - AV[j,k::ks]*vIc[j-1,k::ks])/bet
 
         # backward sweep
-        for j in range(jMin,jMax-1,-1):
-            vRt[j,k::2]=vRt[j,k::2]-cvv[j,k::2]*vRt[j+1,k::2]
+        for j in range(jMax-1,jMin-1,-1):
+            vIc[j,k::ks]=vIc[j,k::ks]-cvv[j,k::ks]*vIc[j+1,k::ks]
 
-    return vRt
+    return vIc
 
 def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                press0, forcingU, forcingV,
@@ -337,13 +338,6 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     # mass*(vIceNm1)/deltaT
     vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
 
-    linTol = 1e-12
-    lsrRelax = 1.05
-    lsrRelaxU = lsrRelax
-    lsrRelaxV = lsrRelax
-    nLsr = 10
-    nLin = 100
-    computeLsrResidual = True
     residual = np.array([None]*nLsr)
 
     for iLsr in range(nLsr):
@@ -370,28 +364,34 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             uIceC = 0.5*( uIce+uIceC )
             vIceC = 0.5*( vIce+vIceC )
 
+        # drag coefficients for ice-ocean and basal drag
         cDrag = ocean_drag_coeffs(uIceC, vIceC, uVel, vVel)
-        cBotC = 0.*bottomdrag_coeffs(uIceC, vIceC, hIceMean, Area, R_low)
+        cBotC = bottomdrag_coeffs(uIceC, vIceC, hIceMean, Area, R_low)
+        #
         e11, e22, e12    = strainrates(uIceC, vIceC, secondOrderBC)
         zeta, eta, press = viscosities(
             e11, e22, e12, press0, iLsr, myTime, myIter)
 
+        # zeta = zeta*0
+        # eta  = eta*0
+        AU, BU, CU, AV, BV, CV, uRt1, uRt2, vRt1, vRt2 = lsr_coefficents(
+            zeta, eta, cDrag+cBotC, SeaIceMassU, SeaIceMassV,
+            areaW, areaS,
+            iLsr, myTime, myIter)
+
+        # zeta = zeta*0
+        # eta  = eta*0
         uIceRHS, vIceRHS = calc_rhs_lsr(
             uIceRHSfix, vIceRHSfix, areaW, areaS,
             uIceC, vIceC, uVel, vVel, cDrag, zeta, eta, press,
             SeaIceMassC, iLsr, myTime, myIter)
-
-        AU,BU,CU,AV,BV,CV,uRt1,uRt2,vRt1,vRt2 = lsr_coefficents(
-            zeta, eta, cDrag+cBotC, SeaIceMassU, SeaIceMassV,
-            areaW, areaS,
-            iLsr, myTime, myIter)
 
         if computeLsrResidual:
             residUpre, residVpre, uRes, vRes = lsr_residual(
                 uIceRHS, vIceRHS, uRt1, uRt2, vRt1, vRt2,
                 AU, BU, CU, AV, BV, CV, uIce, vIce,
                 True, myTime, myIter )
-            print ( 'pre  lin: %i    %e %e'%(iLsr, residUpre, residVpre) )
+            print ( 'pre  lin: %i      %e %e'%(iLsr, residUpre, residVpre) )
 
         iLin = 0.
         doIterU = True
@@ -399,18 +399,29 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         while iLin < nLin and (doIterV or doIterV):
             iLin = iLin+1
 
-            if doIterU:
-                uNm1 = uIce.copy()
-                uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
-                                     uIce )
-            if doIterV:
-                vNm1 = vIce.copy()
-                vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
-                                     vIce )
+            if np.mod(iLin,2)==0:
+                if doIterU:
+                    uNm1 = uIce.copy()
+                    uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
+                                         uIce )
+                if doIterV:
+                    vNm1 = vIce.copy()
+                    vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
+                                         vIce )
+            else:
+                if doIterV:
+                    vNm1 = vIce.copy()
+                    vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
+                                         vIce )
+
+                if doIterU:
+                    uNm1 = uIce.copy()
+                    uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
+                                         uIce )
 
             # over relaxation step
-            lsrRelaxU = 1.05
-            lsrRelaxV = 1.05
+            # lsrRelaxU = 1.05
+            # lsrRelaxV = 1.05
             if doIterU: uIce = uIce + lsrRelaxU * ( uTmp - uIce )
             if doIterV: vIce = vIce + lsrRelaxV * ( vTmp - vIce )
 
@@ -437,7 +448,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                 uIceRHS, vIceRHS, uRt1, uRt2, vRt1, vRt2,
                 AU, BU, CU, AV, BV, CV, uIce, vIce,
                 True, myTime, myIter )
-            print ( 'post lin: %i %i %e %e'%(
+            print ( 'post lin: %i %4i %e %e'%(
                 iLsr, iLin, residUpost, residVpost ) )
 
         residual[iLsr] = np.sqrt(residUpre**2 + residVpre**2)

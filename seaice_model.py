@@ -67,10 +67,6 @@ R_low = np.ones((sNy+2*OLy,sNx+2*OLx)) * -1000
 
 secondOrderBC = False
 
-
-useFreedrift = False
-useEVP = not useFreedrift
-
 plt.close('all')
 monFreq = 5
 nTimeSteps = 15
@@ -80,7 +76,7 @@ for i in range(nTimeSteps):
                                    uWind[0,:,:], vWind[0,:,:],
                                    hIceMean, hSnowMean, Area, etaN,
                                    pLoad, SeaIceLoad,
-                                   useRealFreshWaterFlux, useFreedrift, useEVP,
+                                   useRealFreshWaterFlux,
                                    fu, fv, secondOrderBC, R_low)
 
     hIceMean, hSnowMean, Area = advdiff(uIce, vIce, hIceMean,
@@ -127,6 +123,11 @@ def sq(a):
 fig, ax = plt.subplots(nrows=1,ncols=3,figsize=(15,5),sharex=True,sharey=True,)
 csf0=ax[0].pcolormesh(sq(uIce[OLy:-OLy,OLx:-OLx]))
 ax[0].set_title('uIce')
+# csf0=ax[0].pcolormesh(sq(uIce-vIce.transpose())[OLy:-OLy,OLx:-OLx],
+#                       vmin=-1e-7,vmax=1e-7)
+# csf0=ax[0].pcolormesh(sq(vIce-vIce[:,::-1])[OLy:-OLy,OLx:-OLx],
+#                       vmin=-1e-7,vmax=1e-7)
+# ax[0].set_title('uIce-vIce.transpose()')
 csf1=ax[1].pcolormesh(sq(vIce[OLy:-OLy,OLx:-OLx]))
 ax[1].set_title('vIce')
 csf2=ax[2].pcolormesh( hIceMean[OLy:-OLy,OLx:-OLx]*

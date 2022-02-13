@@ -103,3 +103,6 @@ k2AtZ = np.zeros((sNy+2*OLy,sNx+2*OLx))
 # iceMask = maskInC.copy()
 # SeaIceMaskU = maskInW.copy()
 # SeaIceMaskV = maskInS.copy()
+
+globalArea = (maskInC*rA).sum()
+if globalArea == 0: print('globalArea = 0, something is wrong')
