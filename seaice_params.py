@@ -125,3 +125,5 @@ zetaMaxfac = 2.5e8
 zetaMin = 0
 
 nEVPsteps = 200
+
+noSlip = True
