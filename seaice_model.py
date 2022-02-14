@@ -90,7 +90,7 @@ for i in range(nTimeSteps):
                                                   Area, TIceSnow)
 
     hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, \
-    Qnet, seaIceLoad = growth(hIceMean, iceMask, hSnowMean, Area,
+    Qnet, seaIceLoad = growth(hIceMean, hSnowMean, Area,
                               salt, TIceSnow, precip, snowPrecip,
                               evap, runoff, wspeed, theta, Qnet, Qsw,
                               SWDown, LWDown, ATemp, aqh)
