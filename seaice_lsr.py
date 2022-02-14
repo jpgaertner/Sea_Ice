@@ -227,7 +227,7 @@ def lsr_coefficents(zeta, eta, dragSym, seaiceMassU, seaiceMassV,
     # vRt1 = vRt1*maskInC*np.roll(maskInC,1,0)
     # vRt2 = vRt2*maskInC*np.roll(maskInC,1,0)
 
-    return AU, BU, CU, AV, BV, CV, uRt1, uRt2, vRt1, vRt1
+    return AU, BU, CU, AV, BV, CV, uRt1, uRt2, vRt1, vRt2
 
 def lsr_residual( rhsU, rhsV, uRt1, uRt2, vRt1, vRt2,
                   AU, BU, CU, AV, BV, CV, uFld, vFld,
@@ -366,7 +366,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
 
     computeLsrResidual = True
     printLsrResidual   = True
-    plotLsrResidual    = False
+    plotLsrResidual    = True
     if useAsPreconditioner:
         computeLsrResidual = False
         printLsrResidual   = False
@@ -463,14 +463,21 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
 
             if doIterU: uNm1 = uIce.copy()
             if doIterV: vNm1 = vIce.copy()
-            isEven = np.mod(iLin,1)==0 and False
+            isEven = np.mod(iLin,2)==0 and False
             if not isEven:
                 if doIterU:
                     uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
                                          uIce )
                 if doIterV:
-                    vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
-                                         vIce )
+                    # vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
+                    #                      vIce )
+                    vTmp = lsr_tridiagv( AV.transpose(),
+                                         BV.transpose(),
+                                         CV.transpose(),
+                                         vRt1.transpose(),
+                                         vRt2.transpose(),
+                                         vIceRHS.transpose(),
+                                         vIce.transpose() ).transpose()
             if isEven:
                 if doIterU:
                     uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
