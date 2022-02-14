@@ -261,20 +261,19 @@ def lsr_residual( rhsU, rhsV, uRt1, uRt2, vRt1, vRt2,
 def tridiag(a,b,c,d):
     m,n = d.shape
     w = np.zeros((m,n-1))#,dtype='float64')
-    w = np.zeros((m,n))#,dtype='float64')
 
     # begin
     w[:,0] = c[:,0]/b[:,0]
     d[:,0] = d[:,0]/b[:,0]
 
     # forward sweep
-    # for i in range(1,n-1):
-    for i in range(1,n):
-        w[:,i] = c[:,i]/(b[:,i] - a[:,i-1]*w[:,i-1])
-        d[:,i] = (d[:,i] - a[:,i-1]*d[:,i-1])/(b[:,i] - a[:,i-1]*w[:,i-1])
+    for i in range(1,n-1):
+        bet = 1./(b[:,i] - a[:,i]*w[:,i-1])
+        w[:,i] = c[:,i]*bet
+        d[:,i] = (d[:,i] - a[:,i]*d[:,i-1])*bet
 
-    # i = n-1
-    # d[:,i] = (d[:,i] - a[:,i-1]*d[:,i-1])/(b[:,i] - a[:,i-1]*w[:,i-1])
+    i = n-1
+    d[:,i] = (d[:,i] - a[:,i]*d[:,i-1])/(b[:,i] - a[:,i-1]*w[:,i-1])
     # backward sweep
     for i in range(n-1,0,-1):
         d[:,i-1] = d[:,i-1] - w[:,i-1]*d[:,i]
@@ -299,23 +298,23 @@ def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
         uIc[k::ks,iMin] = uIc[k::ks,iMin] - AU[k::ks,iMin]*uIc[k::ks,iMin-1]
         uIc[k::ks,iMxx] = uIc[k::ks,iMxx] - CU[k::ks,iMxx]*uIc[k::ks,iMxx+1]
         uIc[k::ks,:]    = uIc[k::ks,:] * SeaIceMaskU[k::ks,:]
-        # b = uIc[k::ks,iMin:iMax]
-        # uIc[k::ks,iMin:iMax]= tridiag(AU[k::ks,iMin:iMax],
-        #                               BU[k::ks,iMin:iMax],
-        #                               CU[k::ks,iMin:iMax],
-        #                               b)
-        # begin
-        cuu[k::ks,iMin] = cuu[k::ks,iMin]/BU[k::ks,iMin]
-        uIc[k::ks,iMin] = uIc[k::ks,iMin]/BU[k::ks,iMin]
-        # forward sweep
-        for i in range(iMin+1,iMax):
-            bet = BU[k::ks,i]-AU[k::ks,i]*cuu[k::ks,i-1]
-            cuu[k::ks,i] = cuu[k::ks,i]/bet
-            uIc[k::ks,i] = (uIc[k::ks,i] - AU[k::ks,i]*uIc[k::ks,i-1])/bet
+        b = uIc[k::ks,iMin:iMax]
+        uIc[k::ks,iMin:iMax]= tridiag(AU[k::ks,iMin:iMax],
+                                      BU[k::ks,iMin:iMax],
+                                      CU[k::ks,iMin:iMax],
+                                      b)
+        # # begin
+        # cuu[k::ks,iMin] = cuu[k::ks,iMin]/BU[k::ks,iMin]
+        # uIc[k::ks,iMin] = uIc[k::ks,iMin]/BU[k::ks,iMin]
+        # # forward sweep
+        # for i in range(iMin+1,iMax):
+        #     bet = BU[k::ks,i]-AU[k::ks,i]*cuu[k::ks,i-1]
+        #     cuu[k::ks,i] = cuu[k::ks,i]/bet
+        #     uIc[k::ks,i] = (uIc[k::ks,i] - AU[k::ks,i]*uIc[k::ks,i-1])/bet
 
-        # backward sweep
-        for i in range(iMax-1,iMin,-1):
-            uIc[k::ks,i-1]=uIc[k::ks,i-1]-cuu[k::ks,i-1]*uIc[k::ks,i]
+        # # backward sweep
+        # for i in range(iMax-1,iMin,-1):
+        #     uIc[k::ks,i-1]=uIc[k::ks,i-1]-cuu[k::ks,i-1]*uIc[k::ks,i]
 
     return uIc
 
@@ -337,32 +336,39 @@ def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
         vIc[jMin,k::ks] = vIc[jMin,k::ks] - AV[jMin,k::ks]*vIc[jMin-1,k::ks]
         vIc[jMxx,k::ks] = vIc[jMxx,k::ks] - CV[jMxx,k::ks]*vIc[jMxx+1,k::ks]
         vIc[:,k::ks]    = vIc[:,k::ks] * SeaIceMaskV[:,k::ks]
-        # b = vIc[jMin:jMax,k::ks]
-        # vIc[jMin:jMax,k::ks] = tridiag(AV[jMin:jMax,k::ks].transpose(),
-        #                                BV[jMin:jMax,k::ks].transpose(),
-        #                                CV[jMin:jMax,k::ks].transpose(),
-        #                                b.transpose()).transpose()
-        # begin
-        cvv[jMin,k::ks] = cvv[jMin,k::ks]/BV[jMin,k::ks]
-        vIc[jMin,k::ks] = vIc[jMin,k::ks]/BV[jMin,k::ks]
-        # forward sweep
-        for j in range(jMin+1,jMax):
-            bet = BV[j,k::ks]-AV[j,k::ks]*cvv[j-1,k::ks]
-            cvv[j,k::ks] = cvv[j,k::ks]/bet
-            vIc[j,k::ks] = (vIc[j,k::ks] - AV[j,k::ks]*vIc[j-1,k::ks])/bet
+        b = vIc[jMin:jMax,k::ks]
+        vIc[jMin:jMax,k::ks] = tridiag(AV[jMin:jMax,k::ks].swapaxes(0,1),
+                                       BV[jMin:jMax,k::ks].swapaxes(0,1),
+                                       CV[jMin:jMax,k::ks].swapaxes(0,1),
+                                       b.swapaxes(0,1)).swapaxes(1,0)
+        # # begin
+        # cvv[jMin,k::ks] = cvv[jMin,k::ks]/BV[jMin,k::ks]
+        # vIc[jMin,k::ks] = vIc[jMin,k::ks]/BV[jMin,k::ks]
+        # # forward sweep
+        # for j in range(jMin+1,jMax):
+        #     bet = BV[j,k::ks]-AV[j,k::ks]*cvv[j-1,k::ks]
+        #     cvv[j,k::ks] = cvv[j,k::ks]/bet
+        #     vIc[j,k::ks] = (vIc[j,k::ks] - AV[j,k::ks]*vIc[j-1,k::ks])/bet
 
-        # backward sweep
-        for j in range(jMax-1,jMin,-1):
-            vIc[j-1,k::ks]=vIc[j-1,k::ks]-cvv[j-1,k::ks]*vIc[j,k::ks]
+        # # backward sweep
+        # for j in range(jMax-1,jMin,-1):
+        #     vIc[j-1,k::ks]=vIc[j-1,k::ks]-cvv[j-1,k::ks]*vIc[j,k::ks]
 
     return vIc
 
 def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                press0, forcingU, forcingV,
                SeaIceMassC, SeaIceMassU, SeaIceMassV,
-               R_low, myTime, myIter):
+               R_low, nLsr = nLsr, nLin = nLin,
+               useAsPreconditioner = False,
+               zeta = None, eta = None, cDrag = None, cBotC = None,
+               myTime = 0, myIter = 0):
 
     computeLsrResidual = True
+    printLsrResidual = False
+    if useAsPreconditioner:
+        computeLsrResidual = False
+        printLsrResidual = False
 
     recip_deltaT = 1./deltaTdyn
     bdfAlpha = 1.
@@ -411,23 +417,32 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             uIceC = wght*uIce+(1.-wght)*uIceC
             vIceC = wght*vIce+(1.-wght)*vIceC
 
-        # drag coefficients for ice-ocean and basal drag
-        cDrag = ocean_drag_coeffs(uIceC, vIceC, uVel, vVel)
-        cBotC = bottomdrag_coeffs(uIceC, vIceC, hIceMean, Area, R_low)
-        #
-        e11, e22, e12    = strainrates(uIceC, vIceC, secondOrderBC)
-        zeta, eta, press = viscosities(
-            e11, e22, e12, press0, iLsr, myTime, myIter)
+        if not useAsPreconditioner:
+            # drag coefficients for ice-ocean and basal drag
+            cDrag = ocean_drag_coeffs(uIceC, vIceC, uVel, vVel)
+            cBotC = bottomdrag_coeffs(uIceC, vIceC, hIceMean, Area, R_low)
+            #
+            e11, e22, e12    = strainrates(uIceC, vIceC, secondOrderBC)
+            zeta, eta, press = viscosities(
+                e11, e22, e12, press0, iLsr, myTime, myIter)
+        else:
+            press = press0.copy()
 
         AU, BU, CU, AV, BV, CV, uRt1, uRt2, vRt1, vRt2 = lsr_coefficents(
             zeta, eta, cDrag+cBotC, SeaIceMassU, SeaIceMassV,
             areaW, areaS,
             iLsr, myTime, myIter)
 
-        uIceRHS, vIceRHS = calc_rhs_lsr(
-            uIceRHSfix, vIceRHSfix, areaW, areaS,
-            uIceC, vIceC, uVel, vVel, cDrag, zeta, eta, press,
-            SeaIceMassC, iLsr, myTime, myIter)
+        if useAsPreconditioner:
+            uIceRHS, vIceRHS = calc_rhs_lsr(
+                uIceRHSfix, vIceRHSfix, areaW, areaS,
+                uIceC, vIceC, uVel, vVel, cDrag, zeta, eta, press,
+                SeaIceMassC, iLsr, myTime, myIter)
+        else:
+            uIceRHS, vIceRHS = calc_rhs_lsr(
+                uIceRHSfix, vIceRHSfix, areaW, areaS,
+                uIceC, vIceC, uVel, vVel, cDrag, zeta, eta, press,
+                SeaIceMassC, iLsr, myTime, myIter)
 
         if computeLsrResidual:
             residUpre, residVpre, uRes, vRes = lsr_residual(
@@ -492,13 +507,13 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                 iLsr, iLin, residUpost, residVpost ) )
 
 
-        resNonLin = np.sqrt(residUpre**2 + residVpre**2)
-        residual[iLsr] = resNonLin
-        if iLsr==0: resNonLin0 = resNonLin
+            resNonLin = np.sqrt(residUpre**2 + residVpre**2)
+            residual[iLsr] = resNonLin
+            if iLsr==0: resNonLin0 = resNonLin
 
-        resNonLin = resNonLin/resNonLin0
+            resNonLin = resNonLin/resNonLin0
 
-    if computeLsrResidual:
+    if printLsrResidual:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
         ax[0].semilogy(residual[:iLsr-1]/residual[0],'x-')
