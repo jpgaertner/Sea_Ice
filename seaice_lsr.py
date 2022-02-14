@@ -263,16 +263,19 @@ def tridiag(a,b,c,d):
     w = np.zeros((m,n-1))#,dtype='float64')
     w = np.zeros((m,n))#,dtype='float64')
 
+    # begin
     w[:,0] = c[:,0]/b[:,0]
     d[:,0] = d[:,0]/b[:,0]
 
-#   for i in range(1,n-1):
+    # forward sweep
+    # for i in range(1,n-1):
     for i in range(1,n):
         w[:,i] = c[:,i]/(b[:,i] - a[:,i-1]*w[:,i-1])
         d[:,i] = (d[:,i] - a[:,i-1]*d[:,i-1])/(b[:,i] - a[:,i-1]*w[:,i-1])
 
     # i = n-1
     # d[:,i] = (d[:,i] - a[:,i-1]*d[:,i-1])/(b[:,i] - a[:,i-1]*w[:,i-1])
+    # backward sweep
     for i in range(n-1,0,-1):
         d[:,i-1] = d[:,i-1] - w[:,i-1]*d[:,i]
 
