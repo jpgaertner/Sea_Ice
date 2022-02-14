@@ -32,25 +32,24 @@ OLy = 2
 
 
 hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 1.3
-Area = np.ones((sNx+2*OLx,sNy+2*OLy))* 1
-hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0
+Area = np.ones((sNx+2*OLx,sNy+2*OLy))* 0.9
+hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0.1
 
 iceMask = np.ones((sNx+2*OLx,sNy+2*OLy))*1
 salt = np.ones((sNx+2*OLx,sNy+2*OLy))*29
-TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC)) * 260.3
+TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC)) * 248.7569580078125
 precip = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #order 1e-6
 snowPrecip = np.ones((sNx+2*OLx,sNy+2*OLy))*0
 evap = np.ones((sNx+2*OLx,sNy+2*OLy))*0
 runoff = np.ones((sNx+2*OLx,sNy+2*OLy))*0
 wspeed = np.ones((sNx+2*OLx,sNy+2*OLy))*2
-theta = np.ones((sNx+2*OLx,sNy+2*OLy))*celsius2K-1.66 #-1.96
-Qnet = np.ones((sNx+2*OLx,sNy+2*OLy))* 173.03212617345582
+theta = np.zeros((sNx+2*OLx,sNy+2*OLy)) -1.66 #-1.96
+Qnet = np.ones((sNx+2*OLx,sNy+2*OLy))* 173.03212617345582#29.694019940648037
 Qsw = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #winter condition
 SWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #winter
-LWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*200 #20 winter
-ATemp = np.ones((sNx+2*OLx,sNy+2*OLy))* 273#253
+LWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*180 #20 winter
+ATemp = np.ones((sNx+2*OLx,sNy+2*OLy))* 253
 aqh = np.ones((sNx+2*OLx,sNy+2*OLy))*0#1e-4
-
 
 ice = np.array([hIceMean[0,0]])
 snow = np.array([hSnowMean[0,0]])
@@ -62,10 +61,10 @@ days = np.array([0])
 
 timesteps = 60
 
-# in F, runtime = 360d with deltat = 12h and dump frequency = 10d 
+
 for i in range(timesteps):
     hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet_out, seaIceLoad = (
-        growth(hIceMean, iceMask, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, 
+        growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, 
         runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh))
 
     ice = np.append(ice, hIceMean[0,0])
@@ -74,22 +73,22 @@ for i in range(timesteps):
     iceTemp = np.append(iceTemp, TIceSnow[0,0,:])
     area = np.append(area, Area[0,0])
     qsw = np.append(qsw, Qsw[0,0])
-    days = np.append(days,(i+1)/2)
+    days = np.append(days,i)
 
 
-# fig, axs = plt.subplots(2,2, figsize=(10,6))
-# axs[0,0].plot(ice)
-# axs[0,0].set_ylabel("Ice Thickness")
-# axs[0,1].plot(snow)
-# axs[0,1].set_ylabel("Snow Thickness")
-# axs[1,0].plot(area)
-# axs[1,0].set_ylabel("Area")
-# axs[1,1].plot(iceTemp)
-# axs[1,1].set_ylabel("Ice Temperature")
+fig, axs = plt.subplots(2,2, figsize=(10,6))
+axs[0,0].plot(ice)
+axs[0,0].set_ylabel("Ice Thickness")
+axs[0,1].plot(snow)
+axs[0,1].set_ylabel("Snow Thickness")
+axs[1,0].plot(area)
+axs[1,0].set_ylabel("Area")
+axs[1,1].plot(iceTemp)
+axs[1,1].set_ylabel("Ice Temperature")
 
 
-# fig.tight_layout()
-# plt.show()
+fig.tight_layout()
+plt.show()
 
 # print(ice[timesteps])
 # print(area[timesteps])
