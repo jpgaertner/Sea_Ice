@@ -97,7 +97,7 @@ airIceDrag = 0.0012 #air-ice drag coefficient
 airIceDrag_south = 0.001
 waterIceDrag = 0.0055 #water-ice drag coefficient
 waterIceDrag_south = 0.0055
-cDragMin = 0.25 #minimum of liniear drag coefficient between ice and ocean
+cDragMin = 0.25 #minimum of linear drag coefficient between ice and ocean
 stressFactor = 1
 
 seaIceLoadFac = 1 #factor to scale (and turn off) seaIceLoading
@@ -135,6 +135,5 @@ useLSR = True
 # usePicard=True
 
 nEVPsteps = 200
-useLsrZebra = False
 
 noSlip = True

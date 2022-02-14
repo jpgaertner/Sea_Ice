@@ -185,7 +185,6 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     recip_deltaT = 1./deltaTdyn
     bdfAlpha = 1.
 
-
     # copy previous time step (n-1) of uIce, vIce
     uIceLin = uIce.copy()
     vIceLin = vIce.copy()
@@ -196,7 +195,7 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     # mass*(vIceNm1)/deltaT
     vIceRHS = forcingV + SeaIceMassV*vIce*recip_deltaT
 
-    nPicard = 100
+    nPicard = 10
     nLinear = 20
     residual = np.array([None]*nPicard)
     areaW = 0.5 * (Area + np.roll(Area,1,1))

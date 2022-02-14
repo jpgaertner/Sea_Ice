@@ -2,6 +2,10 @@ import numpy as np
 # from numpy import linalg as npla
 from scipy.sparse import linalg as spla
 from scipy.sparse.linalg import LinearOperator
+import scipy.sparse as sp
+from scipy.linalg import solve
+# from scipy.sparse import csr_matrix
+# from scipy.sparse.linalg import spsolve_triangular
 # from scipy.optimize import fsolve
 
 from seaice_params import *
@@ -15,6 +19,7 @@ from seaice_global_sum import global_sum
 from seaice_fill_overlap import fill_overlap_uv
 from seaice_averaging import c_point_to_z_point
 
+useLsrZebra = True
 useStrengthImplicitCoupling = True
 secondOrderBC = False
 lsrRelax = 1.05
@@ -22,7 +27,7 @@ lsrRelaxU = lsrRelax
 lsrRelaxV = lsrRelax
 nonLinTol = 1e-5
 linTol = 1e-8
-nLsr = 100
+nLsr = 10
 nLin = 100
 computeLsrResidual = True
 
@@ -253,12 +258,31 @@ def lsr_residual( rhsU, rhsV, uRt1, uRt2, vRt1, vRt2,
 
     return residU, residV, uRes, vRes
 
+def tridiag(a,b,c,d):
+    m,n = d.shape
+    w = np.zeros((m,n-1))#,dtype='float64')
+
+    w[:,0] = c[:,0]/b[:,0]
+    d[:,0] = d[:,0]/b[:,0]
+
+    for i in range(1,n-1):
+        w[:,i] = c[:,i]/(b[:,i] - a[:,i-1]*w[:,i-1])
+        d[:,i] = (d[:,i] - a[:,i-1]*d[:,i-1])/(b[:,i] - a[:,i-1]*w[:,i-1])
+
+    i = n-1
+    d[:,i] = (d[:,i] - a[:,i-1]*d[:,i-1])/(b[:,i] - a[:,i-1]*w[:,i-1])
+    for i in range(n-1,0,-1):
+        d[:,i-1] = d[:,i-1] - w[:,i-1]*d[:,i]
+
+    return d
+
 def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
 
-    iMin =  OLx
-    iMax =  OLx + sNx
+    iMin = OLx
+    iMax = OLx + sNx
+    iMxx = iMax-1
     # initialisation
-    cuu         = CU.copy()
+    cuu = CU.copy()
     # zebra loop
     if useLsrZebra: ks = 2
     else:           ks = 1
@@ -268,8 +292,13 @@ def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
             + uRt1[k::ks,:]*np.roll(uIc, 1,0)[k::ks,:] \
             + uRt2[k::ks,:]*np.roll(uIc,-1,0)[k::ks,:]
         uIc[k::ks,iMin] = uIc[k::ks,iMin] - AU[k::ks,iMin]*uIc[k::ks,iMin-1]
-        uIc[k::ks,iMax] = uIc[k::ks,iMax] - CU[k::ks,iMax]*uIc[k::ks,iMax+1]
+        uIc[k::ks,iMxx] = uIc[k::ks,iMxx] - CU[k::ks,iMxx]*uIc[k::ks,iMxx+1]
         uIc[k::ks,:]    = uIc[k::ks,:] * SeaIceMaskU[k::ks,:]
+        # b = uIc[k::ks,iMin:iMax]
+        # uIc[k::ks,iMin:iMax]= tridiag(AU[k::ks,iMin:iMax],
+        #                                BU[k::ks,iMin:iMax],
+        #                                CU[k::ks,iMin:iMax],
+        #                                b)
         # begin
         cuu[k::ks,iMin] = cuu[k::ks,iMin]/BU[k::ks,iMin]
         uIc[k::ks,iMin] = uIc[k::ks,iMin]/BU[k::ks,iMin]
@@ -280,17 +309,18 @@ def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
             uIc[k::ks,i] = (uIc[k::ks,i] - AU[k::ks,i]*uIc[k::ks,i-1])/bet
 
         # backward sweep
-        for i in range(iMax-2,iMin-1,-1):
-            uIc[k::ks,i]=uIc[k::ks,i]-cuu[k::ks,i]*uIc[k::ks,i+1]
+        for i in range(iMax-1,iMin,-1):
+            uIc[k::ks,i-1]=uIc[k::ks,i-1]-cuu[k::ks,i-1]*uIc[k::ks,i]
 
     return uIc
 
 def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
 
-    jMin =  OLy
-    jMax =  OLy + sNy
+    jMin = OLy
+    jMax = OLy + sNy
+    jMxx = jMax-1
     # initialisation
-    cvv         = CV.copy()
+    cvv = CV.copy()
     # zebra loop
     if useLsrZebra: ks = 2
     else:           ks = 1
@@ -300,8 +330,13 @@ def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
             + vRt1[:,k::ks]*np.roll(vIc, 1,1)[:,k::ks] \
             + vRt2[:,k::ks]*np.roll(vIc,-1,1)[:,k::ks]
         vIc[jMin,k::ks] = vIc[jMin,k::ks] - AV[jMin,k::ks]*vIc[jMin-1,k::ks]
-        vIc[jMax,k::ks] = vIc[jMax,k::ks] - CV[jMax,k::ks]*vIc[jMax+1,k::ks]
+        vIc[jMxx,k::ks] = vIc[jMxx,k::ks] - CV[jMxx,k::ks]*vIc[jMxx+1,k::ks]
         vIc[:,k::ks]    = vIc[:,k::ks] * SeaIceMaskV[:,k::ks]
+        b = vIc[jMin:jMax,k::ks]
+        # vIc[jMin:jMax,k::ks] = tridiag(AV[jMin:jMax,k::ks].transpose(),
+        #                                 BV[jMin:jMax,k::ks].transpose(),
+        #                                 CV[jMin:jMax,k::ks].transpose(),
+        #                                 b.transpose()).transpose()
         # begin
         cvv[jMin,k::ks] = cvv[jMin,k::ks]/BV[jMin,k::ks]
         vIc[jMin,k::ks] = vIc[jMin,k::ks]/BV[jMin,k::ks]
@@ -312,8 +347,8 @@ def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
             vIc[j,k::ks] = (vIc[j,k::ks] - AV[j,k::ks]*vIc[j-1,k::ks])/bet
 
         # backward sweep
-        for j in range(jMax-2,jMin-1,-1):
-            vIc[j,k::ks]=vIc[j,k::ks]-cvv[j,k::ks]*vIc[j+1,k::ks]
+        for j in range(jMax-1,jMin,-1):
+            vIc[j-1,k::ks]=vIc[j-1,k::ks]-cvv[j-1,k::ks]*vIc[j,k::ks]
 
     return vIc
 
@@ -379,15 +414,15 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         zeta, eta, press = viscosities(
             e11, e22, e12, press0, iLsr, myTime, myIter)
 
-        uIceRHS, vIceRHS = calc_rhs_lsr(
-            uIceRHSfix, vIceRHSfix, areaW, areaS,
-            uIceC, vIceC, uVel, vVel, cDrag, zeta, eta, press,
-            SeaIceMassC, iLsr, myTime, myIter)
-
         AU, BU, CU, AV, BV, CV, uRt1, uRt2, vRt1, vRt2 = lsr_coefficents(
             zeta, eta, cDrag+cBotC, SeaIceMassU, SeaIceMassV,
             areaW, areaS,
             iLsr, myTime, myIter)
+
+        uIceRHS, vIceRHS = calc_rhs_lsr(
+            uIceRHSfix, vIceRHSfix, areaW, areaS,
+            uIceC, vIceC, uVel, vVel, cDrag, zeta, eta, press,
+            SeaIceMassC, iLsr, myTime, myIter)
 
         if computeLsrResidual:
             residUpre, residVpre, uRes, vRes = lsr_residual(
@@ -404,21 +439,18 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
 
             if doIterU: uNm1 = uIce.copy()
             if doIterV: vNm1 = vIce.copy()
-            if np.mod(iLin,1)==0:
+            isEven = np.mod(iLin,1)==0 and False
+            if not isEven:
                 if doIterU:
                     uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
                                          uIce )
                 if doIterV:
                     vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
                                          vIce )
-            # else:
-            #     if doIterV:
-            #         vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
-            #                              vIce )
-
-            #     if doIterU:
-            #         uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
-            #                              uIce )
+            if isEven:
+                if doIterU:
+                    uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
+                                         uIce )
 
             # over relaxation step
             # lsrRelaxU = 1.05
@@ -470,3 +502,36 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
 
 
     return uIce, vIce
+
+        # n = iMax-iMin
+        # for j in range(OLy,sNy+OLy):
+        #     b = uIc[j,iMin:iMax]
+        #     A = sp.spdiags([AU[j,iMin:iMax],
+        #                     BU[j,iMin:iMax],
+        #                     CU[j,iMin:iMax]],(-1,0,1), n, n).toarray()
+        #     uIc[j,iMin:iMax] = solve(A,b,overwrite_b=True)
+
+        # n = jMax-jMin
+        # for i in range(OLx,sNx+OLx):
+            # b = vIc[jMin:jMax,i]
+            # A = sp.spdiags([AV[jMin:jMax,i],
+            #                 BV[jMin:jMax,i],
+            #                 CV[jMin:jMax,i]],(-1,0,1), n, n).toarray()
+            # vIc[jMin:jMax,i] = solve(A,b,overwrite_b=True)
+# def TDMA(a,b,c,d):
+#     n = len(d)
+#     w= np.zeros(n-1,float)
+#     g= np.zeros(n, float)
+#     p = np.zeros(n,float)
+
+#     w[0] = c[0]/b[0]
+#     g[0] = d[0]/b[0]
+
+#     for i in range(1,n-1):
+#         w[i] = c[i]/(b[i] - a[i-1]*w[i-1])
+#     for i in range(1,n):
+#         g[i] = (d[i] - a[i-1]*g[i-1])/(b[i] - a[i-1]*w[i-1])
+#     p[n-1] = g[n-1]
+#     for i in range(n-1,0,-1):
+#         p[i-1] = g[i-1] - w[i-1]*p[i]
+#     return p

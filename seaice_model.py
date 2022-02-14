@@ -69,7 +69,7 @@ secondOrderBC = False
 
 plt.close('all')
 monFreq = 5
-nTimeSteps = 15
+nTimeSteps = 1
 for i in range(nTimeSteps):
 
     uIce, vIce, fu, fv = dynsolver(uIce, vIce, uVel, vVel,
@@ -85,11 +85,11 @@ for i in range(nTimeSteps):
     hIceMean, hSnowMean, Area, TIceSnow = ridging(hIceMean, hSnowMean,
                                                   Area, TIceSnow)
 
-    hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, \
-    Qnet, seaIceLoad = growth(hIceMean, iceMask, hSnowMean, Area,
-                              salt, TIceSnow, precip, snowPrecip,
-                              evap, runoff, wspeed, theta, Qnet, Qsw,
-                              SWDown, LWDown, ATemp, aqh)
+    # hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, \
+    # Qnet, seaIceLoad = growth(hIceMean, iceMask, hSnowMean, Area,
+    #                           salt, TIceSnow, precip, snowPrecip,
+    #                           evap, runoff, wspeed, theta, Qnet, Qsw,
+    #                           SWDown, LWDown, ATemp, aqh)
 
     printMonitor = monFreq>0 and (np.mod(i,monFreq)==0 or i==nTimeSteps-1)
     print('Time step %04i'%i)
@@ -121,14 +121,13 @@ def sq(a):
     return masked_array
 
 fig, ax = plt.subplots(nrows=1,ncols=3,figsize=(15,5),sharex=True,sharey=True,)
-csf0=ax[0].pcolormesh(sq(uIce[OLy:-OLy,OLx:-OLx]))
+csf0=ax[0].pcolormesh(sq(uIce[OLy:-OLy,OLx:-OLx])*1e3)
 ax[0].set_title('uIce')
-# csf0=ax[0].pcolormesh(sq(uIce-vIce.transpose())[OLy:-OLy,OLx:-OLx],
-#                       vmin=-1e-7,vmax=1e-7)
-# csf0=ax[0].pcolormesh(sq(vIce-vIce[:,::-1])[OLy:-OLy,OLx:-OLx],
-#                       vmin=-1e-7,vmax=1e-7)
+# csf0=ax[0].pcolormesh(sq(uIce-vIce.transpose())[OLy:-OLy,OLx:-OLx]) #
+# # csf0=ax[0].pcolormesh(sq(vIce-vIce[:,::-1])[OLy:-OLy,OLx:-OLx],
+# #                       vmin=-1e-7,vmax=1e-7)
 # ax[0].set_title('uIce-vIce.transpose()')
-csf1=ax[1].pcolormesh(sq(vIce[OLy:-OLy,OLx:-OLx]))
+csf1=ax[1].pcolormesh(sq(vIce[OLy:-OLy,OLx:-OLx])*1e3)
 ax[1].set_title('vIce')
 csf2=ax[2].pcolormesh( hIceMean[OLy:-OLy,OLx:-OLx]*
                       sq(iceMask[OLy:-OLy,OLx:-OLx]))
