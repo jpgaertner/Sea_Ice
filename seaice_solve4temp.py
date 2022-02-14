@@ -5,10 +5,10 @@ import numpy as np
 from seaice_size import *
 from seaice_params import *
 
-# sNx = 1
-# sNy = 1
-# OLx = 2
-# OLy = 2
+sNx = 1
+sNy = 1
+OLx = 2
+OLy = 2
 
 ### input
 # hIceActual     : actual ice thickness [m]
@@ -58,23 +58,23 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
 
     # initialize output arrays
     TSurfOut = TSurfIn.copy()
-    F_ia = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    F_ia = np.zeros(iceMask.shape)
     #F_ia_net
-    F_io_net = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    IcePenetSW = np.zeros((sNy+2*OLy,sNx+2*OLx)) #the shortwave radiative flux at the ocean-ice interface (+ = upwards)
-    FWsublim = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    F_io_net = np.zeros(iceMask.shape)
+    IcePenetSW = np.zeros(iceMask.shape) #the shortwave radiative flux at the ocean-ice interface (+ = upwards)
+    FWsublim = np.zeros(iceMask.shape)
     
     iceOrNot = (hIceActual > 0)
     
-    effConduct = np.zeros((sNy+2*OLy,sNx+2*OLx)) #effective conductivity of ice and snow combined
-    dFia_dTs = np.zeros((sNy+2*OLy,sNx+2*OLx)) #derivative of F_ia w.r.t snow/ice surf. temp
-    absorbedSW = np.zeros((sNy+2*OLy,sNx+2*OLx)) #shortwave radiative flux convergence in the sea ice
-    qhice = np.zeros((sNy+2*OLy,sNx+2*OLx)) #saturation vapor pressure of snow/ice surface
-    dqh_dTs = np.zeros((sNy+2*OLy,sNx+2*OLx)) #derivative of qhice w.r.t snow/ice surf. temp
-    F_lh = np.zeros((sNy+2*OLy,sNx+2*OLx)) #latent heat flux (sublimation) (+ = upward)
-    F_lwu = np.zeros((sNy+2*OLy,sNx+2*OLx)) #upward long-wave surface heat flux (+ = upward)
-    F_sens = np.zeros((sNy+2*OLy,sNx+2*OLx)) #sensible surface heat flux (+ = upward)
-    F_c = np.zeros((sNy+2*OLy,sNx+2*OLx)) #conductive heat flux through ice and snow (+ = upward)
+    effConduct = np.zeros(iceMask.shape) #effective conductivity of ice and snow combined
+    dFia_dTs = np.zeros(iceMask.shape) #derivative of F_ia w.r.t snow/ice surf. temp
+    absorbedSW = np.zeros(iceMask.shape) #shortwave radiative flux convergence in the sea ice
+    qhice = np.zeros(iceMask.shape) #saturation vapor pressure of snow/ice surface
+    dqh_dTs = np.zeros(iceMask.shape) #derivative of qhice w.r.t snow/ice surf. temp
+    F_lh = np.zeros(iceMask.shape) #latent heat flux (sublimation) (+ = upward)
+    F_lwu = np.zeros(iceMask.shape) #upward long-wave surface heat flux (+ = upward)
+    F_sens = np.zeros(iceMask.shape) #sensible surface heat flux (+ = upward)
+    F_c = np.zeros(iceMask.shape) #conductive heat flux through ice and snow (+ = upward)
 
     # make local copies of downward longwave radiation, surface and atmospheric temperatures
     TSurfLoc = TSurfIn.copy()
@@ -163,7 +163,7 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
         dqh_dTs[isIce] = cc1 * cc3t / ((cc2 - cc3t * Ppascals)**2 * t2)
 
         # calculate the fluxes based on the surface temperature
-        F_c[isIce] = effConduct[isIce] * (TempFrz[isIce] - t1)
+        F_c[isIce] = effConduct[isIce] * (TempFrz[isIce] + celsius2K - t1)
         F_lh[isIce] = d1i * ug[isIce] * (qhice[isIce] - aqh[isIce])
 
         F_lwu[isIce] = t4 * d3[isIce]
@@ -201,7 +201,5 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug, SWDown, LWDown, AT
     TSurfOut[isIce] = TSurfLoc[isIce]
     FWsublim[isIce] = F_lh[isIce] / lhSublim
 
-    # print('LWup', F_lwu[0,0])
-    # print('LWdown', LWDownLoc[0,0])
 
     return TSurfOut, F_io_net, F_ia_net, F_ia, IcePenetSW, FWsublim
