@@ -273,7 +273,7 @@ def tridiag(a,b,c,d):
         d[:,i] = (d[:,i] - a[:,i]*d[:,i-1])*bet
 
     i = n-1
-    d[:,i] = (d[:,i] - a[:,i]*d[:,i-1])/(b[:,i] - a[:,i-1]*w[:,i-1])
+    d[:,i] = (d[:,i] - a[:,i]*d[:,i-1])/(b[:,i] - a[:,i]*w[:,i-1])
     # backward sweep
     for i in range(n-1,0,-1):
         d[:,i-1] = d[:,i-1] - w[:,i-1]*d[:,i]
@@ -286,7 +286,7 @@ def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
     iMax = OLx + sNx
     iMxx = iMax-1
     # initialisation
-    cuu = CU.copy()
+    # cuu = CU.copy()
     # zebra loop
     if useLsrZebra: ks = 2
     else:           ks = 1
@@ -324,7 +324,7 @@ def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
     jMax = OLy + sNy
     jMxx = jMax-1
     # initialisation
-    cvv = CV.copy()
+    # cvv = CV.copy()
     # zebra loop
     if useLsrZebra: ks = 2
     else:           ks = 1
@@ -365,10 +365,12 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                myTime = 0, myIter = 0):
 
     computeLsrResidual = True
-    printLsrResidual = False
+    printLsrResidual   = True
+    plotLsrResidual    = False
     if useAsPreconditioner:
         computeLsrResidual = False
-        printLsrResidual = False
+        printLsrResidual   = False
+        plotLsrResidual    = False
 
     recip_deltaT = 1./deltaTdyn
     bdfAlpha = 1.
@@ -449,7 +451,9 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                 uIceRHS, vIceRHS, uRt1, uRt2, vRt1, vRt2,
                 AU, BU, CU, AV, BV, CV, uIce, vIce,
                 True, myTime, myIter )
-            print ( 'pre  lin: %i      %e %e'%(iLsr, residUpre, residVpre) )
+            if printLsrResidual:
+                print ( 'pre  lin: %i      %e %e'%(
+                    iLsr, residUpre, residVpre) )
 
         iLin = 0.
         doIterU = True
@@ -503,8 +507,9 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                 uIceRHS, vIceRHS, uRt1, uRt2, vRt1, vRt2,
                 AU, BU, CU, AV, BV, CV, uIce, vIce,
                 True, myTime, myIter )
-            print ( 'post lin: %i %4i %e %e'%(
-                iLsr, iLin, residUpost, residVpost ) )
+            if printLsrResidual:
+                print ( 'post lin: %i %4i %e %e'%(
+                    iLsr, iLin, residUpost, residVpost ) )
 
 
             resNonLin = np.sqrt(residUpre**2 + residVpre**2)
@@ -513,7 +518,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
 
             resNonLin = resNonLin/resNonLin0
 
-    if printLsrResidual:
+    if plotLsrResidual:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
         ax[0].semilogy(residual[:iLsr-1]/residual[0],'x-')
