@@ -261,16 +261,18 @@ def lsr_residual( rhsU, rhsV, uRt1, uRt2, vRt1, vRt2,
 def tridiag(a,b,c,d):
     m,n = d.shape
     w = np.zeros((m,n-1))#,dtype='float64')
+    w = np.zeros((m,n))#,dtype='float64')
 
     w[:,0] = c[:,0]/b[:,0]
     d[:,0] = d[:,0]/b[:,0]
 
-    for i in range(1,n-1):
+#   for i in range(1,n-1):
+    for i in range(1,n):
         w[:,i] = c[:,i]/(b[:,i] - a[:,i-1]*w[:,i-1])
         d[:,i] = (d[:,i] - a[:,i-1]*d[:,i-1])/(b[:,i] - a[:,i-1]*w[:,i-1])
 
-    i = n-1
-    d[:,i] = (d[:,i] - a[:,i-1]*d[:,i-1])/(b[:,i] - a[:,i-1]*w[:,i-1])
+    # i = n-1
+    # d[:,i] = (d[:,i] - a[:,i-1]*d[:,i-1])/(b[:,i] - a[:,i-1]*w[:,i-1])
     for i in range(n-1,0,-1):
         d[:,i-1] = d[:,i-1] - w[:,i-1]*d[:,i]
 
@@ -296,9 +298,9 @@ def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
         uIc[k::ks,:]    = uIc[k::ks,:] * SeaIceMaskU[k::ks,:]
         # b = uIc[k::ks,iMin:iMax]
         # uIc[k::ks,iMin:iMax]= tridiag(AU[k::ks,iMin:iMax],
-        #                                BU[k::ks,iMin:iMax],
-        #                                CU[k::ks,iMin:iMax],
-        #                                b)
+        #                               BU[k::ks,iMin:iMax],
+        #                               CU[k::ks,iMin:iMax],
+        #                               b)
         # begin
         cuu[k::ks,iMin] = cuu[k::ks,iMin]/BU[k::ks,iMin]
         uIc[k::ks,iMin] = uIc[k::ks,iMin]/BU[k::ks,iMin]
@@ -332,11 +334,11 @@ def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
         vIc[jMin,k::ks] = vIc[jMin,k::ks] - AV[jMin,k::ks]*vIc[jMin-1,k::ks]
         vIc[jMxx,k::ks] = vIc[jMxx,k::ks] - CV[jMxx,k::ks]*vIc[jMxx+1,k::ks]
         vIc[:,k::ks]    = vIc[:,k::ks] * SeaIceMaskV[:,k::ks]
-        b = vIc[jMin:jMax,k::ks]
+        # b = vIc[jMin:jMax,k::ks]
         # vIc[jMin:jMax,k::ks] = tridiag(AV[jMin:jMax,k::ks].transpose(),
-        #                                 BV[jMin:jMax,k::ks].transpose(),
-        #                                 CV[jMin:jMax,k::ks].transpose(),
-        #                                 b.transpose()).transpose()
+        #                                BV[jMin:jMax,k::ks].transpose(),
+        #                                CV[jMin:jMax,k::ks].transpose(),
+        #                                b.transpose()).transpose()
         # begin
         cvv[jMin,k::ks] = cvv[jMin,k::ks]/BV[jMin,k::ks]
         vIc[jMin,k::ks] = vIc[jMin,k::ks]/BV[jMin,k::ks]
