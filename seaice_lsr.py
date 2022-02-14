@@ -27,7 +27,7 @@ lsrRelaxU = lsrRelax
 lsrRelaxV = lsrRelax
 nonLinTol = 1e-5
 linTol = 1e-8
-nLsr = 10
+nLsr = 100
 nLin = 100
 computeLsrResidual = True
 
@@ -282,11 +282,11 @@ def tridiag(a,b,c,d):
 
 def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
 
-    iMin = OLx
-    iMax = OLx + sNx
+    iMin = max(OLx-2,2)
+    iMax = max(OLx + sNx, 2*OLx+sNx-2)
     iMxx = iMax-1
     # initialisation
-    # cuu = CU.copy()
+    cuu = CU.copy()
     # zebra loop
     if useLsrZebra: ks = 2
     else:           ks = 1
@@ -298,33 +298,33 @@ def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
         uIc[k::ks,iMin] = uIc[k::ks,iMin] - AU[k::ks,iMin]*uIc[k::ks,iMin-1]
         uIc[k::ks,iMxx] = uIc[k::ks,iMxx] - CU[k::ks,iMxx]*uIc[k::ks,iMxx+1]
         uIc[k::ks,:]    = uIc[k::ks,:] * SeaIceMaskU[k::ks,:]
-        b = uIc[k::ks,iMin:iMax]
-        uIc[k::ks,iMin:iMax]= tridiag(AU[k::ks,iMin:iMax],
-                                      BU[k::ks,iMin:iMax],
-                                      CU[k::ks,iMin:iMax],
-                                      b)
-        # # begin
-        # cuu[k::ks,iMin] = cuu[k::ks,iMin]/BU[k::ks,iMin]
-        # uIc[k::ks,iMin] = uIc[k::ks,iMin]/BU[k::ks,iMin]
-        # # forward sweep
-        # for i in range(iMin+1,iMax):
-        #     bet = BU[k::ks,i]-AU[k::ks,i]*cuu[k::ks,i-1]
-        #     cuu[k::ks,i] = cuu[k::ks,i]/bet
-        #     uIc[k::ks,i] = (uIc[k::ks,i] - AU[k::ks,i]*uIc[k::ks,i-1])/bet
+        # b = uIc[k::ks,iMin:iMax]
+        # uIc[k::ks,iMin:iMax]= tridiag(AU[k::ks,iMin:iMax],
+        #                               BU[k::ks,iMin:iMax],
+        #                               CU[k::ks,iMin:iMax],
+        #                               b)
+        # begin
+        cuu[k::ks,iMin] = cuu[k::ks,iMin]/BU[k::ks,iMin]
+        uIc[k::ks,iMin] = uIc[k::ks,iMin]/BU[k::ks,iMin]
+        # forward sweep
+        for i in range(iMin+1,iMax):
+            bet = BU[k::ks,i]-AU[k::ks,i]*cuu[k::ks,i-1]
+            cuu[k::ks,i] = cuu[k::ks,i]/bet
+            uIc[k::ks,i] = (uIc[k::ks,i] - AU[k::ks,i]*uIc[k::ks,i-1])/bet
 
-        # # backward sweep
-        # for i in range(iMax-1,iMin,-1):
-        #     uIc[k::ks,i-1]=uIc[k::ks,i-1]-cuu[k::ks,i-1]*uIc[k::ks,i]
+        # backward sweep
+        for i in range(iMax-1,iMin,-1):
+            uIc[k::ks,i-1]=uIc[k::ks,i-1]-cuu[k::ks,i-1]*uIc[k::ks,i]
 
     return uIc
 
 def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
 
-    jMin = OLy
-    jMax = OLy + sNy
+    jMin = max(OLy-2,2)
+    jMax = max(OLy + sNy, 2*OLy+sNy-2)
     jMxx = jMax-1
     # initialisation
-    # cvv = CV.copy()
+    cvv = CV.copy()
     # zebra loop
     if useLsrZebra: ks = 2
     else:           ks = 1
@@ -336,23 +336,23 @@ def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
         vIc[jMin,k::ks] = vIc[jMin,k::ks] - AV[jMin,k::ks]*vIc[jMin-1,k::ks]
         vIc[jMxx,k::ks] = vIc[jMxx,k::ks] - CV[jMxx,k::ks]*vIc[jMxx+1,k::ks]
         vIc[:,k::ks]    = vIc[:,k::ks] * SeaIceMaskV[:,k::ks]
-        b = vIc[jMin:jMax,k::ks]
-        vIc[jMin:jMax,k::ks] = tridiag(AV[jMin:jMax,k::ks].swapaxes(0,1),
-                                       BV[jMin:jMax,k::ks].swapaxes(0,1),
-                                       CV[jMin:jMax,k::ks].swapaxes(0,1),
-                                       b.swapaxes(0,1)).swapaxes(1,0)
-        # # begin
-        # cvv[jMin,k::ks] = cvv[jMin,k::ks]/BV[jMin,k::ks]
-        # vIc[jMin,k::ks] = vIc[jMin,k::ks]/BV[jMin,k::ks]
-        # # forward sweep
-        # for j in range(jMin+1,jMax):
-        #     bet = BV[j,k::ks]-AV[j,k::ks]*cvv[j-1,k::ks]
-        #     cvv[j,k::ks] = cvv[j,k::ks]/bet
-        #     vIc[j,k::ks] = (vIc[j,k::ks] - AV[j,k::ks]*vIc[j-1,k::ks])/bet
+        # b = vIc[jMin:jMax,k::ks]
+        # vIc[jMin:jMax,k::ks] = tridiag(AV[jMin:jMax,k::ks].swapaxes(0,1),
+        #                                BV[jMin:jMax,k::ks].swapaxes(0,1),
+        #                                CV[jMin:jMax,k::ks].swapaxes(0,1),
+        #                                b.swapaxes(0,1)).swapaxes(1,0)
+        # begin
+        cvv[jMin,k::ks] = cvv[jMin,k::ks]/BV[jMin,k::ks]
+        vIc[jMin,k::ks] = vIc[jMin,k::ks]/BV[jMin,k::ks]
+        # forward sweep
+        for j in range(jMin+1,jMax):
+            bet = BV[j,k::ks]-AV[j,k::ks]*cvv[j-1,k::ks]
+            cvv[j,k::ks] = cvv[j,k::ks]/bet
+            vIc[j,k::ks] = (vIc[j,k::ks] - AV[j,k::ks]*vIc[j-1,k::ks])/bet
 
-        # # backward sweep
-        # for j in range(jMax-1,jMin,-1):
-        #     vIc[j-1,k::ks]=vIc[j-1,k::ks]-cvv[j-1,k::ks]*vIc[j,k::ks]
+        # backward sweep
+        for j in range(jMax-1,jMin,-1):
+            vIc[j-1,k::ks]=vIc[j-1,k::ks]-cvv[j-1,k::ks]*vIc[j,k::ks]
 
     return vIc
 
@@ -405,7 +405,6 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             vIce  = 0.5*( vIce+vIceNm1 )
             uIceC = uIce.copy()
             vIceC = vIce.copy()
-            pass
         else:
             # This is the case for nLsr > 2, and here we use
             # a different iterative scheme. u/vIceC = u/vIce is unstable, and
@@ -471,7 +470,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                 if doIterV:
                     # vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
                     #                      vIce )
-                    vTmp = lsr_tridiagv( AV.transpose(),
+                    vTmp = lsr_tridiagu( AV.transpose(),
                                          BV.transpose(),
                                          CV.transpose(),
                                          vRt1.transpose(),
