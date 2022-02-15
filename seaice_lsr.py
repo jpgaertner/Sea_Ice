@@ -26,7 +26,7 @@ lsrRelax = 1.05
 lsrRelaxU = lsrRelax
 lsrRelaxV = lsrRelax
 nonLinTol = 1e-5
-linTol = 1e-7
+linTol0 = 1e-7
 nLsr = 100
 nLin = 100
 
@@ -35,29 +35,35 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
                  SeaIceMassC,
                  iStep, myIter, myTime):
 
-    sinWat = np.sin(np.deg2rad(waterTurnAngle))
-    cosWat = np.cos(np.deg2rad(waterTurnAngle))
+    if iStep < 0:
+        # use as preconditioner and do not include drag or Coriolis terms
+        vIceRHS = vIceRHSfix
+        uIceRHS = uIceRHSfix
+    else:
+        # normal use
+        sinWat = np.sin(np.deg2rad(waterTurnAngle))
+        cosWat = np.cos(np.deg2rad(waterTurnAngle))
 
-    duAtC = 0.5 * ( uVel-uIce + np.roll(uVel-uIce,-1,1) )
-    dvAtC = 0.5 * ( vVel-vIce + np.roll(vVel-vIce,-1,0) )
-    uIceRHS = uIceRHSfix + (
-        0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat *  uVel
-        - np.sign(fCori) * sinWat * 0.5 * (
-            cDrag * dvAtC + np.roll(cDrag * dvAtC,1,1)
-        )
-    ) * areaW
-    vIceRHS = vIceRHSfix + (
-        0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * vVel
-        + np.sign(fCori) * sinWat * 0.5 * (
-            cDrag * duAtC  + np.roll(cDrag * duAtC,1,0)
-        )
-    ) * areaS
-    # coriols terms: + mass*f*vIce
-    #                - mass*f*uIce
-    fuAtC = SeaIceMassC * fCori * 0.5 * ( uIce + np.roll(uIce,-1,1) )
-    fvAtC = SeaIceMassC * fCori * 0.5 * ( vIce + np.roll(vIce,-1,0) )
-    uIceRHS = uIceRHS + 0.5 * ( fvAtC + np.roll(fvAtC,1,1) )
-    vIceRHS = vIceRHS - 0.5 * ( fuAtC + np.roll(fuAtC,1,0) )
+        duAtC = 0.5 * ( uVel-uIce + np.roll(uVel-uIce,-1,1) )
+        dvAtC = 0.5 * ( vVel-vIce + np.roll(vVel-vIce,-1,0) )
+        uIceRHS = uIceRHSfix + (
+            0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat *  uVel
+            - np.sign(fCori) * sinWat * 0.5 * (
+                cDrag * dvAtC + np.roll(cDrag * dvAtC,1,1)
+            )
+        ) * areaW
+        vIceRHS = vIceRHSfix + (
+            0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * vVel
+            + np.sign(fCori) * sinWat * 0.5 * (
+                cDrag * duAtC  + np.roll(cDrag * duAtC,1,0)
+            )
+        ) * areaS
+        # coriols terms: + mass*f*vIce
+        #                - mass*f*uIce
+        fuAtC = SeaIceMassC * fCori * 0.5 * ( uIce + np.roll(uIce,-1,1) )
+        fvAtC = SeaIceMassC * fCori * 0.5 * ( vIce + np.roll(vIce,-1,0) )
+        uIceRHS = uIceRHS + 0.5 * ( fvAtC + np.roll(fvAtC,1,1) )
+        vIceRHS = vIceRHS - 0.5 * ( fuAtC + np.roll(fuAtC,1,0) )
 
     # messy explicit parts of div(sigma)
     mskZ  = iceMask*np.roll(iceMask,1,axis=1)
@@ -425,8 +431,6 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             e11, e22, e12    = strainrates(uIceC, vIceC, secondOrderBC)
             zeta, eta, press = viscosities(
                 e11, e22, e12, press0, iLsr, myTime, myIter)
-        else:
-            press = press0.copy()
 
         AU, BU, CU, AV, BV, CV, uRt1, uRt2, vRt1, vRt2 = lsr_coefficents(
             zeta, eta, cDrag+cBotC, SeaIceMassU, SeaIceMassV,
@@ -434,10 +438,12 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             iLsr, myTime, myIter)
 
         if useAsPreconditioner:
+            print('preconditioner: %i, %e, %e'%(iLsr, uIce.max(), vIce.max()))
             uIceRHS, vIceRHS = calc_rhs_lsr(
                 uIce, vIce, areaW, areaS,
-                uIceC, vIceC, uVel, vVel, cDrag, zeta, eta, press,
-                SeaIceMassC, iLsr, myTime, myIter)
+                uIceC, vIceC, uVel, vVel, np.zeros(cDrag.shape),
+                zeta, eta, np.zeros(press0.shape),
+                SeaIceMassC, -1, myTime, myIter)
         else:
             uIceRHS, vIceRHS = calc_rhs_lsr(
                 uIceRHSfix, vIceRHSfix, areaW, areaS,
@@ -452,6 +458,16 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             if printLsrResidual:
                 print ( 'pre  lin: %i      %e %e'%(
                     iLsr, residUpre, residVpre) )
+
+
+        if iLsr <= 0: linTol = linTol0
+        # wght=0.5
+        # if iLsr > 0 and iLin < nLin:
+        #     linTol = linTol*(1.-wght)
+        # else:
+        #     linTol = min(linTol*(1.+wght)**2,linTol0)
+
+        # if iLsr > 0: print(iLin,linTol)
 
         iLin = 0.
         doIterU = True
@@ -517,11 +533,12 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                     iLsr, iLin, residUpost, residVpost ) )
 
 
-        resNonLin = np.sqrt(residUpre**2 + residVpre**2)
-        residual[iLsr] = resNonLin
-        if iLsr==0: resNonLin0 = resNonLin
+        if computeLsrResidual:
+            resNonLin = np.sqrt(residUpre**2 + residVpre**2)
+            residual[iLsr] = resNonLin
+            if iLsr==0: resNonLin0 = resNonLin
 
-        resNonLin = resNonLin/resNonLin0
+            resNonLin = resNonLin/resNonLin0
 
     if plotLsrResidual:
         import matplotlib.pyplot as plt
