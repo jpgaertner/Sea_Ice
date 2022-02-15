@@ -26,10 +26,9 @@ lsrRelax = 1.05
 lsrRelaxU = lsrRelax
 lsrRelaxV = lsrRelax
 nonLinTol = 1e-5
-linTol = 1e-8
+linTol = 1e-7
 nLsr = 100
 nLin = 100
-computeLsrResidual = True
 
 def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
                  uIce, vIce, uVel, vVel, cDrag, zeta, eta, press,
@@ -366,7 +365,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
 
     computeLsrResidual = True
     printLsrResidual   = True
-    plotLsrResidual    = True
+    plotLsrResidual    = False
     if useAsPreconditioner:
         computeLsrResidual = False
         printLsrResidual   = False
@@ -436,7 +435,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
 
         if useAsPreconditioner:
             uIceRHS, vIceRHS = calc_rhs_lsr(
-                uIceRHSfix, vIceRHSfix, areaW, areaS,
+                uIce, vIce, areaW, areaS,
                 uIceC, vIceC, uVel, vVel, cDrag, zeta, eta, press,
                 SeaIceMassC, iLsr, myTime, myIter)
         else:
@@ -468,15 +467,15 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                     uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
                                          uIce )
                 if doIterV:
-                    # vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
-                    #                      vIce )
-                    vTmp = lsr_tridiagu( AV.transpose(),
-                                         BV.transpose(),
-                                         CV.transpose(),
-                                         vRt1.transpose(),
-                                         vRt2.transpose(),
-                                         vIceRHS.transpose(),
-                                         vIce.transpose() ).transpose()
+                    vTmp = lsr_tridiagv( AV, BV, CV, vRt1, vRt2, vIceRHS,
+                                         vIce )
+                    # vTmp = lsr_tridiagu( AV.transpose(),
+                    #                      BV.transpose(),
+                    #                      CV.transpose(),
+                    #                      vRt1.transpose(),
+                    #                      vRt2.transpose(),
+                    #                      vIceRHS.transpose(),
+                    #                      vIce.transpose() ).transpose()
             if isEven:
                 if doIterU:
                     uTmp = lsr_tridiagu( AU, BU, CU, uRt1, uRt2, uIceRHS,
