@@ -4,10 +4,12 @@ from seaice_params import *
 from seaice_size import *
 
 from seaice_strainrates import strainrates
+from seaice_viscosities import viscosities
 from seaice_ocean_drag_coeffs import ocean_drag_coeffs
 from seaice_bottomdrag_coeffs import bottomdrag_coeffs
 from seaice_global_sum import global_sum
 from seaice_averaging import c_point_to_z_point
+from seaice_fill_overlap import fill_overlap_uv
 
 
 ### input
@@ -17,7 +19,7 @@ from seaice_averaging import c_point_to_z_point
 # vVel: meridional ocean surface velocity
 # hIceMean: mean ice thickness
 # Area: ice cover fraction
-# press0: ocean surface pressure
+# press0: maximum compressive stres
 # secondOrderBC: flag
 # IceSurfStressX0: zonal stress on ice surface at c point
 # IceSurfStressY0: meridional stress on ice surface at c point
@@ -101,40 +103,17 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         # calculate strain rates and bulk moduli/ viscosities
         e11, e22, e12 = strainrates(uIce, vIce, secondOrderBC)
 
-        ep = e11 + e22
-        em = e11 - e22
-
-        # use area weighted average of squares of e12 (more accurate)
-        e12Csq = rAz * e12**2
-        e12Csq =                     e12Csq + np.roll(e12Csq,-1,0)
-        e12Csq = 0.25 * recip_rA * ( e12Csq + np.roll(e12Csq,-1,1) )
-
-        deltaSq = ep**2 + recip_PlasDefCoeffSq * ( em**2 + 4. * e12Csq )
-        deltaC = np.sqrt(deltaSq)
-
-        # smooth regularization of delta for better differentiability
-        deltaCreg = deltaC + deltaMin
-        # deltaCreg = np.sqrt( deltaSq + deltaMin**2 )
-
-        zetaC = 0.5 * (press0 * (1 + tensileStrFac)) / deltaCreg
-
+        zetaC, etaC, pressC = viscosities(e11,e22,e12,press0,i,0,0)
         # calculate zeta, delta on z points
         zetaZ = c_point_to_z_point(zetaC)
-        # import matplotlib.pyplot as plt
-        # plt.clf(); plt.pcolormesh(zetaZ); plt.colorbar(); plt.show()
         # deltaZ = c_point_to_z_point(deltaC)
         # pressZ = c_point_to_z_point(press0 * (1 + tensileStrFac))
         # zetaZ = 0.5 * pressZ / ( deltaZ + deltaMin )
 
-        # recalculate pressure
-        pressC = ( press0 * (1 - pressReplFac)
-                   + 2. * zetaC * deltaC * pressReplFac / (1 + tensileStrFac)
-                  ) * (1 - tensileStrFac)
-
         # divergence strain rates at c points times p / divided by delta minus 1
-        div = (2. * zetaC * ep - pressC) * iceMask
+        div = (2. * zetaC * (e11+e22) - pressC) * iceMask
         # tension strain rates at c points times p / divided by delta
-        tension = 2. * zetaC * em * iceMask * recip_evpRevFac
+        tension = 2. * zetaC * (e11-e22) * iceMask * recip_evpRevFac
         # shear strain rates at z points times p / divided by delta
         shear = 2. * zetaZ * e12 * recip_evpRevFac
 
@@ -257,8 +236,9 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
             ) / evpBetaV
         ) / denomV
 
-        uIce = fill_overlap(uIce)
-        vIce = fill_overlap(vIce)
+        # uIce = fill_overlap(uIce)
+        # vIce = fill_overlap(vIce)
+        uIce, vIce = fill_overlap_uv(uIce, vIce)
 
         # residual computation
         if computeResidual:
