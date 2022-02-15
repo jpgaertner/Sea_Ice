@@ -121,6 +121,8 @@ hice = 0.3 + np.random.normal(scale=0.003,size=xx.shape)
 # initial thickness for comparison with:
 hice = 0.3 + 0.005*(np.sin(60./1000.e3*xx) + np.sin(30./1000.e3*yy))
 #writefield('thickness_aniso_'+dxstr+'.bin',hice)
+hices = 0.5*(hice + hice.transpose())
+#writefield('thickness_aniso_sym_'+dxstr+'.bin',hices)
 
 
 # constant
