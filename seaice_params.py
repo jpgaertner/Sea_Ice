@@ -106,11 +106,9 @@ gravity = 9.8156
 PlasDefCoeff = 2 #coefficient for plastic deformation, related to the relation of the critical stresses needed for plastic deformation when pushing ice together vs. pulling it apart
 
 deltaMin = 2.e-9
-aEVPalphaMin = 5
 pressReplFac = 0
 
 cStar = 20
-aEVPcStar = 4
 
 # basal drag parameters
 basalDragU0 = 5e-5
@@ -120,7 +118,7 @@ cBasalStar = cStar
 
 tensileStrFac = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0. #5
 
-SeaIceStrength = 27.5e4
+SeaIceStrength = 27.5e3
 zetaMaxfac = 2.5e8
 zetaMin = 0
 
@@ -130,10 +128,8 @@ useEVP       = False
 useLSR       = False
 usePicard    = False
 
-# useEVP = True
+#useEVP = True
 useLSR = True
-# usePicard=True
-
-nEVPsteps = 200
+#usePicard=True
 
 noSlip = True
