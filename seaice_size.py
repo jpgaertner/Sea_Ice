@@ -42,6 +42,7 @@ nITC = 1
 recip_nITC = 1 / nITC
 
 gridcellWidth = 512e3/(sNx-1) #grid cell width in m
+print('gridcellWidth = %e'%gridcellWidth)
 
 # grid descriptor variables
 deltaX = np.ones((sNy+2*OLy,sNx+2*OLx))*gridcellWidth
