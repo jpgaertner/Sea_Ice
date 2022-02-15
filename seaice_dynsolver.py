@@ -101,7 +101,7 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean,
             uIce, vIce, uVel, vVel, hIceMean, Area,
             press0, IceSurfStressX0, IceSurfStressY0,
             SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low,
-            myTime, myIter)
+            myTime = myIter, myIter = myIter)
 
     if usePicard:
         uIce, vIce = picard_solver(
