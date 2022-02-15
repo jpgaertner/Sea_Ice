@@ -295,28 +295,41 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     IceGrowthRateFromSurface[noPriorArea] = 0
     NetExistingIceGrowthRate[noPriorArea] = 0
 
-    # if the heat flux convergence could melt more snow than is actually there, the excess is used to melt ice:
-    #HSNOW ACTUAL SHOULD NOT BE REGULARIZED FOR THIS (this is done by using hSnowMean instead of hSnowActual)
-    #leave it for now but try to do it without the regularization once the program is running:
-    #multiplicate PotSnowMeltFromSurf with the area, then compare with hSnowMean
-    #when calculating dhIceMean_dt and dhSnowMean_dt, the factor AreaPreTh can be dropped
+    # if the heat flux convergence could melt more snow than is actually
+    # there, the excess is used to melt ice:
+
+    #HSNOW ACTUAL SHOULD NOT BE REGULARIZED FOR THIS (this is done by
+    # using hSnowMean instead of hSnowActual)
+
+    # leave it for now but try to do it without the regularization once
+    # the program is running: multiplicate PotSnowMeltFromSurf with
+    # the area, then compare with hSnowMean
+    # when calculating dhIceMean_dt
+    # and dhSnowMean_dt, the factor AreaPreTh can be dropped
     
-    # case 1: snow will remain after melting, i.e. all of the heat flux convergence will be used up to melt snow
+    # case 1: snow will remain after melting, i.e. all of the heat flux
+    # convergence will be used up to melt snow
     SnowMeltFromSurface = PotSnowMeltFromSurf.copy()
     SnowMeltRateFromSurface = PotSnowMeltRateFromSurf.copy()
     SurfHeatFluxConvergToSnowMelt = F_ia_net.copy()
 
-    # case 2: all snow will be melted if the potential snow melt height is larger or equal to the actual snow height.
-    # if there is an excess of heat flux convergence after snow melting, it will be used to melt ice
+    # case 2: all snow will be melted if the potential snow melt height is
+    # larger or equal to the actual snow height. If there is an excess of
+    # heat flux convergence after snow melting, it will be used to melt ice
     allSnowMelted = np.where(PotSnowMeltFromSurf >= hSnowActual)
     SnowMeltFromSurface[allSnowMelted] = hSnowActual[allSnowMelted]
-    SnowMeltRateFromSurface[allSnowMelted] = SnowMeltFromSurface[allSnowMelted] * recip_deltaTtherm
-    SurfHeatFluxConvergToSnowMelt[allSnowMelted] = - hSnowActual[allSnowMelted] * recip_deltaTtherm / qs
+    SnowMeltRateFromSurface[allSnowMelted] = \
+        SnowMeltFromSurface[allSnowMelted] * recip_deltaTtherm
+    SurfHeatFluxConvergToSnowMelt[allSnowMelted] = \
+        - hSnowActual[allSnowMelted]       * recip_deltaTtherm / qs
     
-    # the surface heat flux convergence is reduced by the amount that is used for melting snow:
+    # the surface heat flux convergence is reduced by the amount that
+    # is used for melting snow:
     F_ia_net = F_ia_net - SurfHeatFluxConvergToSnowMelt
+
     # the remaining heat flux convergence is used to melt ice:
     IceGrowthRateFromSurface = F_ia_net * qi
+
     # the total ice growth rate is then:
     NetExistingIceGrowthRate = IceGrowthRateUnderExistingIce + IceGrowthRateFromSurface
     
@@ -327,16 +340,22 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     tmpscal1 = 7 / tmpscal0 #steepness/ inflection point
     tmpscal2 = stantonNr * uStarBase * rhoConst * heatCapacity
 
-    surf_theta = np.maximum(theta, TempFrz) #the ocean temperature cannot be lower than TempFrz (otherwise it would have been frozen)
+    # the ocean temperature cannot be lower than the freezing temperature
+    surf_theta = np.maximum(theta, TempFrz)
+
+    # mltf = mixed layer turbulence factor (determines how much of the temperature
+    # difference is used for heat flux)
     mltf = 1 + (McPheeTaperFac - 1) / (1 + np.exp((AreapreTH - tmpscal0) * tmpscal1))
-    F_oi = - tmpscal2 * (surf_theta - TempFrz) * mltf #mixed layer turbulence factor (determines how much of the temperature difference is used for heat flux)
+
+    F_oi = - tmpscal2 * (surf_theta - TempFrz) * mltf
     IceGrowthRateMixedLayer = F_oi * qi
 
 
     ##### calculate d(Area)/dt #####
 
-    # calculate thickness derivatives of ice and snow #
-    dhIceMean_dt = NetExistingIceGrowthRate * AreapreTH + IceGrowthRateOpenWater * (1 - AreapreTH) + IceGrowthRateMixedLayer
+    # calculate thickness derivatives of ice and snow
+    dhIceMean_dt = NetExistingIceGrowthRate * AreapreTH + \
+        IceGrowthRateOpenWater * (1 - AreapreTH) + IceGrowthRateMixedLayer
     dhSnowMean_dt = (SnowAccRateOverIce - SnowMeltRateFromSurface) * AreapreTH
 
     # ifdef allow_salt_plume
@@ -404,41 +423,59 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     # the actual ice volume change over the time step [m3/m2]
     ActualNewTotalVolumeChange = hIceMean - hIceMeanpreTH
 
-    # the net melted snow thickness [m3/m2] (positive if the snow thickness decreases/ melting occurs)
+    # the net melted snow thickness [m3/m2] (positive if the snow
+    # thickness decreases/ melting occurs)
     ActualNewTotalSnowMelt = hSnowMeanpreTH + SnowAccOverIce - hSnowMean
 
     # the energy required to melt or form the new ice volume [J/m2]
     EnergyInNewTotalIceVolume = ActualNewTotalVolumeChange / qi
 
     # the net energy flux out of the ocean [J/m2]
-    NetEnergyFluxOutOfOcean = (AreapreTH * (F_ia_net + F_io_net + qswi) + (1 - AreapreTH) * F_ao) * deltaTtherm
-    # if the net energy flux out of the ocean is balanced by the latent heat of fusion, the temperature of the mixed layer will not change
+    NetEnergyFluxOutOfOcean = (AreapreTH * (F_ia_net + F_io_net + qswi)
+        + (1 - AreapreTH) * F_ao) * deltaTtherm
+
+    # if the net energy flux out of the ocean is balanced by the latent
+    # heat of fusion, the temperature of the mixed layer will not change
     ResidualEnergyOutOfOcean = NetEnergyFluxOutOfOcean - EnergyInNewTotalIceVolume
+
     #the total heat flux out of the ocean [W/m2]
     Qnet = ResidualEnergyOutOfOcean * recip_deltaTtherm
-    # the freshwater flux from melting [m3/m2] (positive if the ice thickness decreases/ melting occurs)
+
+    # the freshwater flux from melting [m3/m2] (positive if the ice
+    # thickness decreases/ melting occurs)
     FreshwaterContribFromIce = - ActualNewTotalVolumeChange * rhoIce2rhoFresh
-    # in the case of non-zero ice salinity, the freshwater contribution is reduced by the salinity ration of ice to water
+
+    # in the case of non-zero ice salinity, the freshwater contribution
+    # is reduced by the salinity ration of ice to water
     saltInWater = np.where((salt > 0) & (salt > saltIce))
-    FreshwaterContribFromIce[saltInWater] = - ActualNewTotalVolumeChange[saltInWater] * rhoIce2rhoFresh * (1 - saltIce/salt[saltInWater])
-    # if the liquid cell has a lower salinity than the specified salinity of sea ice, then assume the sea ice is completely fresh (if the water is fresh, no salty sea ice can form)
+    FreshwaterContribFromIce[saltInWater] = - ActualNewTotalVolumeChange[saltInWater] \
+        * rhoIce2rhoFresh * (1 - saltIce/salt[saltInWater])
+
+    # if the liquid cell has a lower salinity than the specified salinity
+    # of sea ice, then assume the sea ice is completely fresh
+    # (if the water is fresh, no salty sea ice can form)
 
     salt = np.clip(salt, 0, None) #leave in for now, remove when code is running and can be compared
 
     tmpscal0 = np.minimum(saltIce, salt)
-    saltflux = (ActualNewTotalVolumeChange + SIhIceMeanNeg) * tmpscal0 * iceMask * rhoIce * recip_deltaTtherm
+    saltflux = (ActualNewTotalVolumeChange + SIhIceMeanNeg) * tmpscal0 \
+        * iceMask * rhoIce * recip_deltaTtherm
 
     # the freshwater contribution from snow melt [m3/m2]
     FreshwaterContribFromSnowMelt = ActualNewTotalSnowMelt / rhoFresh2rhoSnow
 
     # evaporation minus precipitation minus runoff (freshwater flux to ocean)
-    EvPrecRun = iceMask *  ((evap - precip) * (1 - AreapreTH) - PrecipRateOverIceSurfaceToSea * AreapreTH - runoff - (
-        FreshwaterContribFromIce + FreshwaterContribFromSnowMelt) / deltaTtherm) * rhoFresh + iceMask * (
-        SIhIceMeanNeg * rhoIce + SIhSnowMeanNeg * rhoSnow) * recip_deltaTtherm
+    EvPrecRun = iceMask *  ((evap - precip) * (1 - AreapreTH) \
+        - PrecipRateOverIceSurfaceToSea * AreapreTH - runoff - (
+        FreshwaterContribFromIce + FreshwaterContribFromSnowMelt) \
+            / deltaTtherm) * rhoFresh + iceMask * (
+        SIhIceMeanNeg * rhoIce + SIhSnowMeanNeg * rhoSnow) \
+            * recip_deltaTtherm
 
     # calculate sea ice load on the sea surface
     seaIceLoad = hIceMean * rhoIce + hSnowMean * rhoSnow
     # maybe introduce a cap later
 
     
-    return hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet, seaIceLoad
+    return hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, \
+        Qsw, Qnet, seaIceLoad
