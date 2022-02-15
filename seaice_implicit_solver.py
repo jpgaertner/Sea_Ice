@@ -43,7 +43,7 @@ def calc_stressdiv(sig11, sig22, sig12, iStep, myTime, myIter):
     return stressDivX, stressDivY
 
 def calc_lhs(uIce, vIce, zeta, eta, press,
-             hIceMean, Area, areaW, areaS, press0,
+             hIceMean, Area, areaW, areaS,
              SeaIceMassC, SeaIceMassU, SeaIceMassV,
              cDrag, cBotC, R_low,
              iStep, myTime, myIter):
@@ -95,7 +95,7 @@ def calc_lhs(uIce, vIce, zeta, eta, press,
     # apply masks for interior (important when we have open boundaries)
     return uIceLHS*maskInW, vIceLHS*maskInS
 
-def calc_rhs(uIceRHS, vIceRHS, areaW, areaS,
+def calc_rhs(uIceRHSfix, vIceRHSfix, areaW, areaS,
              uVel, vVel, cDrag,
              iStep, myTime, myIter):
 
@@ -107,13 +107,13 @@ def calc_rhs(uIceRHS, vIceRHS, areaW, areaS,
     # ( remember to average to correct velocity points )
     uAtC = 0.5 * ( uVel + np.roll(uVel,-1,1) )
     vAtC = 0.5 * ( vVel + np.roll(vVel,-1,0) )
-    uIceRHS = uIceRHS + (
+    uIceRHS = uIceRHSfix + (
         0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat *  uVel
         - np.sign(fCori) * sinWat * 0.5 * (
             cDrag * vAtC + np.roll(cDrag * vAtC,1,1)
         )
     ) * areaW
-    vIceRHS = vIceRHS + (
+    vIceRHS = vIceRHSfix + (
         0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * vVel
         + np.sign(fCori) * sinWat * 0.5 * (
             cDrag * uAtC  + np.roll(cDrag * uAtC,1,0)
@@ -133,7 +133,7 @@ def calc_residual(uIce, vIce, hIceMean, Area,
     cDrag = ocean_drag_coeffs(uIce, vIce, uVel, vVel)
 
     Au, Av = calc_lhs(uIce, vIce, zeta, eta, press,
-                      hIceMean, Area, areaW, areaS, press0,
+                      hIceMean, Area, areaW, areaS,
                       SeaIceMassC, SeaIceMassU, SeaIceMassV,
                       cDrag, cBotC, R_low,
                       iStep, myIter, myTime)
@@ -159,7 +159,7 @@ def _2dToVec(u,v):
     return vec
 
 def linOp_lhs(xIn, zeta, eta, press,
-              hIceMean, Area, areaW, areaS, press0,
+              hIceMean, Area, areaW, areaS,
               SeaIceMassC, SeaIceMassU, SeaIceMassV,
               cDrag, cBotC, R_low,
               iStep, myTime, myIter):
@@ -170,7 +170,6 @@ def linOp_lhs(xIn, zeta, eta, press,
         u,v = _vecTo2d(xIn)
         Au, Av = calc_lhs(u, v, zeta, eta, press,
                           hIceMean, Area, areaW, areaS,
-                          press0,
                           SeaIceMassC, SeaIceMassU, SeaIceMassV,
                           cDrag, cBotC, R_low,
                           iStep, myIter, myTime)
@@ -246,7 +245,7 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         u = _2dToVec(uIce,vIce)
         # set up linear operator
         A =  linOp_lhs(u, zeta, eta, press,
-                       hIceMean, Area, areaW, areaS, press0,
+                       hIceMean, Area, areaW, areaS,
                        SeaIceMassC, SeaIceMassU, SeaIceMassV,
                        cDrag, cBotC, R_low,
                        iPicard, myTime, myIter)
@@ -254,32 +253,38 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                                   press, forcingU, forcingV,
                                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
                                   R_low, zeta, eta, cDrag, cBotC )
-        # matrix free solver that calls calc_lhs
+        if computePicardResidual:
+            # print(np.allclose(A.dot(u1), b))
+            resNonLin = np.sqrt( ( (A.matvec(u)-b)**2 ).sum() )
+            if printPicardResidual or exitCode>0: print(
+                'iPicard = %3i, pre-gmres non-linear residual       = %e'%(
+                    iPicard, resNonLin) )
+
         if exitCode == 0:
             linTol = linTol*(1-.7)
         else:
             # reset
             linTol = 1.e-1
+
+        # matrix free solver that calls calc_lhs
         #u1, exitCode = spla.bicgstab(A,b,x0=u,maxiter=nLinear,tol=linTol)
-        u1, exitCode = spla.gmres(A,b,x0=u, M = M,
-                                  maxiter=nLinear,tol=linTol)
-        # for iLin in range(nLinear):
+        u1, exitCode = spla.gmres(A, b, x0 = u, M = M,
+                                  maxiter = nLinear, tol = linTol)
+
         uIce, vIce = _vecTo2d(u1)
         if computePicardResidual:
             # print(np.allclose(A.dot(u1), b))
-            resNonLin = np.sqrt( ( (A.matvec(u1)-b)**2 ).sum() )
             residual[iPicard] = resNonLin
             if iPicard==0: resNonLin0 = resNonLin
-
             resNonLin = resNonLin/resNonLin0
 
-            # if exitCode>0: print(
-            if printPicardResidual: print(
-                    'iPicard = %3i, exitCode = %3i,linear residual = %e'%(
-                        iPicard, exitCode, residual[iPicard]))
+            resNonLinPost = np.sqrt( ( (A.matvec(u1)-b)**2 ).sum() )
+
+            if printPicardResidual or exitCode>0: print(
+                    'iPicard = %3i, exitCode = %3i, non-linear residual = %e'%(
+                        iPicard, exitCode, resNonLinPost )) #residual[iPicard]))
             # Au, Av = calc_lhs(uIce, vIce, zeta, eta, press,
             #                   hIceMean, Area, areaW, areaS,
-            #                   press0,
             #                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
             #                   cDrag, cBotC, R_low,
             #                   iPicard, myIter, myTime)
