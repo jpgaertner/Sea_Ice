@@ -5,7 +5,7 @@ from seaice_params import *
 
 from seaice_freedrift import seaIceFreeDrift
 from seaice_evp import evp
-from seaice_implicit_solver import picard_solver
+from seaice_implicit_solver import picard_solver, jfnk_solver
 from seaice_lsr import lsr_solver
 from seaice_get_dynforcing import get_dynforcing
 from seaice_ocean_stress import ocean_stress
@@ -110,8 +110,12 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean,
             SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low,
             myTime, myIter)
 
-    #if SEAICEuseJFNK
-    #call SEAICE_JFNK
+    if useJFNK:
+        uIce, vIce = jfnk_solver(
+            uIce, vIce, uVel, vVel, hIceMean, Area,
+            press0, IceSurfStressX0, IceSurfStressY0,
+            SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low,
+            myTime, myIter)
 
     # update stress on ocean surface
     fu, fv = ocean_stress(uIce, vIce, uVel, vVel, Area, fu, fv)
