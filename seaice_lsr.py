@@ -507,7 +507,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             # doIterU = residU > linTol
             # doIterV = residV > linTol
 
-        if computeLsrResidual:
+        if computeLsrResidual and (doIterU or doIterV):
             residUpost, residVpost, uRes, vRes = lsr_residual(
                 uIceRHS, vIceRHS, uRt1, uRt2, vRt1, vRt2,
                 AU, BU, CU, AV, BV, CV, uIce, vIce,
@@ -517,11 +517,11 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                     iLsr, iLin, residUpost, residVpost ) )
 
 
-            resNonLin = np.sqrt(residUpre**2 + residVpre**2)
-            residual[iLsr] = resNonLin
-            if iLsr==0: resNonLin0 = resNonLin
+        resNonLin = np.sqrt(residUpre**2 + residVpre**2)
+        residual[iLsr] = resNonLin
+        if iLsr==0: resNonLin0 = resNonLin
 
-            resNonLin = resNonLin/resNonLin0
+        resNonLin = resNonLin/resNonLin0
 
     if plotLsrResidual:
         import matplotlib.pyplot as plt
