@@ -13,11 +13,10 @@ from seaice_reg_ridge import ridging
 from seaice_growth import growth
 from seaice_fill_overlap import fill_overlap, fill_overlap3d
 
-
 ### input from gendata
-windspd = 10
+windspd = 5
 waterspd= 0.0
-hIceMean = np.ones((sNy+2*OLy,sNx+2*OLx))
+hIceMean = np.ones((sNy+2*OLy,sNx+2*OLx))*0.3
 uWind = np.ones((32, sNy+2*OLy,sNx+2*OLx))*windspd
 vWind = np.ones((32, sNy+2*OLy,sNx+2*OLx))*windspd
 uVel = np.zeros((sNy+2*OLy,sNx+2*OLx)) + waterspd
@@ -139,15 +138,15 @@ e12Csq = 0.25 * recip_rA * ( e12Csq + np.roll(e12Csq,-1,1) )
 shear = np.sqrt((e11-e22) ** 2 + 4.*e12Csq)*iceMask
 
 fig, ax = plt.subplots(nrows=1,ncols=3,figsize=(15,5),sharex=True,sharey=True,)
-# csf0=ax[0].pcolormesh(sq(uIce[OLy:-OLy,OLx:-OLx])*1e3)
-# ax[0].set_title('uIce')
+csf0=ax[0].pcolormesh(sq(uIce[OLy:-OLy,OLx:-OLx]))
+ax[0].set_title('uIce')
 # csf0=ax[0].pcolormesh(sq(shear[OLy:-OLy,OLx:-OLx]),norm=mynorm)
 # ax[0].set_title('shear')
 csf0=ax[0].pcolormesh(sq(uIce-vIce.transpose())[OLy:-OLy,OLx:-OLx]) #
 # csf0=ax[0].pcolormesh(sq(vIce-vIce[:,::-1])[OLy:-OLy,OLx:-OLx],
 #                       vmin=-1e-7,vmax=1e-7)
 ax[0].set_title('uIce-vIce.transpose()')
-csf1=ax[1].pcolormesh(sq(vIce[OLy:-OLy,OLx:-OLx])*1e3)
+csf1=ax[1].pcolormesh(sq(vIce[OLy:-OLy,OLx:-OLx]))
 ax[1].set_title('vIce')
 csf2=ax[2].pcolormesh( hIceMean[OLy:-OLy,OLx:-OLx]*
                       sq(iceMask[OLy:-OLy,OLx:-OLx]))
