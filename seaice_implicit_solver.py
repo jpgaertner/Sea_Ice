@@ -13,8 +13,16 @@ from seaice_ocean_drag_coeffs import ocean_drag_coeffs
 from seaice_bottomdrag_coeffs import bottomdrag_coeffs
 from seaice_global_sum import global_sum
 from seaice_fill_overlap import fill_overlap_uv
+from seaice_lsr import lsr_solver
 
 secondOrderBC = False
+nPicard = 2
+nLinear = 50
+nonLinTol = 1e-3
+computePicardResidual = True
+printPicardResidual = True
+plotPicardResidual = False
+
 
 def calc_stress(e11, e22, e12, zeta, eta, press, iStep, myTime, myIter):
     from seaice_averaging import c_point_to_z_point
@@ -170,17 +178,33 @@ def linOp_lhs(xIn, zeta, eta, press,
 
     return LinearOperator((nn,nn), matvec=matvec) #, dtype = 'float64')
 
-def preconditionerMatrix(x, P):
+def preconditionerMatrix(x, uVel, vVel, hIceMean, Area,
+                         press, zeta, eta, cDrag, cBotC, forcingU, forcingV,
+                         SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                         R_low):
+    # get size for convenience
     n = x.shape[0]
-    M_x = lambda x: spla.spsolve(P, x)
-    return spla.LinearOperator((n, n), M_x)
+    # unpack the vector
+    def matvec(x):
+        u,v = _vecTo2d(x)
+
+        Au, Av = lsr_solver(u, v, uVel, vVel, hIceMean, Area,
+                            press, forcingU, forcingV,
+                            SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                            R_low, nLsr = -1, nLin = 10,
+                            useAsPreconditioner = True,
+                            zeta = zeta, eta = eta,
+                            cDrag = cDrag, cBotC = cBotC,
+                            myTime = 0, myIter = 0)
+
+        return _2dToVec(Au,Av)
+
+    return spla.LinearOperator((n, n), matvec=matvec)
 
 def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                   press0, forcingU, forcingV,
                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
                   R_low, myTime, myIter):
-
-    computePicardResidual = True
 
     recip_deltaT = 1./deltaTdyn
     bdfAlpha = 1.
@@ -195,14 +219,15 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     # mass*(vIceNm1)/deltaT
     vIceRHS = forcingV + SeaIceMassV*vIce*recip_deltaT
 
-    nPicard = 10
-    nLinear = 20
-    residual = np.array([None]*nPicard)
+    residual = np.array([None]*(nPicard+1))
     areaW = 0.5 * (Area + np.roll(Area,1,1))
     areaS = 0.5 * (Area + np.roll(Area,1,0))
     exitCode = 1
+    iPicard = -1
+    resNonLin = nonLinTol*2
     linTol = 1e-1
-    for iPicard in range(nPicard):
+    while resNonLin > nonLinTol and iPicard < nPicard:
+        iPicard = iPicard+1
         # smoothing
         wght=0.5
         uIceLin = wght*uIce+(1.-wght)*uIceLin
@@ -225,18 +250,31 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                        SeaIceMassC, SeaIceMassU, SeaIceMassV,
                        cDrag, cBotC, R_low,
                        iPicard, myTime, myIter)
-        # M = preconditionerMatrix( u, A )
+        M = preconditionerMatrix( u, uVel, vVel, hIceMean, Area,
+                                  press, forcingU, forcingV,
+                                  SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                                  R_low, zeta, eta, cDrag, cBotC )
         # matrix free solver that calls calc_lhs
-        if exitCode == 0: linTol = linTol*(1-.7)
+        if exitCode == 0:
+            linTol = linTol*(1-.7)
+        else:
+            # reset
+            linTol = 1.e-1
         #u1, exitCode = spla.bicgstab(A,b,x0=u,maxiter=nLinear,tol=linTol)
-        u1, exitCode = spla.gmres(A,b,x0=u,maxiter=nLinear,tol=linTol)
+        u1, exitCode = spla.gmres(A,b,x0=u, M = M,
+                                  maxiter=nLinear,tol=linTol)
         # for iLin in range(nLinear):
         uIce, vIce = _vecTo2d(u1)
         if computePicardResidual:
             # print(np.allclose(A.dot(u1), b))
-            residual[iPicard] = np.sqrt( ( (A.matvec(u1)-b)**2 ).sum() )
+            resNonLin = np.sqrt( ( (A.matvec(u1)-b)**2 ).sum() )
+            residual[iPicard] = resNonLin
+            if iPicard==0: resNonLin0 = resNonLin
+
+            resNonLin = resNonLin/resNonLin0
+
             # if exitCode>0: print(
-            if True: print(
+            if printPicardResidual: print(
                     'iPicard = %3i, exitCode = %3i,linear residual = %e'%(
                         iPicard, exitCode, residual[iPicard]))
             # Au, Av = calc_lhs(uIce, vIce, zeta, eta, press,
@@ -248,10 +286,11 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             # print(np.sqrt(((Au-bu)**2+(Av-bv)**2)[OLy:-OLy,OLx:-OLx].sum()),
             #       residual[iPicard])
 
-    if computePicardResidual:
+
+    if computePicardResidual and plotPicardResidual:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
-        ax[0].semilogy(residual[:],'x-')
+        ax[0].semilogy(residual[:iPicard]/residual[0],'x-')
         ax[0].set_title('residual')
         plt.show()
 
