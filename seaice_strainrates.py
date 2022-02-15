@@ -16,9 +16,6 @@ from seaice_size import *
 
 def strainrates(uFld, vFld, secondOrderBC):
 
-    # initializations
-    noSlip = True
-
     # abbreviations at c points
     dudx = ( np.roll(uFld,-1,axis=1) - uFld ) * recip_dxF
     uave = ( np.roll(uFld,-1,axis=1) + uFld ) * 0.5

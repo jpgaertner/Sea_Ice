@@ -97,7 +97,7 @@ airIceDrag = 0.0012 #air-ice drag coefficient
 airIceDrag_south = 0.001
 waterIceDrag = 0.0055 #water-ice drag coefficient
 waterIceDrag_south = 0.0055
-cDragMin = 0.25 #minimum of liniear drag coefficient between ice and ocean
+cDragMin = 0.25 #minimum of linear drag coefficient between ice and ocean
 stressFactor = 1
 
 seaIceLoadFac = 1 #factor to scale (and turn off) seaIceLoading
@@ -106,11 +106,9 @@ gravity = 9.8156
 PlasDefCoeff = 2 #coefficient for plastic deformation, related to the relation of the critical stresses needed for plastic deformation when pushing ice together vs. pulling it apart
 
 deltaMin = 2.e-9
-aEVPalphaMin = 5
 pressReplFac = 0
 
 cStar = 20
-aEVPcStar = 4
 
 # basal drag parameters
 basalDragU0 = 5e-5
@@ -120,8 +118,18 @@ cBasalStar = cStar
 
 tensileStrFac = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0. #5
 
-SeaIceStrength = 2.75e4
+SeaIceStrength = 27.5e3
 zetaMaxfac = 2.5e8
 zetaMin = 0
 
-nEVPsteps = 200
+# solver
+useFreedrift = False
+useEVP       = False
+useLSR       = False
+usePicard    = False
+
+#useEVP = True
+useLSR = True
+#usePicard=True
+
+noSlip = True

@@ -13,15 +13,20 @@ from seaice_reg_ridge import ridging
 from seaice_growth import growth
 from seaice_fill_overlap import fill_overlap, fill_overlap3d
 
-
 ### input from gendata
-windspd = 10
+windspd = 5
 waterspd= 0.0
-hIceMean = np.ones((sNy+2*OLy,sNx+2*OLx))
+hIceMean = np.ones((sNy+2*OLy,sNx+2*OLx))*0.3
 uWind = np.ones((32, sNy+2*OLy,sNx+2*OLx))*windspd
 vWind = np.ones((32, sNy+2*OLy,sNx+2*OLx))*windspd
 uVel = np.zeros((sNy+2*OLy,sNx+2*OLx)) + waterspd
 vVel = np.zeros((sNy+2*OLy,sNx+2*OLx)) + waterspd
+
+x = (np.arange(sNx+2*OLx)+0.5)*gridcellWidth;
+y = (np.arange(sNy+2*OLy)+0.5)*gridcellWidth;
+xx,yy = np.meshgrid(x,y);
+hice = 0.3 + 0.005*(np.sin(60./1000.e3*xx) + np.sin(30./1000.e3*yy))
+#hIceMean = 0.5*(hice + hice.transpose())
 
 # hIceMean[OLy:-OLy,OLx:-OLx] = hIce_init
 # hIceMean = fill_overlap(hIceMean)
@@ -67,20 +72,16 @@ R_low = np.ones((sNy+2*OLy,sNx+2*OLx)) * -1000
 
 secondOrderBC = False
 
-
-useFreedrift = False
-useEVP = not useFreedrift
-
 plt.close('all')
 monFreq = 5
-nTimeSteps = 15
+nTimeSteps = 1
 for i in range(nTimeSteps):
 
     uIce, vIce, fu, fv = dynsolver(uIce, vIce, uVel, vVel,
                                    uWind[0,:,:], vWind[0,:,:],
                                    hIceMean, hSnowMean, Area, etaN,
                                    pLoad, SeaIceLoad,
-                                   useRealFreshWaterFlux, useFreedrift, useEVP,
+                                   useRealFreshWaterFlux,
                                    fu, fv, secondOrderBC, R_low)
 
     hIceMean, hSnowMean, Area = advdiff(uIce, vIce, hIceMean,
@@ -89,11 +90,11 @@ for i in range(nTimeSteps):
     hIceMean, hSnowMean, Area, TIceSnow = ridging(hIceMean, hSnowMean,
                                                   Area, TIceSnow)
 
-    hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, \
-    Qnet, seaIceLoad = growth(hIceMean, iceMask, hSnowMean, Area,
-                              salt, TIceSnow, precip, snowPrecip,
-                              evap, runoff, wspeed, theta, Qnet, Qsw,
-                              SWDown, LWDown, ATemp, aqh)
+    # hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, \
+    # Qnet, seaIceLoad = growth(hIceMean, iceMask, hSnowMean, Area,
+    #                           salt, TIceSnow, precip, snowPrecip,
+    #                           evap, runoff, wspeed, theta, Qnet, Qsw,
+    #                           SWDown, LWDown, ATemp, aqh)
 
     printMonitor = monFreq>0 and (np.mod(i,monFreq)==0 or i==nTimeSteps-1)
     print('Time step %04i'%i)
@@ -124,9 +125,27 @@ def sq(a):
     masked_array=np.ma.masked_where(a==0., a)
     return masked_array
 
+from seaice_strainrates import strainrates
+import matplotlib.colors as mcolors
+mynorm = mcolors.LogNorm(vmin=1e-12,vmax=1e-5)
+
+e11,e22,e12=strainrates(uIce,vIce,secondOrderBC)
+divergence = (e11+e22)*iceMask
+# use area weighted average of squares of e12 (more accurate)
+e12Csq = rAz * e12**2
+e12Csq =                     e12Csq + np.roll(e12Csq,-1,0)
+e12Csq = 0.25 * recip_rA * ( e12Csq + np.roll(e12Csq,-1,1) )
+shear = np.sqrt((e11-e22) ** 2 + 4.*e12Csq)*iceMask
+
 fig, ax = plt.subplots(nrows=1,ncols=3,figsize=(15,5),sharex=True,sharey=True,)
 csf0=ax[0].pcolormesh(sq(uIce[OLy:-OLy,OLx:-OLx]))
 ax[0].set_title('uIce')
+# csf0=ax[0].pcolormesh(sq(shear[OLy:-OLy,OLx:-OLx]),norm=mynorm)
+# ax[0].set_title('shear')
+csf0=ax[0].pcolormesh(sq(uIce-vIce.transpose())[OLy:-OLy,OLx:-OLx]) #
+# csf0=ax[0].pcolormesh(sq(vIce-vIce[:,::-1])[OLy:-OLy,OLx:-OLx],
+#                       vmin=-1e-7,vmax=1e-7)
+ax[0].set_title('uIce-vIce.transpose()')
 csf1=ax[1].pcolormesh(sq(vIce[OLy:-OLy,OLx:-OLx]))
 ax[1].set_title('vIce')
 csf2=ax[2].pcolormesh( hIceMean[OLy:-OLy,OLx:-OLx]*

@@ -4,11 +4,12 @@ from seaice_params import *
 from seaice_size import *
 
 from seaice_strainrates import strainrates
+from seaice_viscosities import viscosities
 from seaice_ocean_drag_coeffs import ocean_drag_coeffs
 from seaice_bottomdrag_coeffs import bottomdrag_coeffs
 from seaice_global_sum import global_sum
 from seaice_averaging import c_point_to_z_point
-
+from seaice_fill_overlap import fill_overlap_uv
 
 ### input
 # uIce: zonal ice velocity
@@ -17,7 +18,7 @@ from seaice_averaging import c_point_to_z_point
 # vVel: meridional ocean surface velocity
 # hIceMean: mean ice thickness
 # Area: ice cover fraction
-# press0: ocean surface pressure
+# press0: maximum compressive stres
 # secondOrderBC: flag
 # IceSurfStressX0: zonal stress on ice surface at c point
 # IceSurfStressY0: meridional stress on ice surface at c point
@@ -28,8 +29,19 @@ from seaice_averaging import c_point_to_z_point
 # vIce: meridional ice velocity
 
 
-import matplotlib.pyplot as plt
-
+evpTol = 1e-5
+computeEvpResidual = True
+printEvpResidual   = False
+plotEvpResidual    = False
+#
+evpAlpha        = 500
+evpBeta         = evpAlpha
+useAdaptiveEVP  = True
+aEVPalphaMin    = 5
+aEvpCoeff       = 0.5
+explicitDrag    = False
+#
+nEVPsteps = 500
 
 def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         IceSurfStressX0, IceSurfStressY0, SeaIceMassC, SeaIceMassU,
@@ -37,11 +49,9 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
     ##### initializations #####
 
-    useAdaptiveEVP = True
-    computeResidual = False
     # change to input with default value = False?
     if useAdaptiveEVP:
-        aEvpCoeff = 0.5
+        aEVPcStar = 4
         EVPcFac = deltaTdyn * aEVPcStar * ( np.pi * aEvpCoeff ) ** 2
     else:
         EVPcFac = 0
@@ -52,9 +62,6 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
 
     recip_PlasDefCoeffSq = 1 / PlasDefCoeff**2
 
-    explicitDrag = False
-    evpAlpha = 500
-    evpBeta  = evpAlpha
     recip_evpRevFac = recip_PlasDefCoeffSq
     # recip_evpRevFac = 1
 
@@ -82,15 +89,18 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
     # initializations
     # should initialised elsewhere (but this will work, too, just more
     # expensive)
-    sigma1 = zero2d.copy()
-    sigma2 = zero2d.copy()
+    sigma1  = zero2d.copy()
+    sigma2  = zero2d.copy()
     sigma12 = zero2d.copy()
-    resSig = np.array([None]*nEVPsteps)
-    resU = np.array([None]*nEVPsteps)
+    resSig  = np.array([None]*(nEVPsteps+1))
+    resU    = np.array([None]*(nEVPsteps+1))
 
-    for i in range(nEVPsteps):
+    iEVP = -1
+    resEVP = evpTol*2
+    while resEVP > evpTol and iEVP < nEVPsteps:
+        iEVP = iEVP + 1
 
-        if computeResidual:
+        if computeEvpResidual:
             # save previous (p-1) iteration for residual computation
             sig1Pm1 = sigma1.copy()
             sig2Pm1 = sigma2.copy()
@@ -101,40 +111,17 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         # calculate strain rates and bulk moduli/ viscosities
         e11, e22, e12 = strainrates(uIce, vIce, secondOrderBC)
 
-        ep = e11 + e22
-        em = e11 - e22
-
-        # use area weighted average of squares of e12 (more accurate)
-        e12Csq = rAz * e12**2
-        e12Csq =                     e12Csq + np.roll(e12Csq,-1,0)
-        e12Csq = 0.25 * recip_rA * ( e12Csq + np.roll(e12Csq,-1,1) )
-
-        deltaSq = ep**2 + recip_PlasDefCoeffSq * ( em**2 + 4. * e12Csq )
-        deltaC = np.sqrt(deltaSq)
-
-        # smooth regularization of delta for better differentiability
-        deltaCreg = deltaC + deltaMin
-        # deltaCreg = np.sqrt( deltaSq + deltaMin**2 )
-
-        zetaC = 0.5 * (press0 * (1 + tensileStrFac)) / deltaCreg
-
+        zetaC, etaC, pressC = viscosities(e11,e22,e12,press0,iEVP,0,0)
         # calculate zeta, delta on z points
         zetaZ = c_point_to_z_point(zetaC)
-        # import matplotlib.pyplot as plt
-        # plt.clf(); plt.pcolormesh(zetaZ); plt.colorbar(); plt.show()
         # deltaZ = c_point_to_z_point(deltaC)
         # pressZ = c_point_to_z_point(press0 * (1 + tensileStrFac))
         # zetaZ = 0.5 * pressZ / ( deltaZ + deltaMin )
 
-        # recalculate pressure
-        pressC = ( press0 * (1 - pressReplFac)
-                   + 2. * zetaC * deltaC * pressReplFac / (1 + tensileStrFac)
-                  ) * (1 - tensileStrFac)
-
         # divergence strain rates at c points times p / divided by delta minus 1
-        div = (2. * zetaC * ep - pressC) * iceMask
+        div = (2. * zetaC * (e11+e22) - pressC) * iceMask
         # tension strain rates at c points times p / divided by delta
-        tension = 2. * zetaC * em * iceMask * recip_evpRevFac
+        tension = 2. * zetaC * (e11-e22) * iceMask * recip_evpRevFac
         # shear strain rates at z points times p / divided by delta
         shear = 2. * zetaZ * e12 * recip_evpRevFac
 
@@ -257,11 +244,12 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
             ) / evpBetaV
         ) / denomV
 
-        uIce = fill_overlap(uIce)
-        vIce = fill_overlap(vIce)
+        # uIce = fill_overlap(uIce)
+        # vIce = fill_overlap(vIce)
+        uIce, vIce = fill_overlap_uv(uIce, vIce)
 
         # residual computation
-        if computeResidual:
+        if computeEvpResidual:
             sig1Pm1 = (sigma1 - sig1Pm1) * evpAlphaC * iceMask
             sig2Pm1 = (sigma2 - sig2Pm1) * evpAlphaC * iceMask
             sig12Pm1 = (sigma12 - sig12Pm1) * evpAlphaZ #* maskZ
@@ -279,13 +267,20 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
             # vIcePm1 = ( SeaIceMassV * (vIce - vIceNm1)*recip_deltaTdyn
             #             - (IceSurfStressY + stressDivY)
             #            ) * SeaIceMaskV
-            resSig[i] = (sig1Pm1**2 + sig2Pm1**2
+            resSig[iEVP] = (sig1Pm1**2 + sig2Pm1**2
                          + sig12Pm1**2)[OLy:-OLy,OLx:-OLx].sum()
-            resU[i]   = ( uIcePm1**2
+            resU[iEVP]   = ( uIcePm1**2
                           + vIcePm1**2 )[OLy:-OLy,OLx:-OLx].sum()
-            resU[i]   = global_sum(resU[i])
-            resSig[i] = global_sum(resSig[i])
+            resU[iEVP]   = global_sum(resU[iEVP])
+            resSig[iEVP] = global_sum(resSig[iEVP])
 
+            resEVP = resU[iEVP]
+            if iEVP==0: resEVP0 = resEVP
+            resEVP = resEVP/resEVP0
+
+            if printEvpResidual:
+                print ( 'evp resU, resSigma: %i %e %e'%(
+                    iEVP, resU[iEVP], resSig[iEVP] ) )
             # print(i)
             # print(uIce.max(),vIce.max())
             # print(sigma1.max(), sigma2.max(), sigma12.max())
@@ -301,7 +296,7 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
             # plt.show()
 
 
-    if computeResidual:
+    if computeEvpResidual and plotEvpResidual:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
         ax[0].semilogy(resU[:],'x-')
