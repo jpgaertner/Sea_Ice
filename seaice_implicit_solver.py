@@ -97,7 +97,7 @@ def preconditionerLSR(x, uVel, vVel, hIceMean, Area,
         Au, Av = lsr_solver(u, v, uVel, vVel, hIceMean, Area,
                             press, forcingU, forcingV,
                             SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                            R_low, nLsr = -1, nLin = 10,
+                            R_low, nLsr = 0, nLin = 10,
                             useAsPreconditioner = True,
                             zeta = zeta, eta = eta,
                             cDrag = cDrag, cBotC = cBotC,
@@ -164,7 +164,7 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     # mass*(vIceNm1)/deltaT
     vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
 
-    residual = np.array([None]*(nPicard+1))
+    residual = []
     areaW = 0.5 * (Area + np.roll(Area,1,1))
     areaS = 0.5 * (Area + np.roll(Area,1,0))
     exitCode = 1
@@ -222,12 +222,12 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         # matrix free solver that calls calc_lhs
         #u1, exitCode = spla.bicgstab(A,b,x0=u,maxiter=nLinear,tol=linTol)
         u1, exitCode = spla.gmres(A, b, x0 = u, M = M,
-                                  maxiter = nLinear, tol = linTol)
+                                  maxiter = nLinear, atol = linTol)
 
         uIce, vIce = _vecTo2d(u1)
         if computePicardResidual:
             # print(np.allclose(A.dot(u1), b))
-            residual[iPicard] = resNonLin
+            residual.append(resNonLin)
             if iPicard==0: resNonLin0 = resNonLin
             resNonLin = resNonLin/resNonLin0
 
@@ -248,7 +248,7 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     if computePicardResidual and plotPicardResidual:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
-        ax[0].semilogy(residual[:iPicard]/residual[0],'x-')
+        ax[0].semilogy(residual/residual[0],'x-')
         ax[0].set_title('residual')
         plt.show()
 
@@ -274,7 +274,7 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     # mass*(vIceNm1)/deltaT
     vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
 
-    residual = np.array([None]*(nJFNK+1))
+    residual = []
     areaW = 0.5 * (Area + np.roll(Area,1,1))
     areaS = 0.5 * (Area + np.roll(Area,1,0))
     exitCode = 1
@@ -300,16 +300,11 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                                iJFNK, myTime, myIter)
 
         resNonLin = calc_nonlinear_residual(Fu, Fv)
-        residual[iJFNK] = resNonLin
+        residual.append(resNonLin)
         if iJFNK==0:
             JFNKtol = resNonLin*nonLinTol
             resT    = resNonLin * 0.5
             print('JFNKtol = %e'%JFNKtol)
-
-        if printJFNKResidual:
-            print(
-                'iJFNK = %3i, pre-gmres non-linear residual       = %e'%(
-                    iJFNK, resNonLin) )
 
         # compute convergence criterion for linear solver
         linTolMax = 0.99
@@ -323,6 +318,11 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         elif iJFNK==0:
             resNonLinKm1 = resNonLin
 
+        if printJFNKResidual:
+            print(
+                'iJFNK = %3i, linTol = %f,   non-lin residual = %e'%(
+                    iJFNK, linTol, resNonLin) )
+
         # transform to vectors without overlaps
         b = _2dToVec(Fu,Fv)
         u = _2dToVec(uIce,vIce)
@@ -333,11 +333,6 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                      uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
                      iJFNK, myTime, myIter)
         # preconditioner
-        # A =  matVecOp(u, zeta, eta, press,
-        #               hIceMean, Area, areaW, areaS,
-        #               SeaIceMassC, SeaIceMassU, SeaIceMassV,
-        #               cDrag, cBotC, R_low,
-        #               iJFNK, myTime, myIter)
         # M = preconditionerLSR( u, uVel, vVel, hIceMean, Area,
         #                        press, forcingU, forcingV,
         #                        SeaIceMassC, SeaIceMassU, SeaIceMassV,
@@ -347,11 +342,15 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         #                         SeaIceMassC, SeaIceMassU, SeaIceMassV,
         #                         cDrag, cBotC, R_low,
         #                         iJFNK, myTime, myIter)
-        M = preconGmres(u, J)
         # matrix free solver that calls jacobian times vector
-        du, exitCode = spla.gmres(J, -b,
+        if ( iJFNK < 0 ):
+            du, exitCode = spla.gmres(J, -b,
+                                  maxiter = nLinear, atol = linTol)
+        else:
+            M = preconGmres(u, J)
+            du, exitCode = spla.gmres(J, -b,
                                   M = M,
-                                  maxiter = nLinear, tol = linTol)
+                                  maxiter = nLinear, atol = linTol)
 
         print('gmres: exitCode = %i, linTol = %f, %f, %f'%(
             exitCode, linTol, du.min(), du.max() ) )
@@ -373,7 +372,7 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                                    iJFNK, myTime, myIter)
             resNonLinLS =  calc_nonlinear_residual(Fu, Fv)
             if resNonLinLS < resNonLin:
-                print('line search: %04i resKm1 = %e, %i upds. = %e'%(
+                print('line search: %04i resKm1 = %e, %i updates = %e'%(
                     iLineSearch+1,resNonLin,iLineSearch,resNonLinLS))
 
         # save the residual for the next iteration
@@ -384,7 +383,7 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     if computeJFNKResidual and plotJFNKResidual:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
-        ax[0].semilogy(residual[:iJFNK]/residual[0],'x-')
+        ax[0].semilogy(residual/residual[0],'x-')
         ax[0].set_title('residual')
         plt.show()
 
