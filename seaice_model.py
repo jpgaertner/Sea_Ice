@@ -125,11 +125,11 @@ def sq(a):
     masked_array=np.ma.masked_where(a==0., a)
     return masked_array
 
-from seaice_strainrates import strainrates
+from dynamics_routines import strainrates
 import matplotlib.colors as mcolors
 mynorm = mcolors.LogNorm(vmin=1e-12,vmax=1e-5)
 
-e11,e22,e12=strainrates(uIce,vIce,secondOrderBC)
+e11,e22,e12=strainrates(uIce,vIce)
 divergence = (e11+e22)*iceMask
 # use area weighted average of squares of e12 (more accurate)
 e12Csq = rAz * e12**2

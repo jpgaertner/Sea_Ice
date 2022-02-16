@@ -3,14 +3,12 @@ import numpy as np
 from seaice_params import *
 from seaice_size import *
 
-from seaice_strainrates import strainrates
-from seaice_viscosities import viscosities
-from seaice_ocean_drag_coeffs import ocean_drag_coeffs
-from seaice_bottomdrag_coeffs import bottomdrag_coeffs
+from dynamics_routines import strainrates, viscosities, \
+    ocean_drag_coeffs, bottomdrag_coeffs, calc_stressdiv, calc_stress
+
 from seaice_global_sum import global_sum
 from seaice_averaging import c_point_to_z_point
 from seaice_fill_overlap import fill_overlap_uv
-from seaice_implicit_solver import calc_stressdiv, calc_stress
 
 ### input
 # uIce: zonal ice velocity
@@ -20,7 +18,6 @@ from seaice_implicit_solver import calc_stressdiv, calc_stress
 # hIceMean: mean ice thickness
 # Area: ice cover fraction
 # press0: maximum compressive stres
-# secondOrderBC: flag
 # IceSurfStressX0: zonal stress on ice surface at c point
 # IceSurfStressY0: meridional stress on ice surface at c point
 # R_low: water depth
@@ -108,7 +105,7 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
             vIcePm1  = vIce.copy()
 
         # calculate strain rates and bulk moduli/ viscosities
-        e11, e22, e12 = strainrates(uIce, vIce, secondOrderBC)
+        e11, e22, e12 = strainrates(uIce, vIce)
 
         zeta, eta, press = viscosities(e11,e22,e12,press0,iEVP,myTime,myIter)
 

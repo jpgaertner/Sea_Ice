@@ -11,24 +11,23 @@ from scipy.linalg import solve
 from seaice_params import *
 from seaice_size import *
 
-from seaice_strainrates import strainrates
-from seaice_viscosities import viscosities
-from seaice_ocean_drag_coeffs import ocean_drag_coeffs
-from seaice_bottomdrag_coeffs import bottomdrag_coeffs
+from dynamics_routines import strainrates, viscosities, \
+    ocean_drag_coeffs, bottomdrag_coeffs, \
+    calc_stressdiv, calc_stress, calc_residual
+
 from seaice_global_sum import global_sum
 from seaice_fill_overlap import fill_overlap_uv
 from seaice_averaging import c_point_to_z_point
 
 useLsrZebra = True
-useStrengthImplicitCoupling = True
-secondOrderBC = False
+useStrengthImplicitCoupling = False
 lsrRelax = 1.05
 lsrRelaxU = lsrRelax
 lsrRelaxV = lsrRelax
 nonLinTol = 1e-5
 linTol0 = 1e-7
-nLsr = 100
-nLin = 100
+nLsr = 10
+nLin = 200
 
 def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
                  uIce, vIce, uVel, vVel, cDrag, zeta, eta, press,
@@ -74,7 +73,7 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
           + (zeta+eta) * 0.5 * (np.roll(vIce,-1,0)+vIce)*k2AtC \
           - 0.5 * press
     hFacM = SeaIceMaskV - np.roll(SeaIceMaskV,1,1)
-    sig12 =      c_point_to_z_point(eta, noSlip) * (
+    sig12 =             c_point_to_z_point( eta, noSlip) * (
         (
             ( vIce - np.roll(vIce,1,1) ) * recip_dxV
           - ( vIce + np.roll(vIce,1,1) ) * 0.5 * k1AtZ
@@ -83,7 +82,10 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
     )
 
     if useStrengthImplicitCoupling:
-        sig12 = sig12 + c_point_to_z_point(zeta, noSlip) * (
+        # strictly speaking, this is not a contribution to sig12, but for
+        # convenience we add the explicit term -zetaZ*du/dy here;
+        # we do not have to add any metric terms, because they cancel.
+        sig12 = sig12 - c_point_to_z_point(zeta, noSlip) * (
         (
             ( uIce - np.roll(uIce,1,0) ) * recip_dyU
         ) * mskZ
@@ -100,7 +102,7 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
           + (zeta+eta) * 0.5 * (np.roll(uIce,-1,1)+uIce)*k1AtC \
           - 0.5 * press
     hFacM = SeaIceMaskU - np.roll(SeaIceMaskU,1,0)
-    sig12 =      c_point_to_z_point(eta, noSlip) * (
+    sig12 =             c_point_to_z_point( eta, noSlip) * (
         (
             ( uIce - np.roll(uIce,1,0) ) * recip_dyU
           - ( uIce + np.roll(uIce,1,0) ) * 0.5 * k2AtZ
@@ -109,7 +111,10 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
     )
 
     if useStrengthImplicitCoupling:
-        sig12 = sig12 + c_point_to_z_point(zeta, noSlip) * (
+        # strictly speaking, this is not a contribution to sig12, but for
+        # convenience we add the explicit term -zetaZ*dv/dx here;
+        # we do not have to add any metric terms, because they cancel.
+        sig12 = sig12 - c_point_to_z_point(zeta, noSlip) * (
         (
             ( vIce - np.roll(vIce,1,1) ) * recip_dxV
         ) * mskZ
@@ -371,7 +376,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
 
     computeLsrResidual = True
     printLsrResidual   = True
-    plotLsrResidual    = False
+    plotLsrResidual    = True
     if useAsPreconditioner:
         computeLsrResidual = False
         printLsrResidual   = False
@@ -428,7 +433,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             cDrag = ocean_drag_coeffs(uIceC, vIceC, uVel, vVel)
             cBotC = bottomdrag_coeffs(uIceC, vIceC, hIceMean, Area, R_low)
             #
-            e11, e22, e12    = strainrates(uIceC, vIceC, secondOrderBC)
+            e11, e22, e12    = strainrates(uIceC, vIceC)
             zeta, eta, press = viscosities(
                 e11, e22, e12, press0, iLsr, myTime, myIter)
 
@@ -455,9 +460,25 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                 uIceRHS, vIceRHS, uRt1, uRt2, vRt1, vRt2,
                 AU, BU, CU, AV, BV, CV, uIce, vIce,
                 True, myTime, myIter )
+            uu, vv = calc_residual(
+                uIce, vIce, hIceMean, Area,
+                zeta, eta, press, cDrag, cBotC,
+                SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                forcingU, forcingV, uVel, vVel, R_low,
+                iLsr, myTime, myIter)
+
+            resUU = np.sqrt( global_sum(
+                (uu**2*rAw*maskInW*maskInC*np.roll(maskInC,1,1))
+                [OLy:-OLy,OLx:-OLx].sum() )/globalArea )
+            resVV = np.sqrt( global_sum(
+                (vv**2*rAs*maskInS*maskInC*np.roll(maskInC,1,0))
+                [OLy:-OLy,OLx:-OLx].sum() )/globalArea )
+
             if printLsrResidual:
-                print ( 'pre  lin: %i      %e %e'%(
-                    iLsr, residUpre, residVpre) )
+                print ( 'pre  lin: %i      %e %e %e %e'%(
+                    iLsr, residUpre, residVpre,
+                    resUU-residUpre, resVV-residVpre
+                ) )
 
 
         if iLsr <= 0: linTol = linTol0
