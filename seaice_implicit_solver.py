@@ -22,7 +22,7 @@ computePicardResidual = True
 printPicardResidual = True
 plotPicardResidual = True
 
-nJFNK = 10
+nJFNK = 100
 computeJFNKResidual = True
 printJFNKResidual = True
 plotJFNKResidual = True
@@ -41,13 +41,16 @@ def _2dToVec(u,v):
                      v[OLy:-OLy,OLx:-OLx].ravel()))
     return vec
 
-def linOp_lhs(x, zeta, eta, press,
-              hIceMean, Area, areaW, areaS,
-              SeaIceMassC, SeaIceMassU, SeaIceMassV,
-              cDrag, cBotC, R_low,
-              iStep, myTime, myIter):
+def calc_nonlinear_residual( Fu, Fv ):
+    return np.sqrt( (_2dToVec(Fu,Fv)**2).sum() )
+
+def matVecOp(x, zeta, eta, press,
+             hIceMean, Area, areaW, areaS,
+             SeaIceMassC, SeaIceMassU, SeaIceMassV,
+             cDrag, cBotC, R_low,
+             iStep, myTime, myIter):
     # get size for convenience
-    nn = x.shape[0]
+    n = x.shape[0]
     # unpack the vector
     def matvec(x):
         u,v = _vecTo2d(x)
@@ -58,7 +61,7 @@ def linOp_lhs(x, zeta, eta, press,
                           iStep, myIter, myTime)
         return _2dToVec(Au,Av)
 
-    return LinearOperator((nn,nn), matvec=matvec) #, dtype = 'float64')
+    return LinearOperator((n,n), matvec = matvec, dtype = 'float64')
 
 def jacVecOp(x, uIce, vIce, Fu, Fv, hIceMean, Area,
              zeta, eta, press, cDrag, cBotC,
@@ -70,17 +73,16 @@ def jacVecOp(x, uIce, vIce, Fu, Fv, hIceMean, Area,
     # unpack the vector
     def matvec(x):
         du,dv = _vecTo2d(x)
-        epsjfnk = 1e-9
+        epsjfnk = 1e-12
         Fup, Fvp = calc_residual(uIce+epsjfnk*du, vIce+epsjfnk*dv,
                                  hIceMean, Area,
-                                 zeta, eta, press, cDrag, cBotC,
                                  SeaIceMassC, SeaIceMassU, SeaIceMassV,
                                  uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
                                  iStep, myTime, myIter)
 
         return _2dToVec( (Fup-Fu)/epsjfnk, (Fvp-Fv)/epsjfnk )
 
-    return LinearOperator((n,n), matvec = matvec) #, dtype = 'float64')
+    return LinearOperator((n,n), matvec = matvec, dtype = 'float64')
 
 def preconditionerLSR(x, uVel, vVel, hIceMean, Area,
                       press, zeta, eta, cDrag, cBotC, forcingU, forcingV,
@@ -188,11 +190,11 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         b = _2dToVec(bu,bv)
         u = _2dToVec(uIce,vIce)
         # set up linear operator
-        A =  linOp_lhs(u, zeta, eta, press,
-                       hIceMean, Area, areaW, areaS,
-                       SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                       cDrag, cBotC, R_low,
-                       iPicard, myTime, myIter)
+        A =  matVecOp(u, zeta, eta, press,
+                      hIceMean, Area, areaW, areaS,
+                      SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                      cDrag, cBotC, R_low,
+                      iPicard, myTime, myIter)
         # M = preconditionerLSR( u, uVel, vVel, hIceMean, Area,
         #                        press, forcingU, forcingV,
         #                        SeaIceMassC, SeaIceMassU, SeaIceMassV,
@@ -278,25 +280,49 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     exitCode = 1
     iJFNK = -1
     resNonLin = 1.
-    linTol = 1e-1
     JFNKtol = 0.
     while resNonLin > JFNKtol and iJFNK < nJFNK:
         iJFNK = iJFNK+1
         # smoothing
-        wght=1
+        wght=1.
         uIceLin = wght*uIce+(1.-wght)*uIceLin
         vIceLin = wght*vIce+(1.-wght)*vIceLin
-        #
+        # these are just for the lsr-preconditioner
         cDrag = ocean_drag_coeffs(uIceLin, vIceLin, uVel, vVel)
         cBotC = bottomdrag_coeffs(uIceLin, vIceLin, hIceMean, Area, R_low)
         e11, e22, e12    = strainrates(uIceLin, vIceLin)
         zeta, eta, press = viscosities(
             e11, e22, e12, press0, iJFNK, myIter, myTime)
+        # first residual
         Fu, Fv = calc_residual(uIce, vIce, hIceMean, Area,
-                               zeta, eta, press, cDrag, cBotC,
                                SeaIceMassC, SeaIceMassU, SeaIceMassV,
                                uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
                                iJFNK, myTime, myIter)
+
+        resNonLin = calc_nonlinear_residual(Fu, Fv)
+        residual[iJFNK] = resNonLin
+        if iJFNK==0:
+            JFNKtol = resNonLin*nonLinTol
+            resT    = resNonLin * 0.5
+            print('JFNKtol = %e'%JFNKtol)
+
+        if printJFNKResidual:
+            print(
+                'iJFNK = %3i, pre-gmres non-linear residual       = %e'%(
+                    iJFNK, resNonLin) )
+
+        # compute convergence criterion for linear solver
+        linTolMax = 0.99
+        linTolMin = 0.01
+        linTol = linTolMax
+        if iJFNK > 0 and iJFNK < 100 and resNonLin < resT:
+            # Eisenstat and Walker (1996), eq.(2.6)
+            linTol = 0.7*( resNonLin/resNonLinKm1 )**1.5
+            linTol = min(linTolMax, linTol)
+            linTol = max(linTolMin, linTol)
+        elif iJFNK==0:
+            resNonLinKm1 = resNonLin
+
         # transform to vectors without overlaps
         b = _2dToVec(Fu,Fv)
         u = _2dToVec(uIce,vIce)
@@ -307,11 +333,11 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                      uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
                      iJFNK, myTime, myIter)
         # preconditioner
-        # A =  linOp_lhs(u, zeta, eta, press,
-        #                hIceMean, Area, areaW, areaS,
-        #                SeaIceMassC, SeaIceMassU, SeaIceMassV,
-        #                cDrag, cBotC, R_low,
-        #                iJFNK, myTime, myIter)
+        # A =  matVecOp(u, zeta, eta, press,
+        #               hIceMean, Area, areaW, areaS,
+        #               SeaIceMassC, SeaIceMassU, SeaIceMassV,
+        #               cDrag, cBotC, R_low,
+        #               iJFNK, myTime, myIter)
         # M = preconditionerLSR( u, uVel, vVel, hIceMean, Area,
         #                        press, forcingU, forcingV,
         #                        SeaIceMassC, SeaIceMassU, SeaIceMassV,
@@ -322,86 +348,39 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         #                         cDrag, cBotC, R_low,
         #                         iJFNK, myTime, myIter)
         M = preconGmres(u, J)
-
-        resNonLin = np.sqrt( (Fu**2+Fv**2).sum() )
-        if iJFNK==0:
-            JFNKtol = resNonLin*nonLinTol
-            print('JFNKtol = %e'%JFNKtol)
-
-        if printJFNKResidual:
-            print(
-                'iJFNK = %3i, pre-gmres non-linear residual       = %e'%(
-                    iJFNK, resNonLin) )
-
-        # compute convergence criterion for linear preconditioned FGMRES
-        linTolMax = 0.99
-        linTolMin = 0.01
-        linTol = linTolMax
-        if iJFNK>0 and iJFNK <= 100 and resNonLin<resT:
-            print('hallo')
-            # Eisenstat and Walker (1996), eq.(2.6)
-            linTol = 0.7*( resNonLin/resNonLinKm1 )**1.5
-            linTol = min(linTolMax, linTol)
-            linTol = max(linTolMin, linTol)
-        elif iJFNK==0:
-            print('hallo0')
-            resT = resNonLin * 0.5
-            resNonLinKm1 = 1.
-
         # matrix free solver that calls jacobian times vector
         du, exitCode = spla.gmres(J, -b,
                                   M = M,
                                   maxiter = nLinear, tol = linTol)
 
-        print('gmres: exitCode = %i, linTol = %f, %f'%(
-            exitCode, linTol, resNonLin/resNonLinKm1))
-        # save the residual for the next iteration
-        resNonLinKm1 = resNonLin
+        print('gmres: exitCode = %i, linTol = %f, %f, %f'%(
+            exitCode, linTol, du.min(), du.max() ) )
+        if np.abs(du).max() == 0:
+            print('Newton innovation vector = 0, stopping')
+            break
 
         # Newton step with line search
-        doLineSearch = True
         iLineSearch = -1
-        lsFac = 1.
-        while iLineSearch < 20 and doLineSearch:
+        lsGamma = 0.7
+        resNonLinLS = 2*resNonLin
+        while iLineSearch < 20 and resNonLinLS > resNonLin:
             iLineSearch = iLineSearch + 1
-            lsFac = lsFac*(1-.7)
+            lsFac = (1.-lsGamma)**iLineSearch
             uIce, vIce = _vecTo2d(u + du*lsFac)
-            Fu0, Fv0 = calc_residual(uIce, vIce, hIceMean, Area,
-                                     zeta, eta, press, cDrag, cBotC,
-                                     SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                                     uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
-                                     iJFNK, myTime, myIter)
-            resNonLinPost = np.sqrt( (Fu0**2+Fv0**2).sum() )
-            if resNonLinPost < resNonLin:
-                doLineSearch = False
-                print('line search: %04i pre-gmres: %e update = %e'%(
-                    iLineSearch,resNonLin,resNonLinPost))
+            Fu, Fv = calc_residual(uIce, vIce, hIceMean, Area,
+                                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                                   uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
+                                   iJFNK, myTime, myIter)
+            resNonLinLS =  calc_nonlinear_residual(Fu, Fv)
+            if resNonLinLS < resNonLin:
+                print('line search: %04i resKm1 = %e, %i upds. = %e'%(
+                    iLineSearch+1,resNonLin,iLineSearch,resNonLinLS))
 
+        # save the residual for the next iteration
+        resNonLinKm1 = resNonLin
+        resNonLin    = resNonLinLS
 
-        if computeJFNKResidual:
-            # print(np.allclose(A.dot(u1), b))
-            residual[iJFNK] = resNonLin
-            if iJFNK==0: resNonLin0 = resNonLin
-
-            # Fu0, Fv0 = calc_residual(uIce, vIce, hIceMean, Area,
-            #                          zeta, eta, press, cDrag, cBotC,
-            #                          SeaIceMassC, SeaIceMassU, SeaIceMassV,
-            #                          uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
-            #                          iJFNK, myTime, myIter)
-            # resNonLinPost = np.sqrt( (Fu0**2+Fv0**2).sum() )
-
-            # if printJFNKResidual or exitCode>0: print(
-            #         'iJFNK = %3i, exitCode = %3i, non-linear residual = %e'%(
-            #             iJFNK, exitCode, resNonLinPost )) #residual[iJFNK]))
-            # Au, Av = calc_lhs(uIce, vIce, zeta, eta, press,
-            #                   hIceMean, Area, areaW, areaS,
-            #                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
-            #                   cDrag, cBotC, R_low,
-            #                   iJFNK, myIter, myTime)
-            # print(np.sqrt(((Au-bu)**2+(Av-bv)**2)[OLy:-OLy,OLx:-OLx].sum()),
-            #       residual[iJFNK])
-
-
+    # after the outer nonlinear iteration is done plot residual
     if computeJFNKResidual and plotJFNKResidual:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)

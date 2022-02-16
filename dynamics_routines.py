@@ -288,7 +288,6 @@ def calc_rhs(uIceRHSfix, vIceRHSfix, areaW, areaS,
     return uIceRHS*maskInW, vIceRHS*maskInS
 
 def calc_residual(uIce, vIce, hIceMean, Area,
-                  zeta, eta, press, cDrag, cBotC,
                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
                   forcingU, forcingV, uVel, vVel, R_low,
                   iStep, myTime, myIter):
@@ -296,6 +295,20 @@ def calc_residual(uIce, vIce, hIceMean, Area,
     # initialize fractional areas at velocity points
     areaW = 0.5 * (Area + np.roll(Area,1,1))
     areaS = 0.5 * (Area + np.roll(Area,1,0))
+
+    # # set up mass per unit area
+    # SeaIceMassC = rhoIce * hIceMean
+    # # if SEAICEaddSnowMass (true)
+    # SeaIceMassC= SeaIceMassC + rhoSnow * hSnowMean
+    # SeaIceMassU = 0.5 * ( SeaIceMassC + np.roll(SeaIceMassC,1,1) )
+    # SeaIceMassV = 0.5 * ( SeaIceMassC + np.roll(SeaIceMassC,1,0) )
+    # calculate ice strength
+    press0 = SeaIceStrength * hIceMean * np.exp(-cStar * (1 - Area)) * iceMask
+    cDrag = ocean_drag_coeffs(uIce, vIce, uVel, vVel)
+    cBotC = bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low)
+    e11, e22, e12    = strainrates(uIce, vIce)
+    zeta, eta, press = viscosities(
+        e11, e22, e12, press0, iStep, myIter, myTime)
 
     Au, Av = calc_lhs(uIce, vIce, zeta, eta, press,
                       hIceMean, Area, areaW, areaS,
