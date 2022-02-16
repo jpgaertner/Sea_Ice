@@ -3,7 +3,8 @@ import numpy as np
 from seaice_params import *
 from seaice_size import *
 
-from dynamics_routines import strainrates, viscosities, \
+from dynamics_routines import strainrates, \
+    calc_ice_strength, viscosities, \
     ocean_drag_coeffs, bottomdrag_coeffs, calc_stressdiv, calc_stress
 
 from seaice_global_sum import global_sum
@@ -41,9 +42,10 @@ explicitDrag    = False
 #
 nEVPsteps = 500
 
-def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0,
-        IceSurfStressX0, IceSurfStressY0, SeaIceMassC, SeaIceMassU,
-        SeaIceMassV, R_low, myTime, myIter):
+def evp_solver(uIce, vIce, hIceMean, hSnowMean, Area,
+               uVel, vVel, IceSurfStressX0, IceSurfStressY0,
+               SeaIceMassC, SeaIceMassU, SeaIceMassV,
+               R_low, myTime, myIter):
 
     ##### initializations #####
 
@@ -89,6 +91,9 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0,
     sigma12 = zero2d.copy()
     resSig  = np.array([None]*(nEVPsteps+1))
     resU    = np.array([None]*(nEVPsteps+1))
+
+    # calculate ice strength
+    press0 = calc_ice_strength(hIceMean, iceMask)
 
     iEVP = -1
     resEVP = evpTol*2

@@ -5,6 +5,9 @@ from seaice_size import *
 
 secondOrderBC = False
 
+def calc_ice_strength(hIceMean, Area):
+    return SeaIceStrength * hIceMean * np.exp(-cStar * (1 - Area)) * iceMask
+
 def ocean_drag_coeffs(uIce, vIce, uVel, vVel):
 
     ### input:
@@ -287,7 +290,7 @@ def calc_rhs(uIceRHSfix, vIceRHSfix, areaW, areaS,
 
     return uIceRHS*maskInW, vIceRHS*maskInS
 
-def calc_residual(uIce, vIce, hIceMean, Area,
+def calc_residual(uIce, vIce, hIceMean, hSnowMean, Area,
                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
                   forcingU, forcingV, uVel, vVel, R_low,
                   iStep, myTime, myIter):

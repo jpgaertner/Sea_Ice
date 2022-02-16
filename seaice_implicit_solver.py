@@ -6,7 +6,8 @@ from scipy.sparse.linalg import LinearOperator
 from seaice_params import *
 from seaice_size import *
 
-from dynamics_routines import strainrates, viscosities, \
+from dynamics_routines import strainrates, \
+    calc_ice_strength, viscosities, \
     ocean_drag_coeffs, bottomdrag_coeffs, \
     calc_stressdiv, calc_stress, calc_lhs, calc_rhs, calc_residual
 
@@ -63,7 +64,7 @@ def matVecOp(x, zeta, eta, press,
 
     return LinearOperator((n,n), matvec = matvec, dtype = 'float64')
 
-def jacVecOp(x, uIce, vIce, Fu, Fv, hIceMean, Area,
+def jacVecOp(x, uIce, vIce, Fu, Fv, hIceMean, hSnowMean, Area,
              zeta, eta, press, cDrag, cBotC,
              SeaIceMassC, SeaIceMassU, SeaIceMassV,
              uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
@@ -75,7 +76,7 @@ def jacVecOp(x, uIce, vIce, Fu, Fv, hIceMean, Area,
         du,dv = _vecTo2d(x)
         epsjfnk = 1e-12
         Fup, Fvp = calc_residual(uIce+epsjfnk*du, vIce+epsjfnk*dv,
-                                 hIceMean, Area,
+                                 hIceMean, hSnowMean, Area,
                                  SeaIceMassC, SeaIceMassU, SeaIceMassV,
                                  uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
                                  iStep, myTime, myIter)
@@ -144,8 +145,8 @@ def preconGmres(x, P):
         return xx
     return spla.LinearOperator((n, n), matvec = M_x)
 
-def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
-                  press0, forcingU, forcingV,
+def picard_solver(uIce, vIce, hIceMean, hSnowMean, Area,
+                  uVel, vVel, forcingU, forcingV,
                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
                   R_low, myTime, myIter):
 
@@ -163,6 +164,9 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     uIceRHSfix = forcingU + SeaIceMassU*uIceNm1*recip_deltaT
     # mass*(vIceNm1)/deltaT
     vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
+    # calculate ice strength
+    press0 = calc_ice_strength(hIceMean, iceMask)
+
 
     residual = []
     areaW = 0.5 * (Area + np.roll(Area,1,1))
@@ -255,8 +259,8 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
 
     return uIce, vIce
 
-def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
-                press0, forcingU, forcingV,
+def jfnk_solver(uIce, vIce, hIceMean, hSnowMean, Area,
+                uVel, vVel, forcingU, forcingV,
                 SeaIceMassC, SeaIceMassU, SeaIceMassV,
                 R_low, myTime, myIter):
 
@@ -274,6 +278,8 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     uIceRHSfix = forcingU + SeaIceMassU*uIceNm1*recip_deltaT
     # mass*(vIceNm1)/deltaT
     vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
+    # calculate ice strength
+    press0 = calc_ice_strength(hIceMean, iceMask)
 
     residual = []
     areaW = 0.5 * (Area + np.roll(Area,1,1))
@@ -295,7 +301,7 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         zeta, eta, press = viscosities(
             e11, e22, e12, press0, iJFNK, myIter, myTime)
         # first residual
-        Fu, Fv = calc_residual(uIce, vIce, hIceMean, Area,
+        Fu, Fv = calc_residual(uIce, vIce, hIceMean, hSnowMean, Area,
                                SeaIceMassC, SeaIceMassU, SeaIceMassV,
                                uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
                                iJFNK, myTime, myIter)
@@ -328,7 +334,7 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         b = _2dToVec(Fu,Fv)
         u = _2dToVec(uIce,vIce)
         # set up linear operator
-        J = jacVecOp(u, uIce, vIce, Fu, Fv, hIceMean, Area,
+        J = jacVecOp(u, uIce, vIce, Fu, Fv, hIceMean, hSnowMean, Area,
                      zeta, eta, press, cDrag, cBotC,
                      SeaIceMassC, SeaIceMassU, SeaIceMassV,
                      uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
@@ -367,7 +373,7 @@ def jfnk_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             iLineSearch = iLineSearch + 1
             lsFac = (1.-lsGamma)**iLineSearch
             uIce, vIce = _vecTo2d(u + du*lsFac)
-            Fu, Fv = calc_residual(uIce, vIce, hIceMean, Area,
+            Fu, Fv = calc_residual(uIce, vIce, hIceMean, hSnowMean, Area,
                                    SeaIceMassC, SeaIceMassU, SeaIceMassV,
                                    uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
                                    iJFNK, myTime, myIter)

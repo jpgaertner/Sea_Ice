@@ -11,7 +11,8 @@ from scipy.linalg import solve
 from seaice_params import *
 from seaice_size import *
 
-from dynamics_routines import strainrates, viscosities, \
+from dynamics_routines import strainrates, \
+    calc_ice_strength, viscosities, \
     ocean_drag_coeffs, bottomdrag_coeffs, \
     calc_stressdiv, calc_stress, calc_residual
 
@@ -366,8 +367,8 @@ def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
 
     return vIc
 
-def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
-               press0, forcingU, forcingV,
+def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
+               uVel, vVel, forcingU, forcingV,
                SeaIceMassC, SeaIceMassU, SeaIceMassV,
                R_low, nLsr = nLsr, nLin = nLin,
                useAsPreconditioner = False,
@@ -399,7 +400,11 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     # mass*(vIceNm1)/deltaT
     vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
 
-    residual = np.array([None]*(nLsr+1))
+    residual = []
+
+    if not useAsPreconditioner:
+        # calculate ice strength
+        press0 = calc_ice_strength(hIceMean, iceMask)
 
     iLsr = -1
     resNonLin = nonLinTol*2
@@ -443,11 +448,11 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             iLsr, myTime, myIter)
 
         if useAsPreconditioner:
-            print('preconditioner: %i, %e, %e'%(iLsr, uIce.max(), vIce.max()))
+#            print('preconditioner: %i, %e, %e'%(iLsr, uIce.max(), vIce.max()))
             uIceRHS, vIceRHS = calc_rhs_lsr(
                 uIce, vIce, areaW, areaS,
                 uIceC, vIceC, uVel, vVel, np.zeros(cDrag.shape),
-                zeta, eta, np.zeros(press0.shape),
+                zeta, eta, np.zeros(zeta.shape),
                 SeaIceMassC, -1, myTime, myIter)
         else:
             uIceRHS, vIceRHS = calc_rhs_lsr(
@@ -461,8 +466,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                 AU, BU, CU, AV, BV, CV, uIce, vIce,
                 True, myTime, myIter )
             uu, vv = calc_residual(
-                uIce, vIce, hIceMean, Area,
-                zeta, eta, press, cDrag, cBotC,
+                uIce, vIce, hIceMean, hSnowMean, Area,
                 SeaIceMassC, SeaIceMassU, SeaIceMassV,
                 forcingU, forcingV, uVel, vVel, R_low,
                 iLsr, myTime, myIter)
@@ -556,7 +560,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
 
         if computeLsrResidual:
             resNonLin = np.sqrt(residUpre**2 + residVpre**2)
-            residual[iLsr] = resNonLin
+            residual.append(resNonLin)
             if iLsr==0: resNonLin0 = resNonLin
 
             resNonLin = resNonLin/resNonLin0
@@ -564,7 +568,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     if plotLsrResidual:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
-        ax[0].semilogy(residual[:iLsr-1]/residual[0],'x-')
+        ax[0].semilogy(residual/residual[0],'x-')
         ax[0].set_title('residual')
         plt.show()
 
