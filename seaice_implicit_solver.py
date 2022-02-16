@@ -206,18 +206,19 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         #                         iPicard, myTime, myIter)
         M = preconGmres(u, A)
 
+        if exitCode == 0:
+            linTolMin = 1e-2
+            linTol = max(linTol*(1-.7),linTolMin)
+        else:
+            # reset
+            linTol = 1.e-1
+
         if computePicardResidual:
             # print(np.allclose(A.dot(u1), b))
             resNonLin = np.sqrt( ( (A.matvec(u)-b)**2 ).sum() )
             if printPicardResidual or exitCode>0: print(
-                'iPicard = %3i, pre-gmres non-linear residual       = %e'%(
-                    iPicard, resNonLin) )
-
-        if exitCode == 0:
-            linTol = linTol*(1-.7)
-        else:
-            # reset
-            linTol = 1.e-1
+                'iPicard = %3i, linTol %f non-linear residual = %e'%(
+                    iPicard, linTol, resNonLin) )
 
         # matrix free solver that calls calc_lhs
         #u1, exitCode = spla.bicgstab(A,b,x0=u,maxiter=nLinear,tol=linTol)
