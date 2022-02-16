@@ -59,11 +59,11 @@ area = np.array([Area[0,0]])
 qsw = np.array([Qsw[0,0]])
 days = np.array([0])
 
-timesteps = 60
+timesteps = 60*12
 
 
 for i in range(timesteps):
-    hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, Qnet_out, seaIceLoad = (
+    hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw_out, Qnet_out, seaIceLoad = (
         growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, 
         runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh))
 
@@ -74,6 +74,8 @@ for i in range(timesteps):
     area = np.append(area, Area[0,0])
     qsw = np.append(qsw, Qsw[0,0])
     days = np.append(days,i)
+
+
 
 
 fig, axs = plt.subplots(2,2, figsize=(10,6))
