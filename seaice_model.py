@@ -94,11 +94,11 @@ for i in range(nTimeSteps):
     hIceMean, hSnowMean, Area, TIceSnow = ridging(hIceMean, hSnowMean,
                                                   Area, TIceSnow)
 
-    # hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, \
-    # Qnet, seaIceLoad = growth(hIceMean, iceMask, hSnowMean, Area,
-    #                           salt, TIceSnow, precip, snowPrecip,
-    #                           evap, runoff, wspeed, theta, Qnet, Qsw,
-    #                           SWDown, LWDown, ATemp, aqh)
+    hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, \
+    Qnet, seaIceLoad = growth(hIceMean, iceMask, hSnowMean, Area,
+                              salt, TIceSnow, precip, snowPrecip,
+                              evap, runoff, wspeed, theta, Qnet, Qsw,
+                              SWDown, LWDown, ATemp, aqh)
 
     printMonitor = monFreq>0 and (np.mod(myIter,monFreq)==0
                                   or myIter==nTimeSteps-1)
