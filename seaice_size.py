@@ -13,17 +13,17 @@
 import numpy as np
 from seaice_fill_overlap import fill_overlap
 
-# # for the 1d model
-# sNx = 1
-# sNy = 1
-# OLx = 1
-# OLy = 1
+# for the 1d model
+sNx = 1
+sNy = 1
+OLx = 2
+OLy = 2
 
 
-sNx = 65 #Number of X points in tile
-sNy = 65 #Number of Y points in tile
-OLx = 2 #Tile overlap extent in X
-OLy = 2 #Tile overlap extent in Y
+# sNx = 65 #Number of X points in tile
+# sNy = 65 #Number of Y points in tile
+# OLx = 2 #Tile overlap extent in X
+# OLy = 2 #Tile overlap extent in Y
 #nSx =   1 #Number of tiles per process in X
 #nSy =   1 #Number of tiles per process in Y
 #tiles are subprocesses that can work with the same memory
@@ -96,10 +96,10 @@ k2AtC = np.zeros((sNy+2*OLy,sNx+2*OLx))
 k1AtZ = np.zeros((sNy+2*OLy,sNx+2*OLx))
 k2AtZ = np.zeros((sNy+2*OLy,sNx+2*OLx))
 
-# # for the 1d model
-# maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))
-# maskInW = np.ones((sNy+2*OLy,sNx+2*OLx))
-# maskInS = np.ones((sNy+2*OLy,sNx+2*OLx))
-# iceMask = maskInC.copy()
-# SeaIceMaskU = maskInW.copy()
-# SeaIceMaskV = maskInS.copy()
+# for the 1d model
+maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))
+maskInW = np.ones((sNy+2*OLy,sNx+2*OLx))
+maskInS = np.ones((sNy+2*OLy,sNx+2*OLx))
+iceMask = maskInC.copy()
+SeaIceMaskU = maskInW.copy()
+SeaIceMaskV = maskInS.copy()
