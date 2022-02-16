@@ -57,7 +57,7 @@ def bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low):
     isArea = np.where(Area[:-1,:-1] > 0.01)
 
     tmpFld = 0.25 * ( (uIce*maskInW)**2 + np.roll(uIce*maskInW,-1,1)**2
-                 + (vIce*maskInS)**2 + np.roll(vIce*maskInS,-1,1)**2 )
+                    + (vIce*maskInS)**2 + np.roll(vIce*maskInS,-1,1)**2 )
     tmpFld = basalDragK2 / np.sqrt(tmpFld + basalDragU0**2)
 
     hCrit = np.abs(R_low) * Area / basalDragK1
@@ -69,9 +69,9 @@ def bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low):
     # If k*a gets too large, EXP will overflow, but for the anticipated
     # values of hActual < 100m, and k=10, this should be very unlikely
     cBot = np.where(Area > 0.01,
-                tmpFld
-                    * np.log(np.exp(fac * (hIceMean-hCrit)) + 1.) * recip_fac
-                    * np.exp(-cBasalStar * (1. - Area)),
+            tmpFld
+                * np.log(np.exp(fac * (hIceMean-hCrit)) + 1.) * recip_fac
+                * np.exp(-cBasalStar * (1. - Area)),
                 0.)
 
     return cBot
