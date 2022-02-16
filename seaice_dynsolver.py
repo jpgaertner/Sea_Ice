@@ -37,7 +37,7 @@ from seaice_ocean_stress import ocean_stress
 
 def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean,
               hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux,
-              fu, fv, secondOrderBC, R_low):
+              fu, fv, secondOrderBC, R_low, myTime, myIter):
 
     # set up mass per unit area
     SeaIceMassC = rhoIce * hIceMean
@@ -90,18 +90,16 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean,
     if useEVP:
         uIce, vIce = evp(
             uIce, vIce, uVel, vVel, hIceMean, Area,
-            press0, secondOrderBC,
-            IceSurfStressX0, IceSurfStressY0,
-            SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low)
+            press0, IceSurfStressX0, IceSurfStressY0,
+            SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low,
+            myTime, myIter)
 
-    myTime = 0.
-    myIter = 0
     if useLSR:
         uIce, vIce = lsr_solver(
             uIce, vIce, uVel, vVel, hIceMean, Area,
             press0, IceSurfStressX0, IceSurfStressY0,
             SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low,
-            myTime = myIter, myIter = myIter)
+            myTime, myIter)
 
     if usePicard:
         uIce, vIce = picard_solver(

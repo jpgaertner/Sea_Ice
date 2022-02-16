@@ -32,7 +32,7 @@ nLin = 200
 def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
                  uIce, vIce, uVel, vVel, cDrag, zeta, eta, press,
                  SeaIceMassC,
-                 iStep, myIter, myTime):
+                 iStep, myTime, myIter):
 
     if iStep < 0:
         # use as preconditioner and do not include drag or Coriolis terms

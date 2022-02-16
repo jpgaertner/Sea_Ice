@@ -41,9 +41,9 @@ explicitDrag    = False
 #
 nEVPsteps = 500
 
-def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
+def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0,
         IceSurfStressX0, IceSurfStressY0, SeaIceMassC, SeaIceMassU,
-        SeaIceMassV, R_low):
+        SeaIceMassV, R_low, myTime, myIter):
 
     ##### initializations #####
 
@@ -55,7 +55,6 @@ def evp(uIce, vIce, uVel, vVel, hIceMean, Area, press0, secondOrderBC,
         EVPcFac = 0
     # ... aEVPCoeff
 
-    myTime, myIter = 0, 0
     sinWat = np.sin(np.deg2rad(waterTurnAngle))
     cosWat = np.cos(np.deg2rad(waterTurnAngle))
 
