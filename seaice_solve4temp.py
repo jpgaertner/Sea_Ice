@@ -63,46 +63,47 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug,
     ##### initializations #####
 
     TSurfOut = TSurfIn.copy()
-    F_ia = np.zeros(iceMask.shape)
+    F_ia = np.zeros_like(iceMask)
     #F_ia_net
-    F_io_net = np.zeros(iceMask.shape)
+    F_io_net = np.zeros_like(iceMask)
 
     # the shortwave radiative flux at the ocean-ice interface (+ = upwards)
-    IcePenetSW = np.zeros(iceMask.shape)
+    IcePenetSW = np.zeros_like(iceMask)
 
     # reshwater flux due to sublimation [kg/m2] (+ = upward)
-    FWsublim = np.zeros(iceMask.shape)
+    FWsublim = np.zeros_like(iceMask)
         
     # effective conductivity of ice and snow combined
-    effConduct = np.zeros(iceMask.shape)
+    effConduct = np.zeros_like(iceMask)
 
     # derivative of F_ia w.r.t snow/ice surf. temp
-    dFia_dTs = np.zeros(iceMask.shape)
+    dFia_dTs = np.zeros_like(iceMask)
 
     # shortwave radiative flux convergence in the sea ice
-    absorbedSW = np.zeros(iceMask.shape)
+    absorbedSW = np.zeros_like(iceMask)
 
     # saturation vapor pressure of snow/ice surface
-    qhice = np.zeros(iceMask.shape)
+    qhice = np.zeros_like(iceMask)
 
     # derivative of qhice w.r.t snow/ice surf. temp
-    dqh_dTs = np.zeros(iceMask.shape)
+    dqh_dTs = np.zeros_like(iceMask)
 
     # latent heat flux (sublimation) (+ = upward)
-    F_lh = np.zeros(iceMask.shape)
+    F_lh = np.zeros_like(iceMask)
 
     # upward long-wave surface heat flux (+ = upward)
-    F_lwu = np.zeros(iceMask.shape)
+    F_lwu = np.zeros_like(iceMask)
 
     # sensible surface heat flux (+ = upward)
-    F_sens = np.zeros(iceMask.shape)
+    F_sens = np.zeros_like(iceMask)
 
     # conductive heat flux through ice and snow (+ = upward)
-    F_c = np.zeros(iceMask.shape)
+    F_c = np.zeros_like(iceMask)
 
     # make local copies of downward longwave radiation, surface
     # and atmospheric temperatures
     TSurfLoc = TSurfIn.copy()
+    #???: use cap?
     # TSurfLoc = np.minimum(celsius2k + maxTIce, TSurfIn)
     LWDownLocBound = np.maximum(minLwDown, LWDown)
     ATempLoc = np.maximum(celsius2K + minTAir, ATemp)

@@ -49,6 +49,7 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
 
     ##### constants and initializations #####
 
+    #???: salt
     # #ifdef ALLOW_SALT_PLUME
     # IceGrowthRateInLeads #d(hIceMean)/dt from heat fluxes in the open water fraction of the grid cell
     # leadPlumeFraction #The fraction of salt released in leads by new ice production there
@@ -133,7 +134,7 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
 
     dArea_dt = np.zeros_like(iceMask)
 
-    # reshwater flux due to sublimation [kg/m2] (+ = upward)
+    # freshwater flux due to sublimation [kg/m2] (+ = upward)
     # FWsublim
 
     hIceActual_mult = np.zeros(np.append(iceMask.shape,nITC))
@@ -153,8 +154,6 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     # d(Area)/dt due to ice-atmosphere fluxes
     dArea_iaFlux = np.zeros_like(iceMask)
 
-    # Cutoff for iceload, can be left out for now
-
     # constants for converting heat fluxes into growth rates
     qi = 1 / (rhoIce * lhFusion)
     qs = 1 / (rhoSnow * lhFusion)
@@ -170,7 +169,7 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     # placeholders for extra bits from advection, used in budget
     d_hIcebyDyn = np.ones_like(iceMask)
     d_hSnowbyDyn = np.ones_like(iceMask)
-    #d_hIcebyDyn (d_HEFFbyNEG in F) set up empty in seaice.h
+    #???: d_hIcebyDyn (d_HEFFbyNEG in F) set up empty in seaice.h
     SIhIceMeanNeg = d_hIcebyDyn * SINegFac
     SIhSnowMeanNeg = d_hSnowbyDyn * SINegFac
 
@@ -205,6 +204,7 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     hIceActual[isIce] = hIceMeanpreTH[isIce] * recip_regAreaSqrt
     hIceActual = np.clip(hIceActual, 0.05, None)
     recip_hIceActual = AreapreTH / np.sqrt(hIceMeanpreTH**2 + hice_reg_sq)
+    #???: regularize hSnow or not?
     #hSnowActual[isIce] = hSnowMeanpreTH[isIce] * recip_regAreaSqrt
     hSnowActual[isIce] = hSnowMeanpreTH[isIce] / AreapreTH[isIce]
 
@@ -216,13 +216,14 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     ug = np.maximum(eps, wspeed)
 
     # set fluxed in (qswo) and out (F_ao) of the ocean
+    #???: budget_ocean
     F_ao = Qnet.copy()
     qswo = Qsw.copy()
     qswi = np.zeros_like(iceMask)
 
     swFracAbsTopOcean = 0 #-> qswo_in_first_layer = qswo? (l. 177)
 
-    #qswo_below_first_layer = qswo * swFracAbsTopOcean
+    #???: qswo_below_first_layer = qswo * swFracAbsTopOcean
     qswo_in_first_layer = qswo * (1 - swFracAbsTopOcean)
 
     # IceGrowthRateOpenWater is also defined for Area > 0 as the area can
@@ -300,7 +301,7 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     # if the heat flux convergence could melt more snow than is actually
     # there, the excess is used to melt ice:
 
-    #HSNOW ACTUAL SHOULD NOT BE REGULARIZED FOR THIS (this is done by
+    #???: HSNOW ACTUAL SHOULD NOT BE REGULARIZED FOR THIS (this is done by
     # using hSnowMean instead of hSnowActual)
 
     # leave it for now but try to do it without the regularization once
@@ -360,6 +361,7 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
         IceGrowthRateOpenWater * (1 - AreapreTH) + IceGrowthRateMixedLayer
     dhSnowMean_dt = (SnowAccRateOverIce - SnowMeltRateFromSurface) * AreapreTH
 
+    #???: salt
     # ifdef allow_salt_plume
     # ifdef salt_plume_in_leads
     # calculate leadPlumeFraction, IceGrowthRateInLeads and saltPlumeFlux
@@ -383,10 +385,14 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
 
     # ice growth mixed layer
     dArea_oiFlux = np.where(IceGrowthRateMixedLayer <= 0,
+        #???: IceGrowthRateMixedLayer cant be positive bc the ocean is always 
+        # warmer than the ice and therefore F_oi is always negative?
+        # if yes, what is this check for?
         tmpscal0 * IceGrowthRateMixedLayer, 0)
 
     # ice growth over ice (from ice atmosphere fluxes)
-    dArea_iaFlux = np.where((NetExistingIceGrowthRate<= 0) & (hIceMeanpreTH > 0),
+    dArea_iaFlux = np.where((NetExistingIceGrowthRate <= 0) & (hIceMeanpreTH > 0),
+        #???: why cant NetExistingIceGrowthRate be positive?
         tmpscal0 * NetExistingIceGrowthRate * AreapreTH, 0)
 
     #update area derivative
@@ -455,7 +461,7 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     # of sea ice, then assume the sea ice is completely fresh
     # (if the water is fresh, no salty sea ice can form)
 
-    salt = np.clip(salt, 0, None) #leave in for now, remove when code is running and can be compared
+    salt = np.clip(salt, 0, None) #???: use paranoid check? leave in for now, remove when code is running and can be compared
 
     tmpscal0 = np.minimum(saltIce, salt)
     saltflux = (ActualNewTotalVolumeChange + SIhIceMeanNeg) * tmpscal0 \
@@ -474,7 +480,7 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
 
     # sea ice + snow load on the sea surface
     seaIceLoad = hIceMean * rhoIce + hSnowMean * rhoSnow
-    # maybe introduce a cap later
+    #???: maybe introduce a cap later
 
     
     return hIceMean, hSnowMean, Area, TIceSnow, saltflux, EmPmR, \
