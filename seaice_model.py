@@ -9,7 +9,7 @@ from gendata import uWind_gendata, vWind_gendata, \
 
 from seaice_dynsolver import dynsolver
 from seaice_advdiff import advdiff
-from seaice_reg_ridge import ridging
+from seaice_reg_ridge import clean_up_advection, ridging
 from seaice_growth import growth
 from seaice_fill_overlap import fill_overlap, fill_overlap3d
 
@@ -36,7 +36,7 @@ vVel = np.zeros((sNy+2*OLy,sNx+2*OLx)) + waterspd
 
 
 hSnowMean = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-Area = np.ones((sNy+2*OLy,sNx+2*OLx))
+Area = np.ones((sNy+2*OLy,sNx+2*OLx)) * iceMask
 TIceSnow = np.ones((sNy+2*OLy,sNx+2*OLx,nITC))*celsius2K
 
 uIce = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0.0
@@ -53,7 +53,7 @@ snowPrecip = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
 evap = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
 runoff = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
 wspeed = np.sqrt(uWind[0,:,:]**2 + vWind[0,:,:]**2)
-theta = np.ones((sNy+2*OLy,sNx+2*OLx))*celsius2K - 1.62
+theta = np.zeros((sNy+2*OLy,sNx+2*OLx))*celsius2K - 1.62
 Qnet = np.ones((sNy+2*OLy,sNx+2*OLx)) * 153.536072
 Qsw = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
 SWDown = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
@@ -73,27 +73,31 @@ useEVP = not useFreedrift
 
 plt.close('all')
 monFreq = 5
-nTimeSteps = 15
+nTimeSteps = 10
 for i in range(nTimeSteps):
 
     uIce, vIce, fu, fv = dynsolver(uIce, vIce, uVel, vVel,
-                                   uWind[0,:,:], vWind[0,:,:],
-                                   hIceMean, hSnowMean, Area, etaN,
-                                   pLoad, SeaIceLoad,
-                                   useRealFreshWaterFlux, useFreedrift, useEVP,
-                                   fu, fv, secondOrderBC, R_low)
+                                uWind[0,:,:], vWind[0,:,:],
+                                hIceMean, hSnowMean, Area, etaN,
+                                pLoad, SeaIceLoad,
+                                useRealFreshWaterFlux, useFreedrift, useEVP,
+                                fu, fv, secondOrderBC, R_low)
 
     hIceMean, hSnowMean, Area = advdiff(uIce, vIce, hIceMean,
                                         hSnowMean, Area)
 
-    hIceMean, hSnowMean, Area, TIceSnow = ridging(hIceMean, hSnowMean,
-                                                  Area, TIceSnow)
+    hIceMean, hSnowMean, Area, TIceSnow, os_hIceMean, os_hSnowMean \
+        = clean_up_advection(hIceMean, hSnowMean, Area, TIceSnow)
 
-    hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw, \
-    Qnet, seaIceLoad = growth(hIceMean, hSnowMean, Area,
-                              salt, TIceSnow, precip, snowPrecip,
-                              evap, runoff, wspeed, theta, Qnet, Qsw,
-                              SWDown, LWDown, ATemp, aqh)
+    Area = ridging(Area)
+
+    hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, \
+        Qsw_out, Qnet_out, seaIceLoad \
+        = growth(hIceMean, hSnowMean, Area, os_hIceMean, os_hSnowMean,
+                salt, TIceSnow, precip, snowPrecip, evap, 
+                runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown,
+                ATemp, aqh)
+
 
     printMonitor = monFreq>0 and (np.mod(i,monFreq)==0 or i==nTimeSteps-1)
     print('Time step %04i'%i)
@@ -110,13 +114,6 @@ for i in range(nTimeSteps):
         print('std       %4i, %11.4e, %11.4e, %11.4e, %11.4e, %11.4e'%(
             i,hIceMean.std(),hSnowMean.std(),Area.std(),uIce.std(),vIce.std()))
 
-
-# print(np.mean(hIceMean))
-# print(np.mean(uWind))
-# print(np.mean(vWind))
-# print(np.max(uIce))
-# print(np.max(vIce))
-
 # need this for my plots
 def sq(a):
     import numpy as np
@@ -130,7 +127,7 @@ ax[0].set_title('uIce')
 csf1=ax[1].pcolormesh(sq(vIce[OLy:-OLy,OLx:-OLx]))
 ax[1].set_title('vIce')
 csf2=ax[2].pcolormesh( hIceMean[OLy:-OLy,OLx:-OLx]*
-                      sq(iceMask[OLy:-OLy,OLx:-OLx]))
+                        sq(iceMask[OLy:-OLy,OLx:-OLx]))
 ax[2].set_title('hIce')
 #plt.contourf(vWind[0,OLy:-OLy,OLx:-OLx])
 plt.colorbar(csf0,ax=ax[0],orientation='horizontal')
