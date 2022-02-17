@@ -81,7 +81,7 @@ for i in range(nTimeSteps):
                                 uWind[0,:,:], vWind[0,:,:],
                                 hIceMean, hSnowMean, Area, etaN,
                                 pLoad, SeaIceLoad,
-                                useRealFreshWaterFlux, useFreedrift, useEVP,
+                                useRealFreshWaterFlux,
                                 fu, fv, secondOrderBC, R_low)
 
     hIceMean, hSnowMean, Area = advdiff(uIce, vIce, hIceMean,
