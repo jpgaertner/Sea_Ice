@@ -6,10 +6,11 @@ import numpy as np
 from seaice_size import *
 from seaice_params import *
 
-sNx = 1
-sNy = 1
-OLx = 2
-OLy = 2
+# # for the 1d test
+# sNx = 1
+# sNy = 1
+# OLx = 2
+# OLy = 2
 
 ### input
 # hIceActual: actual ice thickness [m]

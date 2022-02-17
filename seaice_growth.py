@@ -5,10 +5,11 @@ from seaice_params import *
 
 from seaice_solve4temp import solve4temp
 
-sNx = 1
-sNy = 1
-OLx = 2
-OLy = 2
+# # for the 1d test
+# sNx = 1
+# sNy = 1
+# OLx = 2
+# OLy = 2
 
 ### input
 # hIceMean: mean ice thickness [m3/m2] (= hIceActual * Area with Area the
@@ -336,11 +337,18 @@ def growth(hIceMean, hSnowMean, Area, os_hIceMean, os_hSnowMean, salt, TIceSnow,
     dArea_dt = dArea_oaFlux + dArea_oiFlux + dArea_iaFlux
 
 
+    # import matplotlib.pyplot as plt
+    # plt.contourf(dhIceMean_dt[OLy:-OLy,OLx:-OLx])
+    # plt.colorbar()
+    # plt.show()
+
     ######  update ice, snow thickness and area #####
 
     Area = AreapreTH + dArea_dt * iceMask * deltaTtherm
     hIceMean = hIceMeanpreTH + dhIceMean_dt * iceMask * deltaTtherm
     hSnowMean = hSnowMeanpreTH + dhSnowMean_dt * iceMask * deltaTtherm
+
+
 
     # set boundaries:
     Area = np.clip(Area, 0, 1)
@@ -419,6 +427,7 @@ def growth(hIceMean, hSnowMean, Area, os_hIceMean, os_hSnowMean, salt, TIceSnow,
     # sea ice + snow load on the sea surface
     seaIceLoad = hIceMean * rhoIce + hSnowMean * rhoSnow
     # XXX: maybe introduce a cap if needed for ocean model
+
 
 
     return hIceMean, hSnowMean, Area, TIceSnow, saltflux, EmPmR, \
