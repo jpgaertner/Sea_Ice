@@ -74,15 +74,20 @@ secondOrderBC = False
 
 plt.close('all')
 monFreq = 5
-nTimeSteps = 10
+nTimeSteps = 1
+nIter0 = 0
+
 for i in range(nTimeSteps):
 
+    myIter = nIter0 + i
+    myTime = myIter*deltaTtherm
     uIce, vIce, fu, fv = dynsolver(uIce, vIce, uVel, vVel,
-                                uWind[0,:,:], vWind[0,:,:],
-                                hIceMean, hSnowMean, Area, etaN,
-                                pLoad, SeaIceLoad,
-                                useRealFreshWaterFlux,
-                                fu, fv, secondOrderBC, R_low)
+                                   uWind[0,:,:], vWind[0,:,:],
+                                   hIceMean, hSnowMean, Area, etaN,
+                                   pLoad, SeaIceLoad,
+                                   useRealFreshWaterFlux,
+                                   fu, fv, secondOrderBC, R_low,
+                                   myTime, myIter)
 
     hIceMean, hSnowMean, Area = advdiff(uIce, vIce, hIceMean,
                                         hSnowMean, Area)
@@ -99,20 +104,24 @@ for i in range(nTimeSteps):
                 runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown,
                 ATemp, aqh)
 
-    printMonitor = monFreq>0 and (np.mod(i,monFreq)==0 or i==nTimeSteps-1)
-    print('Time step %04i'%i)
+    printMonitor = monFreq>0 and (np.mod(myIter,monFreq)==0
+                                  or myIter==nTimeSteps-1)
+    print('Time step %04i'%myIter)
     if printMonitor:
         print('Time step %4s, %11s, %11s, %11s, %11s, %11s'%(
             ' ','hIceMean','hSnowMean','Area','uIce','vIce'))
         print('mean      %4i, %11.4e, %11.4e, %11.4e, %11.4e, %11.4e'%(
-            i,hIceMean.mean(),hSnowMean.mean(),Area.mean(),uIce.mean(),
-            vIce.mean()))
+            myIter,hIceMean.mean(),hSnowMean.mean(),Area.mean(),
+            uIce.mean(),vIce.mean()))
         print('min       %4i, %11.4e, %11.4e, %11.4e, %11.4e, %11.4e'%(
-            i,hIceMean.min(),hSnowMean.min(),Area.min(),uIce.min(),vIce.min()))
+            myIter,hIceMean.min(),hSnowMean.min(),Area.min(),
+            uIce.min(),vIce.min()))
         print('max       %4i, %11.4e, %11.4e, %11.4e, %11.4e, %11.4e'%(
-            i,hIceMean.max(),hSnowMean.max(),Area.max(),uIce.max(),vIce.max()))
+            myIter,hIceMean.max(),hSnowMean.max(),Area.max(),
+            uIce.max(),vIce.max()))
         print('std       %4i, %11.4e, %11.4e, %11.4e, %11.4e, %11.4e'%(
-            i,hIceMean.std(),hSnowMean.std(),Area.std(),uIce.std(),vIce.std()))
+            myIter,hIceMean.std(),hSnowMean.std(),Area.std(),
+            uIce.std(),vIce.std()))
 
 # need this for my plots
 def sq(a):
@@ -121,11 +130,11 @@ def sq(a):
     masked_array=np.ma.masked_where(a==0., a)
     return masked_array
 
-from seaice_strainrates import strainrates
+from dynamics_routines import strainrates
 import matplotlib.colors as mcolors
 mynorm = mcolors.LogNorm(vmin=1e-12,vmax=1e-5)
 
-e11,e22,e12=strainrates(uIce,vIce,secondOrderBC)
+e11,e22,e12=strainrates(uIce,vIce)
 divergence = (e11+e22)*iceMask
 # use area weighted average of squares of e12 (more accurate)
 e12Csq = rAz * e12**2

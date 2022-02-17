@@ -2,7 +2,7 @@ import numpy as np
 
 from seaice_size import *
 
-# densities [g/m3]
+# densities [kg/m3]
 rhoIce = 910
 rhoSnow = 330
 rhoFresh = 999.8
@@ -127,9 +127,11 @@ useFreedrift = False
 useEVP       = False
 useLSR       = False
 usePicard    = False
+useJFNK      = False
 
 #useEVP = True
-useLSR = True
+#useLSR = True
 #usePicard=True
+useJFNK = True
 
 noSlip = True

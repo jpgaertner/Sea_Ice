@@ -4,12 +4,11 @@ from seaice_size import *
 from seaice_params import *
 
 from seaice_freedrift import seaIceFreeDrift
-from seaice_evp import evp
-from seaice_implicit_solver import picard_solver
+from seaice_evp import evp_solver
+from seaice_implicit_solver import picard_solver, jfnk_solver
 from seaice_lsr import lsr_solver
 from seaice_get_dynforcing import get_dynforcing
 from seaice_ocean_stress import ocean_stress
-
 
 ### input:
 # uIce: zonal ice velocity at south-west B-grid (or c grid? ifdef cgrid) u point? (what does the grid look like) (>0 = from west to east)
@@ -34,10 +33,9 @@ from seaice_ocean_stress import ocean_stress
 # fu: zonal stress on ocean surface (ice or atmopshere)
 # fv: meridional stress on ocean surface (ice or atmopshere)
 
-
 def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean,
               hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux,
-              fu, fv, secondOrderBC, R_low):
+              fu, fv, secondOrderBC, R_low, myTime, myIter):
 
     # set up mass per unit area
     SeaIceMassC = rhoIce * hIceMean
@@ -75,9 +73,6 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean,
     IceSurfStressY0 = IceSurfStressY0 \
         - SeaIceMassV * recip_dyC * ( phiSurf - np.roll(phiSurf,1,0) )
 
-    # calculate ice strength
-    press0 = SeaIceStrength * hIceMean * np.exp(-cStar * (1 - Area)) * iceMask
-
     #if SEAICEuseDYNAMICS (true)
     if useFreedrift:
         uIce, vIce = seaIceFreeDrift(hIceMean, uVel, vVel,
@@ -88,30 +83,32 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean,
     # #solver
 
     if useEVP:
-        uIce, vIce = evp(
-            uIce, vIce, uVel, vVel, hIceMean, Area,
-            press0, secondOrderBC,
-            IceSurfStressX0, IceSurfStressY0,
-            SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low)
-
-    myTime = 0.
-    myIter = 0
-    if useLSR:
-        uIce, vIce = lsr_solver(
-            uIce, vIce, uVel, vVel, hIceMean, Area,
-            press0, IceSurfStressX0, IceSurfStressY0,
-            SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low,
-            myTime = myIter, myIter = myIter)
-
-    if usePicard:
-        uIce, vIce = picard_solver(
-            uIce, vIce, uVel, vVel, hIceMean, Area,
-            press0, IceSurfStressX0, IceSurfStressY0,
+        uIce, vIce = evp_solver(
+            uIce, vIce, hIceMean, hSnowMean, Area,
+            uVel, vVel, IceSurfStressX0, IceSurfStressY0,
             SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low,
             myTime, myIter)
 
-    #if SEAICEuseJFNK
-    #call SEAICE_JFNK
+    if useLSR:
+        uIce, vIce = lsr_solver(
+            uIce, vIce, hIceMean, hSnowMean, Area,
+            uVel, vVel, IceSurfStressX0, IceSurfStressY0,
+            SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low,
+            myTime = myTime, myIter = myIter)
+
+    if usePicard:
+        uIce, vIce = picard_solver(
+            uIce, vIce, hIceMean, hSnowMean, Area,
+            uVel, vVel, IceSurfStressX0, IceSurfStressY0,
+            SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low,
+            myTime, myIter)
+
+    if useJFNK:
+        uIce, vIce = jfnk_solver(
+            uIce, vIce, hIceMean, hSnowMean, Area,
+            uVel, vVel, IceSurfStressX0, IceSurfStressY0,
+            SeaIceMassC, SeaIceMassU, SeaIceMassV, R_low,
+            myTime, myIter)
 
     # update stress on ocean surface
     fu, fv = ocean_stress(uIce, vIce, uVel, vVel, Area, fu, fv)

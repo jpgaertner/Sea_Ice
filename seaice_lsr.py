@@ -11,53 +11,59 @@ from scipy.linalg import solve
 from seaice_params import *
 from seaice_size import *
 
-from seaice_strainrates import strainrates
-from seaice_viscosities import viscosities
-from seaice_ocean_drag_coeffs import ocean_drag_coeffs
-from seaice_bottomdrag_coeffs import bottomdrag_coeffs
+from dynamics_routines import strainrates, \
+    calc_ice_strength, viscosities, \
+    ocean_drag_coeffs, bottomdrag_coeffs, \
+    calc_stressdiv, calc_stress, calc_residual
+
 from seaice_global_sum import global_sum
 from seaice_fill_overlap import fill_overlap_uv
 from seaice_averaging import c_point_to_z_point
 
 useLsrZebra = True
-useStrengthImplicitCoupling = True
-secondOrderBC = False
+useStrengthImplicitCoupling = False
 lsrRelax = 1.05
 lsrRelaxU = lsrRelax
 lsrRelaxV = lsrRelax
 nonLinTol = 1e-5
-linTol = 1e-7
-nLsr = 100
-nLin = 100
+linTol0 = 1e-7
+nLsr = 10
+nLin = 200
 
 def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
                  uIce, vIce, uVel, vVel, cDrag, zeta, eta, press,
                  SeaIceMassC,
-                 iStep, myIter, myTime):
+                 iStep, myTime, myIter):
 
-    sinWat = np.sin(np.deg2rad(waterTurnAngle))
-    cosWat = np.cos(np.deg2rad(waterTurnAngle))
+    if iStep < 0:
+        # use as preconditioner and do not include drag or Coriolis terms
+        vIceRHS = vIceRHSfix.copy()
+        uIceRHS = uIceRHSfix.copy()
+    else:
+        # normal use
+        sinWat = np.sin(np.deg2rad(waterTurnAngle))
+        cosWat = np.cos(np.deg2rad(waterTurnAngle))
 
-    duAtC = 0.5 * ( uVel-uIce + np.roll(uVel-uIce,-1,1) )
-    dvAtC = 0.5 * ( vVel-vIce + np.roll(vVel-vIce,-1,0) )
-    uIceRHS = uIceRHSfix + (
-        0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat *  uVel
-        - np.sign(fCori) * sinWat * 0.5 * (
-            cDrag * dvAtC + np.roll(cDrag * dvAtC,1,1)
-        )
-    ) * areaW
-    vIceRHS = vIceRHSfix + (
-        0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * vVel
-        + np.sign(fCori) * sinWat * 0.5 * (
-            cDrag * duAtC  + np.roll(cDrag * duAtC,1,0)
-        )
-    ) * areaS
-    # coriols terms: + mass*f*vIce
-    #                - mass*f*uIce
-    fuAtC = SeaIceMassC * fCori * 0.5 * ( uIce + np.roll(uIce,-1,1) )
-    fvAtC = SeaIceMassC * fCori * 0.5 * ( vIce + np.roll(vIce,-1,0) )
-    uIceRHS = uIceRHS + 0.5 * ( fvAtC + np.roll(fvAtC,1,1) )
-    vIceRHS = vIceRHS - 0.5 * ( fuAtC + np.roll(fuAtC,1,0) )
+        duAtC = 0.5 * ( uVel-uIce + np.roll(uVel-uIce,-1,1) )
+        dvAtC = 0.5 * ( vVel-vIce + np.roll(vVel-vIce,-1,0) )
+        uIceRHS = uIceRHSfix + (
+            0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat *  uVel
+            - np.sign(fCori) * sinWat * 0.5 * (
+                cDrag * dvAtC + np.roll(cDrag * dvAtC,1,1)
+            )
+        ) * areaW
+        vIceRHS = vIceRHSfix + (
+            0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * vVel
+            + np.sign(fCori) * sinWat * 0.5 * (
+                cDrag * duAtC  + np.roll(cDrag * duAtC,1,0)
+            )
+        ) * areaS
+        # Coriols terms: + mass*f*vIce
+        #                - mass*f*uIce
+        fuAtC = SeaIceMassC * fCori * 0.5 * ( uIce + np.roll(uIce,-1,1) )
+        fvAtC = SeaIceMassC * fCori * 0.5 * ( vIce + np.roll(vIce,-1,0) )
+        uIceRHS = uIceRHS + 0.5 * ( fvAtC + np.roll(fvAtC,1,1) )
+        vIceRHS = vIceRHS - 0.5 * ( fuAtC + np.roll(fuAtC,1,0) )
 
     # messy explicit parts of div(sigma)
     mskZ  = iceMask*np.roll(iceMask,1,axis=1)
@@ -68,7 +74,7 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
           + (zeta+eta) * 0.5 * (np.roll(vIce,-1,0)+vIce)*k2AtC \
           - 0.5 * press
     hFacM = SeaIceMaskV - np.roll(SeaIceMaskV,1,1)
-    sig12 =      c_point_to_z_point(eta, noSlip) * (
+    sig12 =             c_point_to_z_point( eta, noSlip) * (
         (
             ( vIce - np.roll(vIce,1,1) ) * recip_dxV
           - ( vIce + np.roll(vIce,1,1) ) * 0.5 * k1AtZ
@@ -77,7 +83,10 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
     )
 
     if useStrengthImplicitCoupling:
-        sig12 = sig12 + c_point_to_z_point(zeta, noSlip) * (
+        # strictly speaking, this is not a contribution to sig12, but for
+        # convenience we add the explicit term -zetaZ*du/dy here;
+        # we do not have to add any metric terms, because they cancel.
+        sig12 = sig12 - c_point_to_z_point(zeta, noSlip) * (
         (
             ( uIce - np.roll(uIce,1,0) ) * recip_dyU
         ) * mskZ
@@ -94,7 +103,7 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
           + (zeta+eta) * 0.5 * (np.roll(uIce,-1,1)+uIce)*k1AtC \
           - 0.5 * press
     hFacM = SeaIceMaskU - np.roll(SeaIceMaskU,1,0)
-    sig12 =      c_point_to_z_point(eta, noSlip) * (
+    sig12 =             c_point_to_z_point( eta, noSlip) * (
         (
             ( uIce - np.roll(uIce,1,0) ) * recip_dyU
           - ( uIce + np.roll(uIce,1,0) ) * 0.5 * k2AtZ
@@ -103,7 +112,10 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
     )
 
     if useStrengthImplicitCoupling:
-        sig12 = sig12 + c_point_to_z_point(zeta, noSlip) * (
+        # strictly speaking, this is not a contribution to sig12, but for
+        # convenience we add the explicit term -zetaZ*dv/dx here;
+        # we do not have to add any metric terms, because they cancel.
+        sig12 = sig12 - c_point_to_z_point(zeta, noSlip) * (
         (
             ( vIce - np.roll(vIce,1,1) ) * recip_dxV
         ) * mskZ
@@ -355,8 +367,8 @@ def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
 
     return vIc
 
-def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
-               press0, forcingU, forcingV,
+def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
+               uVel, vVel, forcingU, forcingV,
                SeaIceMassC, SeaIceMassU, SeaIceMassV,
                R_low, nLsr = nLsr, nLin = nLin,
                useAsPreconditioner = False,
@@ -365,7 +377,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
 
     computeLsrResidual = True
     printLsrResidual   = True
-    plotLsrResidual    = False
+    plotLsrResidual    = True
     if useAsPreconditioner:
         computeLsrResidual = False
         printLsrResidual   = False
@@ -378,80 +390,112 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     areaW = 0.5 * (Area + np.roll(Area,1,1))
     areaS = 0.5 * (Area + np.roll(Area,1,0))
 
-    # copy previous time step (n-1) of uIce, vIce
-    uIceNm1 = uIce.copy()
-    vIceNm1 = vIce.copy()
-
     # this does not change in Picard iteration
-    # mass*(uIceNm1)/deltaT
-    uIceRHSfix = forcingU + SeaIceMassU*uIceNm1*recip_deltaT
-    # mass*(vIceNm1)/deltaT
-    vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
+    if useAsPreconditioner:
+        uIceRHSfix = uIce.copy()
+        vIceRHSfix = vIce.copy()
+        # do not calculate ice strength, not needed
+    else:
+        # copy previous time step (n-1) of uIce, vIce
+        uIceNm1 = uIce.copy()
+        vIceNm1 = vIce.copy()
+        # mass*(uIceNm1)/deltaT
+        uIceRHSfix = forcingU + SeaIceMassU*uIceNm1*recip_deltaT
+        # mass*(vIceNm1)/deltaT
+        vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
+        # calculate ice strength
+        press0 = calc_ice_strength(hIceMean, iceMask)
 
-    residual = np.array([None]*(nLsr+1))
-
+    residual = []
     iLsr = -1
     resNonLin = nonLinTol*2
-    while resNonLin > nonLinTol and iLsr < nLsr:
+    while resNonLin > nonLinTol and iLsr < nLsr-1:
+        # if useAsPreconditioner:
+        #     print('HALLO PRECONDITIONER %i, %e'%(iLsr, resNonLin))
+
         iLsr = iLsr+1
-        if iLsr==0:
-            # This is the predictor time step
-            uIceC = uIce.copy()
-            vIceC = vIce.copy()
-        elif iLsr==1 and nLsr <= 2:
-            # This is the modified Euler step
-            uIce  = 0.5*( uIce+uIceNm1 )
-            vIce  = 0.5*( vIce+vIceNm1 )
-            uIceC = uIce.copy()
-            vIceC = vIce.copy()
-        else:
-            # This is the case for nLsr > 2, and here we use
-            # a different iterative scheme. u/vIceC = u/vIce is unstable, and
-            # different stabilisation methods are possible.
-
-            # This is stable but slow to converge.
-            # uIceC = 0.5*( uIce+uIceNm1 )
-            # vIceC = 0.5*( vIce+vIceNm1 )
-            # This converges slightly faster than the previous lines.
-            wght = .5
-            uIceC = wght*uIce+(1.-wght)*uIceC
-            vIceC = wght*vIce+(1.-wght)*vIceC
-
         if not useAsPreconditioner:
+            if iLsr==0:
+                # This is the predictor time step
+                uIceC = uIce.copy()
+                vIceC = vIce.copy()
+            elif iLsr==1 and nLsr <= 2:
+                # This is the modified Euler step
+                uIce  = 0.5*( uIce+uIceNm1 )
+                vIce  = 0.5*( vIce+vIceNm1 )
+                uIceC = uIce.copy()
+                vIceC = vIce.copy()
+            else:
+                # This is the case for nLsr > 2, and here we use a
+                # different iterative scheme. u/vIceC = u/vIce is
+                # unstable, and different stabilisation methods are
+                # possible.
+
+                # This is stable but slow to converge.
+                # uIceC = 0.5*( uIce+uIceNm1 )
+                # vIceC = 0.5*( vIce+vIceNm1 )
+                # This converges slightly faster than the previous lines.
+                wght = .8
+                uIceC = wght*uIce+(1.-wght)*uIceC
+                vIceC = wght*vIce+(1.-wght)*vIceC
+
             # drag coefficients for ice-ocean and basal drag
             cDrag = ocean_drag_coeffs(uIceC, vIceC, uVel, vVel)
             cBotC = bottomdrag_coeffs(uIceC, vIceC, hIceMean, Area, R_low)
             #
-            e11, e22, e12    = strainrates(uIceC, vIceC, secondOrderBC)
+            e11, e22, e12    = strainrates(uIceC, vIceC)
             zeta, eta, press = viscosities(
                 e11, e22, e12, press0, iLsr, myTime, myIter)
-        else:
-            press = press0.copy()
+            #
+            uIceRHS, vIceRHS = calc_rhs_lsr(
+                uIceRHSfix, vIceRHSfix, areaW, areaS, uIceC, vIceC,
+                uVel, vVel, cDrag, zeta, eta, press,
+                SeaIceMassC, iLsr, myTime, myIter)
 
         AU, BU, CU, AV, BV, CV, uRt1, uRt2, vRt1, vRt2 = lsr_coefficents(
             zeta, eta, cDrag+cBotC, SeaIceMassU, SeaIceMassV,
             areaW, areaS,
             iLsr, myTime, myIter)
 
-        if useAsPreconditioner:
-            uIceRHS, vIceRHS = calc_rhs_lsr(
-                uIce, vIce, areaW, areaS,
-                uIceC, vIceC, uVel, vVel, cDrag, zeta, eta, press,
-                SeaIceMassC, iLsr, myTime, myIter)
-        else:
-            uIceRHS, vIceRHS = calc_rhs_lsr(
-                uIceRHSfix, vIceRHSfix, areaW, areaS,
-                uIceC, vIceC, uVel, vVel, cDrag, zeta, eta, press,
-                SeaIceMassC, iLsr, myTime, myIter)
-
         if computeLsrResidual:
+            if useAsPreconditioner:
+                uIceRHS, vIceRHS = calc_rhs_lsr(
+                    uIceRHSfix, vIceRHSfix, areaW, areaS, uIce, vIce,
+                    uVel, vVel, cDrag, zeta, eta, np.zeros_like(hIceMean),
+                    SeaIceMassC, iLsr, myTime, myIter)
+
             residUpre, residVpre, uRes, vRes = lsr_residual(
                 uIceRHS, vIceRHS, uRt1, uRt2, vRt1, vRt2,
                 AU, BU, CU, AV, BV, CV, uIce, vIce,
                 True, myTime, myIter )
+            uu, vv = calc_residual(
+                uIce, vIce, hIceMean, hSnowMean, Area,
+                SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                forcingU, forcingV, uVel, vVel, R_low,
+                iLsr, myTime, myIter)
+
+            resUU = np.sqrt( global_sum(
+                (uu**2*rAw*maskInW*maskInC*np.roll(maskInC,1,1))
+                [OLy:-OLy,OLx:-OLx].sum() )/globalArea )
+            resVV = np.sqrt( global_sum(
+                (vv**2*rAs*maskInS*maskInC*np.roll(maskInC,1,0))
+                [OLy:-OLy,OLx:-OLx].sum() )/globalArea )
+
             if printLsrResidual:
-                print ( 'pre  lin: %i      %e %e'%(
-                    iLsr, residUpre, residVpre) )
+                print ( 'pre  lin: %i      %e %e %e %e'%(
+                    iLsr, residUpre, residVpre,
+                    resUU-residUpre, resVV-residVpre
+                ) )
+
+
+        if iLsr <= 0: linTol = linTol0
+        # wght=0.5
+        # if iLsr > 0 and iLin < nLin:
+        #     linTol = linTol*(1.-wght)
+        # else:
+        #     linTol = min(linTol*(1.+wght)**2,linTol0)
+
+        # if iLsr > 0: print(iLin,linTol)
 
         iLin = 0.
         doIterU = True
@@ -459,8 +503,20 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
         while iLin < nLin and (doIterV or doIterV):
             iLin = iLin+1
 
-            if doIterU: uNm1 = uIce.copy()
-            if doIterV: vNm1 = vIce.copy()
+            if not useAsPreconditioner:
+                if doIterU: uNm1 = uIce.copy()
+                if doIterV: vNm1 = vIce.copy()
+
+            if (doIterU or doIterV) and useAsPreconditioner:
+                # update rhs as a function of u/vIce instead of u/vIceC
+                # print('preconditioner: %i, %e, %e'%(
+                #          iLsr,uIce.max(),vIce.max()))
+                uIceRHS, vIceRHS = calc_rhs_lsr(
+                    uIceRHSfix, vIceRHSfix, areaW, areaS,
+                    uIce, vIce, uVel, vVel, np.zeros_like(hIceMean),
+                    zeta, eta, np.zeros(zeta.shape),
+                    SeaIceMassC, -1, myTime, myIter)
+
             isEven = np.mod(iLin,2)==0 and False
             if not isEven:
                 if doIterU:
@@ -482,22 +538,19 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                                          uIce )
 
             # over relaxation step
-            # lsrRelaxU = 1.05
-            # lsrRelaxV = 1.05
             if doIterU: uIce = uIce + lsrRelaxU * ( uTmp - uIce )
             if doIterV: vIce = vIce + lsrRelaxV * ( vTmp - vIce )
 
             uIce, vIce = fill_overlap_uv( uIce, vIce )
 
-            if iLin>1:
-                doIterU = np.sqrt((uIce-uNm1)**2
-                                  )[OLy:-OLy,OLx:-OLx].max() > linTol
-                doIterV = np.sqrt((vIce-vNm1)**2
-                                  )[OLy:-OLy,OLx:-OLx].max() > linTol
-
-            # resU = np.sqrt((uIce-uNm1)**2).max()
-            # resV = np.sqrt((vIce-vNm1)**2).max()
-            # print(resU,resV,doIterU,doIterV)
+            if not useAsPreconditioner:
+                if iLin>1:
+                    doIterU = np.sqrt((uIce-uNm1)**2
+                                      )[OLy:-OLy,OLx:-OLx].max() > linTol
+                    doIterV = np.sqrt((vIce-vNm1)**2
+                                      )[OLy:-OLy,OLx:-OLx].max() > linTol
+            # else:
+            #     print('precond: iLin %i', iLin)
 
             # residU, residV, uRes, vRes = lsr_residual(
             #     uIceRHS, vIceRHS, uRt1, uRt2, vRt1, vRt2,
@@ -507,7 +560,7 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
             # doIterU = residU > linTol
             # doIterV = residV > linTol
 
-        if computeLsrResidual:
+        if computeLsrResidual and (doIterU or doIterV):
             residUpost, residVpost, uRes, vRes = lsr_residual(
                 uIceRHS, vIceRHS, uRt1, uRt2, vRt1, vRt2,
                 AU, BU, CU, AV, BV, CV, uIce, vIce,
@@ -516,9 +569,9 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
                 print ( 'post lin: %i %4i %e %e'%(
                     iLsr, iLin, residUpost, residVpost ) )
 
-
+        if computeLsrResidual:
             resNonLin = np.sqrt(residUpre**2 + residVpre**2)
-            residual[iLsr] = resNonLin
+            residual.append(resNonLin)
             if iLsr==0: resNonLin0 = resNonLin
 
             resNonLin = resNonLin/resNonLin0
@@ -526,10 +579,9 @@ def lsr_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     if plotLsrResidual:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
-        ax[0].semilogy(residual[:iLsr-1]/residual[0],'x-')
+        ax[0].semilogy(residual/residual[0],'x-')
         ax[0].set_title('residual')
         plt.show()
-
 
     return uIce, vIce
 

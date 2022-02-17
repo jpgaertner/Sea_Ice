@@ -1,148 +1,34 @@
 import numpy as np
-# from numpy import linalg as npla
+
 from scipy.sparse import linalg as spla
 from scipy.sparse.linalg import LinearOperator
-# from scipy.optimize import fsolve
 
 from seaice_params import *
 from seaice_size import *
 
-from seaice_strainrates import strainrates
-from seaice_viscosities import viscosities
-from seaice_ocean_drag_coeffs import ocean_drag_coeffs
-from seaice_bottomdrag_coeffs import bottomdrag_coeffs
+from dynamics_routines import strainrates, \
+    calc_ice_strength, viscosities, \
+    ocean_drag_coeffs, bottomdrag_coeffs, \
+    calc_stressdiv, calc_stress, calc_lhs, calc_rhs, calc_residual
+
 from seaice_global_sum import global_sum
 from seaice_fill_overlap import fill_overlap_uv
 from seaice_lsr import lsr_solver
 
-secondOrderBC = False
-nPicard = 2
 nLinear = 50
-nonLinTol = 1e-3
+nonLinTol = 1e-5
+
+useLsrAsPreconditioner = True
+
+nPicard = 10
 computePicardResidual = True
 printPicardResidual = True
-plotPicardResidual = False
+plotPicardResidual = True
 
-
-def calc_stress(e11, e22, e12, zeta, eta, press, iStep, myTime, myIter):
-    from seaice_averaging import c_point_to_z_point
-    sig11 = zeta*(e11 + e22) + eta*(e11 - e22) - 0.5 * press
-    sig22 = zeta*(e11 + e22) - eta*(e11 - e22) - 0.5 * press
-    sig12 = 2. * e12 * c_point_to_z_point(eta)
-    return sig11, sig22, sig12
-
-def calc_stressdiv(sig11, sig22, sig12, iStep, myTime, myIter):
-    stressDivX = (
-          sig11*dyF - np.roll(sig11*dyF, 1,axis=1)
-        - sig12*dxV + np.roll(sig12*dxV,-1,axis=0)
-    ) * recip_rAw
-    stressDivY = (
-          sig22*dxF - np.roll(sig22*dxF, 1,axis=0)
-        - sig12*dyU + np.roll(sig12*dyU,-1,axis=1)
-    ) * recip_rAs
-    return stressDivX, stressDivY
-
-def calc_lhs(uIce, vIce, zeta, eta, press,
-             hIceMean, Area, areaW, areaS, press0,
-             SeaIceMassC, SeaIceMassU, SeaIceMassV,
-             cDrag, cBotC, R_low,
-             iStep, myTime, myIter):
-
-    recip_deltaT = 1./deltaTdyn
-    bdfAlpha = 1.
-    sinWat = np.sin(np.deg2rad(waterTurnAngle))
-    cosWat = np.cos(np.deg2rad(waterTurnAngle))
-
-    #
-    e11, e22, e12          = strainrates(uIce, vIce, secondOrderBC)
-    # zeta, eta, press       = viscosities(
-    #     e11, e22, e12, press0, iStep, myIter, myTime)
-    sig11, sig22, sig12    = calc_stress(
-        e11, e22, e12, zeta, eta, press, iStep, myIter, myTime)
-    stressDivX, stressDivY = calc_stressdiv(
-        sig11, sig22, sig12, iStep, myIter, myTime)
-
-    # sum up for symmetric drag contributions
-    symDrag = cDrag*cosWat + cBotC
-
-    # mass*(uIce)/deltaT - dsigma/dx
-    uIceLHS = bdfAlpha*SeaIceMassU*recip_deltaT*uIce - stressDivX
-    # mass*(vIce)/deltaT - dsigma/dy
-    vIceLHS = bdfAlpha*SeaIceMassV*recip_deltaT*vIce - stressDivY
-    # coriols terms: - mass*f*vIce
-    #                + mass*f*uIce
-    fuAtC = SeaIceMassC * fCori * 0.5 * ( uIce + np.roll(uIce,-1,1) )
-    fvAtC = SeaIceMassC * fCori * 0.5 * ( vIce + np.roll(vIce,-1,0) )
-    uIceLHS = uIceLHS - 0.5 * ( fvAtC + np.roll(fvAtC,1,1) )
-    vIceLHS = vIceLHS + 0.5 * ( fuAtC + np.roll(fuAtC,1,0) )
-    # ocean-ice and bottom drag terms: + (Cdrag*cosWat+Cb)*uIce - vIce*sinWat)
-    uAtC = 0.5 * ( uIce + np.roll(uIce,-1,1) )
-    vAtC = 0.5 * ( vIce + np.roll(vIce,-1,0) )
-    uIceLHS = uIceLHS + (
-        0.5 * ( symDrag + np.roll(symDrag,1,1) ) *  uIce
-        - np.sign(fCori) * sinWat * 0.5 * (
-            symDrag * vAtC + np.roll(symDrag * vAtC,1,1)
-        )
-    ) * areaW
-    vIceLHS = vIceLHS + (
-        0.5 * ( symDrag + np.roll(symDrag,1,0) ) * vIce
-        + np.sign(fCori) * sinWat * 0.5 * (
-            symDrag * uAtC  + np.roll(symDrag * uAtC,1,0)
-        )
-    ) * areaS
-    # momentum advection (not now)
-
-    # apply masks for interior (important when we have open boundaries)
-    return uIceLHS*maskInW, vIceLHS*maskInS
-
-def calc_rhs(uIceRHS, vIceRHS, areaW, areaS,
-             uVel, vVel, cDrag,
-             iStep, myTime, myIter):
-
-    sinWat = np.sin(np.deg2rad(waterTurnAngle))
-    cosWat = np.cos(np.deg2rad(waterTurnAngle))
-
-    # ice-velocity independent contribution to drag terms
-    # - Cdrag*(uVel*cosWat - vVel*sinWat)/(vVel*cosWat + uVel*sinWat)
-    # ( remember to average to correct velocity points )
-    uAtC = 0.5 * ( uVel + np.roll(uVel,-1,1) )
-    vAtC = 0.5 * ( vVel + np.roll(vVel,-1,0) )
-    uIceRHS = uIceRHS + (
-        0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat *  uVel
-        - np.sign(fCori) * sinWat * 0.5 * (
-            cDrag * vAtC + np.roll(cDrag * vAtC,1,1)
-        )
-    ) * areaW
-    vIceRHS = vIceRHS + (
-        0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * vVel
-        + np.sign(fCori) * sinWat * 0.5 * (
-            cDrag * uAtC  + np.roll(cDrag * uAtC,1,0)
-        )
-    ) * areaS
-
-    return uIceRHS*maskInW, vIceRHS*maskInS
-
-def calc_residual(uIce, vIce, hIceMean, Area,
-                  SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                  uVel, vVel, R_low,
-                  iStep, myTime, myIter):
-
-    # initialize fractional areas at velocity points
-    areaW = 0.5 * (Area + np.roll(Area,1,1))
-    areaS = 0.5 * (Area + np.roll(Area,1,0))
-    cDrag = ocean_drag_coeffs(uIce, vIce, uVel, vVel)
-
-    Au, Av = calc_lhs(uIce, vIce, zeta, eta, press,
-                      hIceMean, Area, areaW, areaS, press0,
-                      SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                      cDrag, cBotC, R_low,
-                      iStep, myIter, myTime)
-    bu, bv = calc_rhs(forcingU, forcingV, areaW, areaS,
-                      uVel, vVel, cDrag,
-                      iStep, myIter, myTime)
-
-    # residual by vector component
-    return Au-bu, Av-bv
+nJFNK = 100
+computeJFNKResidual = True
+printJFNKResidual = True
+plotJFNKResidual = True
 
 def _vecTo2d(vec):
     n = vec.shape[0]//2
@@ -158,51 +44,111 @@ def _2dToVec(u,v):
                      v[OLy:-OLy,OLx:-OLx].ravel()))
     return vec
 
-def linOp_lhs(xIn, zeta, eta, press,
-              hIceMean, Area, areaW, areaS, press0,
-              SeaIceMassC, SeaIceMassU, SeaIceMassV,
-              cDrag, cBotC, R_low,
-              iStep, myTime, myIter):
-    # get size for convenience
-    nn = xIn.shape[0]
-    # unpack the vector
-    def matvec(xIn):
-        u,v = _vecTo2d(xIn)
-        Au, Av = calc_lhs(u, v, zeta, eta, press,
-                          hIceMean, Area, areaW, areaS,
-                          press0,
-                          SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                          cDrag, cBotC, R_low,
-                          iStep, myIter, myTime)
-        return _2dToVec(Au,Av)
+def calc_nonlinear_residual( Fu, Fv ):
+    return np.sqrt( _2dToVec(Fu**2*rAw,Fv**2*rAs).sum()/globalArea )
 
-    return LinearOperator((nn,nn), matvec=matvec) #, dtype = 'float64')
-
-def preconditionerMatrix(x, uVel, vVel, hIceMean, Area,
-                         press, zeta, eta, cDrag, cBotC, forcingU, forcingV,
-                         SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                         R_low):
+def matVecOp(x, zeta, eta, press,
+             hIceMean, Area, areaW, areaS,
+             SeaIceMassC, SeaIceMassU, SeaIceMassV,
+             cDrag, cBotC, R_low,
+             iStep, myTime, myIter):
     # get size for convenience
     n = x.shape[0]
     # unpack the vector
     def matvec(x):
         u,v = _vecTo2d(x)
+        Au, Av = calc_lhs(u, v, zeta, eta, press,
+                          hIceMean, Area, areaW, areaS,
+                          SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                          cDrag, cBotC, R_low,
+                          iStep, myIter, myTime)
+        return _2dToVec(Au,Av)
 
-        Au, Av = lsr_solver(u, v, uVel, vVel, hIceMean, Area,
-                            press, forcingU, forcingV,
+    return LinearOperator((n,n), matvec = matvec, dtype = 'float64')
+
+def jacVecOp(x, uIce, vIce, Fu, Fv, hIceMean, hSnowMean, Area,
+             zeta, eta, press, cDrag, cBotC,
+             SeaIceMassC, SeaIceMassU, SeaIceMassV,
+             uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
+             iStep, myTime, myIter):
+    # get size for convenience
+    n = x.shape[0]
+    # unpack the vector
+    def matvec(x):
+        du,dv = _vecTo2d(x)
+        epsjfnk = 1e-12
+        Fup, Fvp = calc_residual(uIce+epsjfnk*du, vIce+epsjfnk*dv,
+                                 hIceMean, hSnowMean, Area,
+                                 SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                                 uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
+                                 iStep, myTime, myIter)
+
+        return _2dToVec( (Fup-Fu)/epsjfnk, (Fvp-Fv)/epsjfnk )
+
+    return LinearOperator((n,n), matvec = matvec, dtype = 'float64')
+
+def preconditionerLSR(x, uVel, vVel, hIceMean, hSnowMean, Area,
+                      zeta, eta, cDrag, cBotC, forcingU, forcingV,
+                      SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                      R_low):
+    # get size for convenience
+    n = x.shape[0]
+    # unpack the vector
+    def M_x(x):
+        u,v = _vecTo2d(x)
+
+        Au, Av = lsr_solver(u, v, hIceMean*0, hSnowMean*0, Area,
+                            uVel, vVel, forcingU*0, forcingV*0,
                             SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                            R_low, nLsr = -1, nLin = 10,
+                            R_low, nLsr = 1, nLin = 10,
                             useAsPreconditioner = True,
                             zeta = zeta, eta = eta,
                             cDrag = cDrag, cBotC = cBotC,
-                            myTime = 0, myIter = 0)
+                            myTime = -1., myIter = -1)
 
         return _2dToVec(Au,Av)
 
-    return spla.LinearOperator((n, n), matvec=matvec)
+    return spla.LinearOperator((n, n), matvec = M_x)
 
-def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
-                  press0, forcingU, forcingV,
+def preconditionerSolve(x, zeta, eta, press,
+                        hIceMean, Area, areaW, areaS,
+                        SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                        cDrag, cBotC, R_low,
+                        iStep, myTime, myIter):
+    # get size for convenience
+    n = x.shape[0]
+    # unpack the vector
+    def lhs(x):
+        u,v = _vecTo2d(x)
+        Au, Av = calc_lhs(u, v, zeta, eta, press,
+                          hIceMean, Area, areaW, areaS,
+                          SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                          cDrag, cBotC, R_low,
+                          iStep, myIter, myTime)
+        return _2dToVec(Au,Av)
+
+    def M_x(x):
+        P  = spla.LinearOperator((n, n), matvec = lhs)
+        xx, exitCode = spla.lgmres(P, x, maxiter = 5)
+        return xx
+
+    return spla.LinearOperator((n, n), matvec = M_x)
+
+def preconGmres(x, P):
+    import scipy.sparse.linalg as spla
+    n = x.shape[0]
+    # taken from https://docs.scipy.org/doc/scipy/reference/generated/ ...
+    #                                  scipy.sparse.linalg.gmres.html
+    # does not work for some reason
+    # M_x = lambda x: spla.gmres(P, x, maxiter = 2)
+    # return spla.LinearOperator((n, n), M_x)
+    def M_x(x):
+        xx, exitCode = spla.lgmres(P, x, maxiter = 5) #, atol = 1e-1)
+        return xx
+    return spla.LinearOperator((n, n), matvec = M_x)
+
+def picard_solver(uIce, vIce, hIceMean, hSnowMean, Area,
+                  uVel, vVel, forcingU, forcingV,
                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
                   R_low, myTime, myIter):
 
@@ -212,74 +158,91 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     # copy previous time step (n-1) of uIce, vIce
     uIceLin = uIce.copy()
     vIceLin = vIce.copy()
+    uIceNm1 = uIce.copy()
+    vIceNm1 = vIce.copy()
 
     # this does not change
     # mass*(uIceNm1)/deltaT
-    uIceRHS = forcingU + SeaIceMassU*uIce*recip_deltaT
+    uIceRHSfix = forcingU + SeaIceMassU*uIceNm1*recip_deltaT
     # mass*(vIceNm1)/deltaT
-    vIceRHS = forcingV + SeaIceMassV*vIce*recip_deltaT
+    vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
+    # calculate ice strength
+    press0 = calc_ice_strength(hIceMean, iceMask)
 
-    residual = np.array([None]*(nPicard+1))
+
+    residual = []
     areaW = 0.5 * (Area + np.roll(Area,1,1))
     areaS = 0.5 * (Area + np.roll(Area,1,0))
     exitCode = 1
     iPicard = -1
     resNonLin = nonLinTol*2
-    linTol = 1e-1
+    linTolMax = 1e-1
+    linTol = linTolMax
     while resNonLin > nonLinTol and iPicard < nPicard:
         iPicard = iPicard+1
         # smoothing
-        wght=0.5
+        wght=.8
         uIceLin = wght*uIce+(1.-wght)*uIceLin
         vIceLin = wght*vIce+(1.-wght)*vIceLin
         #
         cDrag = ocean_drag_coeffs(uIceLin, vIceLin, uVel, vVel)
         cBotC = bottomdrag_coeffs(uIceLin, vIceLin, hIceMean, Area, R_low)
-        e11, e22, e12    = strainrates(uIceLin, vIceLin, secondOrderBC)
+        e11, e22, e12    = strainrates(uIceLin, vIceLin)
         zeta, eta, press = viscosities(
             e11, e22, e12, press0, iPicard, myIter, myTime)
-        bu, bv = calc_rhs(uIceRHS, vIceRHS, areaW, areaS,
+        bu, bv = calc_rhs(uIceRHSfix, vIceRHSfix, areaW, areaS,
                           uVel, vVel, cDrag,
                           iPicard, myIter, myTime)
         # transform to vectors without overlaps
         b = _2dToVec(bu,bv)
         u = _2dToVec(uIce,vIce)
         # set up linear operator
-        A =  linOp_lhs(u, zeta, eta, press,
-                       hIceMean, Area, areaW, areaS, press0,
-                       SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                       cDrag, cBotC, R_low,
-                       iPicard, myTime, myIter)
-        M = preconditionerMatrix( u, uVel, vVel, hIceMean, Area,
-                                  press, forcingU, forcingV,
+        A =  matVecOp(u, zeta, eta, press,
+                      hIceMean, Area, areaW, areaS,
+                      SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                      cDrag, cBotC, R_low,
+                      iPicard, myTime, myIter)
+        if useLsrAsPreconditioner:
+            M = preconditionerLSR(u, uVel, vVel, hIceMean, hSnowMean, Area,
+                                  zeta, eta, cDrag, cBotC, forcingU, forcingV,
                                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                                  R_low, zeta, eta, cDrag, cBotC )
-        # matrix free solver that calls calc_lhs
+                                  R_low)
+        else:
+            M = preconGmres(u, A)
+
         if exitCode == 0:
-            linTol = linTol*(1-.7)
+            linTolMin = 1e-2
+            linTol = max(linTol*(1-.1),linTolMin)
         else:
             # reset
-            linTol = 1.e-1
+            linTol = linTolMax
+
+        if computePicardResidual:
+            # print(np.allclose(A.dot(u1), b))
+            resNonLin = np.sqrt( ( (A.matvec(u)-b)**2 ).sum() )
+            if printPicardResidual or exitCode>0: print(
+                'iPicard = %3i, linTol %f non-linear residual = %e'%(
+                    iPicard, linTol, resNonLin) )
+
+        # matrix free solver that calls calc_lhs
         #u1, exitCode = spla.bicgstab(A,b,x0=u,maxiter=nLinear,tol=linTol)
-        u1, exitCode = spla.gmres(A,b,x0=u, M = M,
-                                  maxiter=nLinear,tol=linTol)
-        # for iLin in range(nLinear):
+        u1, exitCode = spla.gmres(A, b, x0 = u, M = M,
+                                  maxiter = nLinear, atol = linTol)
+
         uIce, vIce = _vecTo2d(u1)
         if computePicardResidual:
             # print(np.allclose(A.dot(u1), b))
-            resNonLin = np.sqrt( ( (A.matvec(u1)-b)**2 ).sum() )
-            residual[iPicard] = resNonLin
+            residual.append(resNonLin)
             if iPicard==0: resNonLin0 = resNonLin
-
             resNonLin = resNonLin/resNonLin0
 
-            # if exitCode>0: print(
-            if printPicardResidual: print(
-                    'iPicard = %3i, exitCode = %3i,linear residual = %e'%(
-                        iPicard, exitCode, residual[iPicard]))
+            resNonLinPost = np.sqrt( ( (A.matvec(u1)-b)**2 ).sum() )
+
+            if printPicardResidual or exitCode>0: print(
+                    'iPicard = %3i, exitCode = %3i, non-linear residual = %e'%(
+                        iPicard, exitCode, resNonLinPost )) #residual[iPicard]))
             # Au, Av = calc_lhs(uIce, vIce, zeta, eta, press,
             #                   hIceMean, Area, areaW, areaS,
-            #                   press0,
             #                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
             #                   cDrag, cBotC, R_low,
             #                   iPicard, myIter, myTime)
@@ -290,7 +253,146 @@ def picard_solver(uIce, vIce, uVel, vVel, hIceMean, Area,
     if computePicardResidual and plotPicardResidual:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
-        ax[0].semilogy(residual[:iPicard]/residual[0],'x-')
+        ax[0].semilogy(residual/residual[0],'x-')
+        ax[0].set_title('residual')
+        plt.show()
+
+    return uIce, vIce
+
+def jfnk_solver(uIce, vIce, hIceMean, hSnowMean, Area,
+                uVel, vVel, forcingU, forcingV,
+                SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                R_low, myTime, myIter):
+
+    recip_deltaT = 1./deltaTdyn
+    bdfAlpha = 1.
+
+    # copy previous time step (n-1) of uIce, vIce
+    uIceLin = uIce.copy()
+    vIceLin = vIce.copy()
+    uIceNm1 = uIce.copy()
+    vIceNm1 = vIce.copy()
+
+    # this does not change
+    # mass*(uIceNm1)/deltaT
+    uIceRHSfix = forcingU + SeaIceMassU*uIceNm1*recip_deltaT
+    # mass*(vIceNm1)/deltaT
+    vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
+    # calculate ice strength
+    press0 = calc_ice_strength(hIceMean, iceMask)
+
+    residual = []
+    areaW = 0.5 * (Area + np.roll(Area,1,1))
+    areaS = 0.5 * (Area + np.roll(Area,1,0))
+    exitCode = 1
+    iJFNK = -1
+    resNonLin = 1.
+    JFNKtol = 0.
+    while resNonLin > JFNKtol and iJFNK < nJFNK:
+        iJFNK = iJFNK+1
+
+        # smoothing
+        wght=1.
+        uIceLin = wght*uIce+(1.-wght)*uIceLin
+        vIceLin = wght*vIce+(1.-wght)*vIceLin
+
+        # these are just for the lsr-preconditioner
+        cDrag = ocean_drag_coeffs(uIceLin, vIceLin, uVel, vVel)
+        cBotC = bottomdrag_coeffs(uIceLin, vIceLin, hIceMean, Area, R_low)
+        e11, e22, e12    = strainrates(uIceLin, vIceLin)
+        zeta, eta, press = viscosities(
+            e11, e22, e12, press0, iJFNK, myIter, myTime)
+
+        # first residual
+        Fu, Fv = calc_residual(uIce, vIce, hIceMean, hSnowMean, Area,
+                               SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                               uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
+                               iJFNK, myTime, myIter)
+
+        resNonLin = calc_nonlinear_residual(Fu, Fv)
+        residual.append(resNonLin)
+        # compute non-linear convergence criterion
+        if iJFNK==0:
+            JFNKtol = resNonLin*nonLinTol
+            resT    = resNonLin * 0.5
+            print('JFNKtol = %e'%JFNKtol)
+
+        # compute convergence criterion for linear solver
+        linTolMax = 0.99
+        linTolMin = 0.01
+        linTol = linTolMax
+        if iJFNK > 0 and iJFNK < 100 and resNonLin < resT:
+            # Eisenstat and Walker (1996), eq.(2.6)
+            linTol = 0.7*( resNonLin/resNonLinKm1 )**1.5
+            linTol = min(linTolMax, linTol)
+            linTol = max(linTolMin, linTol)
+        elif iJFNK==0:
+            resNonLinKm1 = resNonLin
+
+        if printJFNKResidual:
+            print(
+                'iJFNK = %3i, linTol = %f,   non-lin residual = %e'%(
+                    iJFNK, linTol, resNonLin) )
+
+        # transform 2D fields to vectors without overlaps
+        b = _2dToVec(Fu,Fv)
+        u = _2dToVec(uIce,vIce)
+        # set up Jacobian times vector operator
+        J = jacVecOp(u, uIce, vIce, Fu, Fv, hIceMean, hSnowMean, Area,
+                     zeta, eta, press, cDrag, cBotC,
+                     SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                     uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
+                     iJFNK, myTime, myIter)
+        # preconditioner
+        if useLsrAsPreconditioner:
+            M = preconditionerLSR(u, uVel, vVel, hIceMean, hSnowMean, Area,
+                                  zeta, eta, cDrag, cBotC, forcingU, forcingV,
+                                  SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                                  R_low)
+        else:
+            # matrix free solver that calls jacobian times vector
+            M = preconGmres(u, J)
+
+        if ( iJFNK < 0 ):
+            du, exitCode = spla.gmres(J, -b,
+                                  maxiter = nLinear, atol = linTol)
+        else:
+            du, exitCode = spla.gmres(J, -b,
+                                  M = M,
+                                  maxiter = nLinear, atol = linTol)
+
+        print('gmres: exitCode = %i, linTol = %f, %f, %f'%(
+            exitCode, linTol, du.min(), du.max() ) )
+        if np.abs(du).max() == 0:
+            print('Newton innovation vector = 0, stopping')
+            break
+
+        # Newton step with line search
+        iLineSearch = -1
+        lsGamma = 0.7
+        resNonLinLS = 2*resNonLin
+        while iLineSearch < 20 and resNonLinLS > resNonLin:
+            iLineSearch = iLineSearch + 1
+            lsFac = (1.-lsGamma)**iLineSearch
+            uIce, vIce = _vecTo2d(u + du*lsFac)
+            Fu, Fv = calc_residual(uIce, vIce, hIceMean, hSnowMean, Area,
+                                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                                   uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
+                                   iJFNK, myTime, myIter)
+            resNonLinLS =  calc_nonlinear_residual(Fu, Fv)
+            if resNonLinLS < resNonLin:
+                print('line search: %04i resKm1 = %e, %i updates = %e'%(
+                    iLineSearch+1,resNonLin,iLineSearch,resNonLinLS))
+
+        # save the residual for the next iteration
+        resNonLinKm1 = resNonLin
+        resNonLin    = resNonLinLS
+
+    # after the outer nonlinear iteration is done plot residual
+    if computeJFNKResidual and plotJFNKResidual:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(nrows=2,ncols=1,sharex=True)
+        ax[0].semilogy(residual/residual[0],'x-')
         ax[0].set_title('residual')
         plt.show()
 
