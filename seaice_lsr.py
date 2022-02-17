@@ -503,8 +503,10 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         while iLin < nLin and (doIterV or doIterV):
             iLin = iLin+1
 
-            if doIterU: uNm1 = uIce.copy()
-            if doIterV: vNm1 = vIce.copy()
+            if not useAsPreconditioner:
+                if doIterU: uNm1 = uIce.copy()
+                if doIterV: vNm1 = vIce.copy()
+
             if (doIterU or doIterV) and useAsPreconditioner:
                 # update rhs as a function of u/vIce instead of u/vIceC
                 # print('preconditioner: %i, %e, %e'%(
