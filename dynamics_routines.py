@@ -306,7 +306,8 @@ def calc_residual(uIce, vIce, hIceMean, hSnowMean, Area,
     # SeaIceMassU = 0.5 * ( SeaIceMassC + np.roll(SeaIceMassC,1,1) )
     # SeaIceMassV = 0.5 * ( SeaIceMassC + np.roll(SeaIceMassC,1,0) )
     # calculate ice strength
-    press0 = SeaIceStrength * hIceMean * np.exp(-cStar * (1 - Area)) * iceMask
+    press0 = calc_ice_strength(hIceMean, Area)
+    #
     cDrag = ocean_drag_coeffs(uIce, vIce, uVel, vVel)
     cBotC = bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low)
     e11, e22, e12    = strainrates(uIce, vIce)
