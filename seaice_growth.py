@@ -66,7 +66,7 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     # atmospheric fluxes
     # = 0: surface heat loss is balanced by upward conductive fluxes
     # < 0: net heat flux convergence at the ice/ snow surface
-    F_ia_net = np.zeros_like(iceMask)
+    # F_ia_net
 
     # the net heat flux divergence at the sea ice/snow
     # surface before snow is melted with any convergence
@@ -75,64 +75,16 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
 
     # net upward conductive heat flux
     # through sea ice and snow realized at the sea ice/snow surface (+ = upward)
-    F_io_net = np.zeros_like(iceMask)
+    # F_io_net
 
     # heat flux from atmosphere to ocean (+ = upward)
     # F_ao
 
     # heat flux from ocean to the ice (change of mixed layer temperature) (+ = upward)
-    F_oi = np.zeros_like(iceMask)
-
-
-    # sea ice growth rates in [m/s]
-
-    NetExistingIceGrowthRate = np.zeros_like(iceMask)
-    IceGrowthRateUnderExistingIce = np.zeros_like(iceMask)
-    IceGrowthRateFromSurface = np.zeros_like(iceMask)
-    IceGrowthRateMixedLayer = np.zeros_like(iceMask)
-
-    # change of ice thickness due to conversion of snow to ice if snow
-    # is submerged with water [m]
-    d_hIceMeanByFlood = np.zeros_like(iceMask)
-
-    # the energy taken out of the ocean which is used for sea ice growth [J]
-    ResidualEnergyOutOfOcean = np.zeros_like(iceMask)
+    # F_oi
 
     # snow accumulation rate over ice [m/s]
     SnowAccRateOverIce = np.zeros_like(iceMask)
-
-    # total snow accumulation over ice [m]
-    SnowAccOverIce = np.zeros_like(iceMask)
-
-    # the precipitation rate over the ice which goes immediately into
-    # the ocean (flowing through cracks in the ice)
-    PrecipRateOverIceSurfaceToSea = np.zeros_like(iceMask)
-
-    # the potential snow melt rate if all snow surface heat flux
-    # convergences goes to melting snow [m/s]
-    PotSnowMeltRateFromSurf = np.zeros_like(iceMask)
-
-    # the potential thickness of snow which could be melted by snow
-    # surface heat flux convergence [m]
-    PotSnowMeltFromSurf = np.zeros_like(iceMask)
-
-    # the actual snow melt rate due to snow surface heat flux convergence [m/s]
-    SnowMeltRateFromSurface = np.zeros_like(iceMask)
-
-    # the actual surface heat flux convergence used to melt snow [W/m2]
-    SurfHeatFluxConvergToSnowMelt = np.zeros_like(iceMask)
-
-    # the actual thickness of snow to be melted by snow surface
-    # heat flux convergence [m]
-    SnowMeltFromSurface = np.zeros_like(iceMask)
-
-    # the freshwater contribution to the ocean from melting snow [m]
-    FreshwaterContribFromSnowMelt = np.zeros_like(iceMask)
-
-    # the freshwater contribution to (from) the ocean from melting (growing) ice [m]
-    FreshwaterContribFromIce = np.zeros_like(iceMask)
-
-    dArea_dt = np.zeros_like(iceMask)
 
     # freshwater flux due to sublimation [kg/m2] (+ = upward)
     # FWsublim
@@ -144,15 +96,6 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     F_ia_mult = np.zeros(np.append(iceMask.shape,nITC))
     qswi_mult = np.zeros(np.append(iceMask.shape,nITC))
     FWsublim_mult = np.zeros(np.append(iceMask.shape,nITC))
-
-    # d(Area)/dt due to open water fluxes
-    dArea_oaFlux = np.zeros_like(iceMask)
-
-    # d(Area)/dt due to ocean-ice fluxes
-    dArea_oiFlux = np.zeros_like(iceMask)
-
-    # d(Area)/dt due to ice-atmosphere fluxes
-    dArea_iaFlux = np.zeros_like(iceMask)
 
     # constants for converting heat fluxes into growth rates
     qi = 1 / (rhoIce * lhFusion)
@@ -256,8 +199,10 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
 
     ##### evaluate precipitation as snow or rain #####
 
-    # if the temperature is above the freezing point, the precipitation
-    # remains wet and runs into the ocean
+    # the precipitation rate over the ice which goes immediately into the
+    # ocean (flowing through cracks in the ice). If the temperature is
+    # above the freezing point, the precipitation remains wet and runs
+    # into the ocean
     PrecipRateOverIceSurfaceToSea = precip.copy()
 
     # if there is ice and the temperature is below the freezing point,
@@ -266,6 +211,7 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     SnowAccRateOverIce[tmp] = snowPrecip[tmp] * rhoFresh2rhoSnow
     PrecipRateOverIceSurfaceToSea[tmp] = 0
 
+    # total snow accumulation over ice [m]
     SnowAccOverIce = SnowAccRateOverIce * AreapreTH * deltaTtherm
 
 
@@ -286,17 +232,15 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     # flux F_io_net and qi:
     IceGrowthRateUnderExistingIce = F_io_net * qi
 
-    # if there is a net heat flux convergence at the sea ice/snow surface
-    # (F_ia_net < 0), snow can be melted:
+    # the potential snow melt rate if all snow surface heat flux
+    # convergence (F_ia_net < 0) goes to melting snow [m/s]
     PotSnowMeltRateFromSurf = - F_ia_net * qs
 
-    # the depth of snow that can be melted in one time step:
+    # the thickness of snow that can be melted in one time step:
     PotSnowMeltFromSurf = PotSnowMeltRateFromSurf * deltaTtherm
 
     noPriorArea = np.where(AreapreTH == 0)
     IceGrowthRateUnderExistingIce[noPriorArea] = 0
-    IceGrowthRateFromSurface[noPriorArea] = 0
-    NetExistingIceGrowthRate[noPriorArea] = 0
 
     # if the heat flux convergence could melt more snow than is actually
     # there, the excess is used to melt ice:
@@ -310,15 +254,25 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     # when calculating dhIceMean_dt
     # and dhSnowMean_dt, the factor AreaPreTh can be dropped
     
+
     # case 1: snow will remain after melting, i.e. all of the heat flux
     # convergence will be used up to melt snow
-    SnowMeltFromSurface = PotSnowMeltFromSurf.copy()
-    SnowMeltRateFromSurface = PotSnowMeltRateFromSurf.copy()
+
+    # the actual surface heat flux convergence used to melt snow [W/m2]
     SurfHeatFluxConvergToSnowMelt = F_ia_net.copy()
+
+    # the actual snow melt rate due to snow surface heat flux convergence [m/s]
+    SnowMeltRateFromSurface = PotSnowMeltRateFromSurf.copy()
+
+    # the actual thickness of snow to be melted by snow surface
+    # heat flux convergence [m]
+    SnowMeltFromSurface = PotSnowMeltFromSurf.copy()
+
 
     # case 2: all snow will be melted if the potential snow melt height is
     # larger or equal to the actual snow height. If there is an excess of
     # heat flux convergence after snow melting, it will be used to melt ice
+
     allSnowMelted = np.where(PotSnowMeltFromSurf >= hSnowActual)
     SnowMeltFromSurface[allSnowMelted] = hSnowActual[allSnowMelted]
     SnowMeltRateFromSurface[allSnowMelted] = \
@@ -368,7 +322,7 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
 
     tmpscal0 =  0.5 * recip_hIceActual
 
-    # ice growth open water
+    # ice growth open water (due to ocean-atmosphere fluxes)
     # reduce ice cover if the open water growth rate is negative
     dArea_oaFlux = tmpscal0 * IceGrowthRateOpenWater * (1 - AreapreTH)
 
@@ -383,20 +337,20 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
         dArea_oaFlux[tmp] * recip_h0_south,
         dArea_oaFlux[tmp] * recip_h0)
 
-    # ice growth mixed layer
+    # ice growth mixed layer (due to ocean-ice fluxes)
     dArea_oiFlux = np.where(IceGrowthRateMixedLayer <= 0,
         #???: IceGrowthRateMixedLayer cant be positive bc the ocean is always 
         # warmer than the ice and therefore F_oi is always negative?
         # if yes, what is this check for?
         tmpscal0 * IceGrowthRateMixedLayer, 0)
 
-    # ice growth over ice (from ice atmosphere fluxes)
+    # ice growth over ice (due to ice-atmosphere fluxes)
     dArea_iaFlux = np.where((NetExistingIceGrowthRate <= 0) & (hIceMeanpreTH > 0),
         #???: why cant NetExistingIceGrowthRate be positive?
         tmpscal0 * NetExistingIceGrowthRate * AreapreTH, 0)
 
-    #update area derivative
-    dArea_dt = dArea_dt + dArea_oaFlux + dArea_oiFlux + dArea_iaFlux
+    # total change in area
+    dArea_dt = dArea_oaFlux + dArea_oiFlux + dArea_iaFlux
 
 
     ######  update sea ice cover fraction and mean ice and snow thickness #####
@@ -410,21 +364,23 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     hIceMean = np.clip(hIceMean, 0, None)
     hSnowMean = np.clip(hSnowMean, 0, None)
 
-    noIce = np.where((hIceMean == 0) | (Area <= 0))
+    noIce = np.where((hIceMean == 0) | (Area == 0))
     Area[noIce] = 0
     hSnowMean[noIce] = 0
     hIceMean[noIce] = 0
 
-
-    ##### output to ocean #####
-
-    Qsw = qswi * AreapreTH + qswo * (1 - AreapreTH)
-
-    # convert snow to ice if submerged
+    # change of ice thickness due to conversion of snow to ice if snow
+    # is submerged with water
     tmpscal0 = (hSnowMean * rhoSnow + hIceMean * rhoIce) * recip_rhoConst
     d_hIceMeanByFlood = np.maximum(0, tmpscal0 - hIceMean)
     hIceMean = hIceMean + d_hIceMeanByFlood
     hSnowMean = hSnowMean - d_hIceMeanByFlood * rhoice2rhosnow
+
+
+    ##### output to ocean #####
+
+    # effective shortwave heating rate
+    Qsw = qswi * AreapreTH + qswo * (1 - AreapreTH)
 
     # the actual ice volume change over the time step [m3/m2]
     ActualNewTotalVolumeChange = hIceMean - hIceMeanpreTH
@@ -440,15 +396,16 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     NetEnergyFluxOutOfOcean = (AreapreTH * (F_ia_net + F_io_net + qswi)
         + (1 - AreapreTH) * F_ao) * deltaTtherm
 
-    # if the net energy flux out of the ocean is balanced by the latent
+    # energy taken out of the ocean which is not used for sea ice growth [J].
+    # If the net energy flux out of the ocean is balanced by the latent
     # heat of fusion, the temperature of the mixed layer will not change
     ResidualEnergyOutOfOcean = NetEnergyFluxOutOfOcean - EnergyInNewTotalIceVolume
 
     # total heat flux out of the ocean [W/m2]
     Qnet = ResidualEnergyOutOfOcean * recip_deltaTtherm
 
-    # freshwater flux from melting [m3/m2] (positive if the ice
-    # thickness decreases/ melting occurs)
+    # the freshwater contribution to (from) the ocean from melting (growing)
+    # ice [m3/m2] (positive for melting)
     FreshwaterContribFromIce = - ActualNewTotalVolumeChange * rhoIce2rhoFresh
 
     # in the case of non-zero ice salinity, the freshwater contribution
@@ -467,7 +424,7 @@ def growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip,
     saltflux = (ActualNewTotalVolumeChange + SIhIceMeanNeg) * tmpscal0 \
         * iceMask * rhoIce * recip_deltaTtherm
 
-    # freshwater contribution from snow melt [m3/m2]
+    # the freshwater contribution to the ocean from melting snow [m]
     FreshwaterContribFromSnowMelt = ActualNewTotalSnowMelt / rhoFresh2rhoSnow
 
     # evaporation minus precipitation minus runoff (freshwater flux to ocean)
