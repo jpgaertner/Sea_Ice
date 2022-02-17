@@ -85,8 +85,8 @@ def jacVecOp(x, uIce, vIce, Fu, Fv, hIceMean, hSnowMean, Area,
 
     return LinearOperator((n,n), matvec = matvec, dtype = 'float64')
 
-def preconditionerLSR(x, uVel, vVel, hIceMean, Area,
-                      press, zeta, eta, cDrag, cBotC, forcingU, forcingV,
+def preconditionerLSR(x, uVel, vVel, hIceMean, hSnowMean, Area,
+                      zeta, eta, cDrag, cBotC, forcingU, forcingV,
                       SeaIceMassC, SeaIceMassU, SeaIceMassV,
                       R_low):
     # get size for convenience
@@ -95,14 +95,14 @@ def preconditionerLSR(x, uVel, vVel, hIceMean, Area,
     def M_x(x):
         u,v = _vecTo2d(x)
 
-        Au, Av = lsr_solver(u, v, uVel, vVel, hIceMean, Area,
-                            press, forcingU, forcingV,
+        Au, Av = lsr_solver(u, v, hIceMean*0, hSnowMean*0, Area,
+                            uVel, vVel, forcingU*0, forcingV*0,
                             SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                            R_low, nLsr = 0, nLin = 10,
+                            R_low, nLsr = 1, nLin = 10,
                             useAsPreconditioner = True,
                             zeta = zeta, eta = eta,
                             cDrag = cDrag, cBotC = cBotC,
-                            myTime = 0, myIter = 0)
+                            myTime = -1., myIter = -1)
 
         return _2dToVec(Au,Av)
 
@@ -199,10 +199,10 @@ def picard_solver(uIce, vIce, hIceMean, hSnowMean, Area,
                       SeaIceMassC, SeaIceMassU, SeaIceMassV,
                       cDrag, cBotC, R_low,
                       iPicard, myTime, myIter)
-        # M = preconditionerLSR( u, uVel, vVel, hIceMean, Area,
-        #                        press, forcingU, forcingV,
-        #                        SeaIceMassC, SeaIceMassU, SeaIceMassV,
-        #                        R_low, zeta, eta, cDrag, cBotC )
+        # M = preconditionerLSR(u, uVel, vVel, hIceMean, hSnowMean, Area,
+        #                       zeta, eta, cDrag, cBotC, forcingU, forcingV,
+        #                       SeaIceMassC, SeaIceMassU, SeaIceMassV,
+        #                       R_low)
         # M = preconditionerSolve(u, zeta, eta, press,
         #                         hIceMean, Area, areaW, areaS,
         #                         SeaIceMassC, SeaIceMassU, SeaIceMassV,
@@ -290,16 +290,19 @@ def jfnk_solver(uIce, vIce, hIceMean, hSnowMean, Area,
     JFNKtol = 0.
     while resNonLin > JFNKtol and iJFNK < nJFNK:
         iJFNK = iJFNK+1
+
         # smoothing
         wght=1.
         uIceLin = wght*uIce+(1.-wght)*uIceLin
         vIceLin = wght*vIce+(1.-wght)*vIceLin
+
         # these are just for the lsr-preconditioner
         cDrag = ocean_drag_coeffs(uIceLin, vIceLin, uVel, vVel)
         cBotC = bottomdrag_coeffs(uIceLin, vIceLin, hIceMean, Area, R_low)
         e11, e22, e12    = strainrates(uIceLin, vIceLin)
         zeta, eta, press = viscosities(
             e11, e22, e12, press0, iJFNK, myIter, myTime)
+
         # first residual
         Fu, Fv = calc_residual(uIce, vIce, hIceMean, hSnowMean, Area,
                                SeaIceMassC, SeaIceMassU, SeaIceMassV,
@@ -308,6 +311,7 @@ def jfnk_solver(uIce, vIce, hIceMean, hSnowMean, Area,
 
         resNonLin = calc_nonlinear_residual(Fu, Fv)
         residual.append(resNonLin)
+        # compute non-linear convergence criterion
         if iJFNK==0:
             JFNKtol = resNonLin*nonLinTol
             resT    = resNonLin * 0.5
@@ -330,31 +334,26 @@ def jfnk_solver(uIce, vIce, hIceMean, hSnowMean, Area,
                 'iJFNK = %3i, linTol = %f,   non-lin residual = %e'%(
                     iJFNK, linTol, resNonLin) )
 
-        # transform to vectors without overlaps
+        # transform 2D fields to vectors without overlaps
         b = _2dToVec(Fu,Fv)
         u = _2dToVec(uIce,vIce)
-        # set up linear operator
+        # set up Jacobian times vector operator
         J = jacVecOp(u, uIce, vIce, Fu, Fv, hIceMean, hSnowMean, Area,
                      zeta, eta, press, cDrag, cBotC,
                      SeaIceMassC, SeaIceMassU, SeaIceMassV,
                      uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
                      iJFNK, myTime, myIter)
         # preconditioner
-        # M = preconditionerLSR( u, uVel, vVel, hIceMean, Area,
-        #                        press, forcingU, forcingV,
-        #                        SeaIceMassC, SeaIceMassU, SeaIceMassV,
-        #                        R_low, zeta, eta, cDrag, cBotC )
-        # M = preconditionerSolve(u, zeta, eta, press,
-        #                         hIceMean, Area, areaW, areaS,
-        #                         SeaIceMassC, SeaIceMassU, SeaIceMassV,
-        #                         cDrag, cBotC, R_low,
-        #                         iJFNK, myTime, myIter)
+        M = preconditionerLSR(u, uVel, vVel, hIceMean, hSnowMean, Area,
+                              zeta, eta, cDrag, cBotC, forcingU, forcingV,
+                              SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                              R_low)
         # matrix free solver that calls jacobian times vector
+        # M = preconGmres(u, J)
         if ( iJFNK < 0 ):
             du, exitCode = spla.gmres(J, -b,
                                   maxiter = nLinear, atol = linTol)
         else:
-            M = preconGmres(u, J)
             du, exitCode = spla.gmres(J, -b,
                                   M = M,
                                   maxiter = nLinear, atol = linTol)
