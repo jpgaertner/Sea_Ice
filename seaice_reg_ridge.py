@@ -47,7 +47,7 @@ def clean_up_advection(hIceMean, hSnowMean, Area, TIceSnow):
     iceOrSnow = np.where((hIceMean > 0) | (hSnowMean > 0))
     Area[iceOrSnow] = np.maximum(Area[iceOrSnow], area_floor)
 
-    return hIceMean, hSnowMean, Area, os_hIceMean, os_hSnowMean
+    return hIceMean, hSnowMean, Area, TIceSnow, os_hIceMean, os_hSnowMean
 
 
 def ridging(Area):
