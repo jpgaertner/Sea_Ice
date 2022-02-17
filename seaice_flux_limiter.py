@@ -1,5 +1,3 @@
-# statement function to describe flux limiter
-
 import numpy as np
 
 

@@ -22,10 +22,6 @@ from seaice_fill_overlap import fill_overlap
 
 def fluxlimit_adv_y(vFld, tracer, vTrans, deltatLoc, maskLocS):
 
-    # output
-    vT = np.zeros((sNy+2*OLy,sNx+2*OLx))
-
-    # local variables
     CrMax = 1e6
 
     vCFL = np.abs(vFld * deltatLoc * recip_dyC)
@@ -46,8 +42,10 @@ def fluxlimit_adv_y(vFld, tracer, vTrans, deltatLoc, maskLocS):
     # limit Cr
     Cr = limiter(Cr)
 
-    vT[2:-1,:] = vTrans[2:-1,:] * (tracer[2:-1,:] + tracer[1:-2,:]) * 0.5 - np.abs(vTrans[2:-1,:]) * ((1 - Cr) + vCFL[2:-1,:] * Cr ) * Rj * 0.5
-
+    vT = np.zeros_like(iceMask)
+    vT[2:-1,:] = vTrans[2:-1,:] * (tracer[2:-1,:] + tracer[1:-2,:]) * 0.5 \
+                    - np.abs(vTrans[2:-1,:]) * ((1 - Cr) + vCFL[2:-1,:] * Cr ) \
+                    * Rj * 0.5
     vT = fill_overlap(vT)
 
 
