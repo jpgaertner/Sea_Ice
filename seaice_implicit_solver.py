@@ -45,7 +45,7 @@ def _2dToVec(u,v):
     return vec
 
 def calc_nonlinear_residual( Fu, Fv ):
-    return np.sqrt( (_2dToVec(Fu,Fv)**2).sum() )
+    return np.sqrt( _2dToVec(Fu**2*rAw,Fv**2*rAs).sum()/globalArea )
 
 def matVecOp(x, zeta, eta, press,
              hIceMean, Area, areaW, areaS,
