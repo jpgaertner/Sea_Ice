@@ -51,6 +51,9 @@ LWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*180 #20 winter
 ATemp = np.ones((sNx+2*OLx,sNy+2*OLy))* 253
 aqh = np.ones((sNx+2*OLx,sNy+2*OLy))*0#1e-4
 
+os_hIceMean = np.zeros_like(iceMask)
+os_hSnowMean = np.zeros_like(iceMask)
+
 ice = np.array([hIceMean[0,0]])
 snow = np.array([hSnowMean[0,0]])
 qnet = np.array([Qnet[0,0]])
@@ -64,7 +67,7 @@ timesteps = 60*12
 
 for i in range(timesteps):
     hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw_out, Qnet_out, seaIceLoad = (
-        growth(hIceMean, hSnowMean, Area, salt, TIceSnow, precip, snowPrecip, evap, 
+        growth(hIceMean, hSnowMean, Area, os_hIceMean, os_hSnowMean, salt, TIceSnow, precip, snowPrecip, evap, 
         runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh))
 
     ice = np.append(ice, hIceMean[0,0])
