@@ -390,21 +390,19 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
     areaW = 0.5 * (Area + np.roll(Area,1,1))
     areaS = 0.5 * (Area + np.roll(Area,1,0))
 
-    # copy previous time step (n-1) of uIce, vIce
-    uIceNm1 = uIce.copy()
-    vIceNm1 = vIce.copy()
-
     # this does not change in Picard iteration
     if useAsPreconditioner:
         uIceRHSfix = uIce.copy()
         vIceRHSfix = vIce.copy()
+        # do not calculate ice strength, not needed
     else:
+        # copy previous time step (n-1) of uIce, vIce
+        uIceNm1 = uIce.copy()
+        vIceNm1 = vIce.copy()
         # mass*(uIceNm1)/deltaT
         uIceRHSfix = forcingU + SeaIceMassU*uIceNm1*recip_deltaT
         # mass*(vIceNm1)/deltaT
         vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
-
-    if not useAsPreconditioner:
         # calculate ice strength
         press0 = calc_ice_strength(hIceMean, iceMask)
 
@@ -416,30 +414,31 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         #     print('HALLO PRECONDITIONER %i, %e'%(iLsr, resNonLin))
 
         iLsr = iLsr+1
-        if iLsr==0:
-            # This is the predictor time step
-            uIceC = uIce.copy()
-            vIceC = vIce.copy()
-        elif iLsr==1 and nLsr <= 2:
-            # This is the modified Euler step
-            uIce  = 0.5*( uIce+uIceNm1 )
-            vIce  = 0.5*( vIce+vIceNm1 )
-            uIceC = uIce.copy()
-            vIceC = vIce.copy()
-        else:
-            # This is the case for nLsr > 2, and here we use
-            # a different iterative scheme. u/vIceC = u/vIce is unstable, and
-            # different stabilisation methods are possible.
-
-            # This is stable but slow to converge.
-            # uIceC = 0.5*( uIce+uIceNm1 )
-            # vIceC = 0.5*( vIce+vIceNm1 )
-            # This converges slightly faster than the previous lines.
-            wght = .5
-            uIceC = wght*uIce+(1.-wght)*uIceC
-            vIceC = wght*vIce+(1.-wght)*vIceC
-
         if not useAsPreconditioner:
+            if iLsr==0:
+                # This is the predictor time step
+                uIceC = uIce.copy()
+                vIceC = vIce.copy()
+            elif iLsr==1 and nLsr <= 2:
+                # This is the modified Euler step
+                uIce  = 0.5*( uIce+uIceNm1 )
+                vIce  = 0.5*( vIce+vIceNm1 )
+                uIceC = uIce.copy()
+                vIceC = vIce.copy()
+            else:
+                # This is the case for nLsr > 2, and here we use a
+                # different iterative scheme. u/vIceC = u/vIce is
+                # unstable, and different stabilisation methods are
+                # possible.
+
+                # This is stable but slow to converge.
+                # uIceC = 0.5*( uIce+uIceNm1 )
+                # vIceC = 0.5*( vIce+vIceNm1 )
+                # This converges slightly faster than the previous lines.
+                wght = .8
+                uIceC = wght*uIce+(1.-wght)*uIceC
+                vIceC = wght*vIce+(1.-wght)*vIceC
+
             # drag coefficients for ice-ocean and basal drag
             cDrag = ocean_drag_coeffs(uIceC, vIceC, uVel, vVel)
             cBotC = bottomdrag_coeffs(uIceC, vIceC, hIceMean, Area, R_low)
@@ -447,24 +446,24 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
             e11, e22, e12    = strainrates(uIceC, vIceC)
             zeta, eta, press = viscosities(
                 e11, e22, e12, press0, iLsr, myTime, myIter)
+            #
+            uIceRHS, vIceRHS = calc_rhs_lsr(
+                uIceRHSfix, vIceRHSfix, areaW, areaS, uIceC, vIceC,
+                uVel, vVel, cDrag, zeta, eta, press,
+                SeaIceMassC, iLsr, myTime, myIter)
 
         AU, BU, CU, AV, BV, CV, uRt1, uRt2, vRt1, vRt2 = lsr_coefficents(
             zeta, eta, cDrag+cBotC, SeaIceMassU, SeaIceMassV,
             areaW, areaS,
             iLsr, myTime, myIter)
 
-        if useAsPreconditioner and computeLsrResidual:
-            uIceRHS, vIceRHS = calc_rhs_lsr(
-                uIceRHSfix, vIceRHSfix, areaW, areaS,
-                uIce, vIce, uVel, vVel, cDrag, zeta, eta, np.zeros(zeta.shape),
-                SeaIceMassC, iLsr, myTime, myIter)
-        elif not useAsPreconditioner:
-            uIceRHS, vIceRHS = calc_rhs_lsr(
-                uIceRHSfix, vIceRHSfix, areaW, areaS,
-                uIceC, vIceC, uVel, vVel, cDrag, zeta, eta, press,
-                SeaIceMassC, iLsr, myTime, myIter)
-
         if computeLsrResidual:
+            if useAsPreconditioner:
+                uIceRHS, vIceRHS = calc_rhs_lsr(
+                    uIceRHSfix, vIceRHSfix, areaW, areaS, uIce, vIce,
+                    uVel, vVel, cDrag, zeta, eta, np.zeros_like(hIceMean),
+                    SeaIceMassC, iLsr, myTime, myIter)
+
             residUpre, residVpre, uRes, vRes = lsr_residual(
                 uIceRHS, vIceRHS, uRt1, uRt2, vRt1, vRt2,
                 AU, BU, CU, AV, BV, CV, uIce, vIce,
@@ -512,7 +511,7 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
                 #          iLsr,uIce.max(),vIce.max()))
                 uIceRHS, vIceRHS = calc_rhs_lsr(
                     uIceRHSfix, vIceRHSfix, areaW, areaS,
-                    uIce, vIce, uVel, vVel, np.zeros(cDrag.shape),
+                    uIce, vIce, uVel, vVel, np.zeros_like(hIceMean),
                     zeta, eta, np.zeros(zeta.shape),
                     SeaIceMassC, -1, myTime, myIter)
 
