@@ -41,7 +41,6 @@ def clean_up_advection(hIceMean, hSnowMean, Area, TIceSnow):
     noIceSnow = np.where((hIceMean == 0) & (hSnowMean == 0))
     Area[noIceSnow] = 0
 
-
     # case 4: very small area
     # introduce lower boundary for the area (if ice or snow is present)
     iceOrSnow = np.where((hIceMean > 0) | (hSnowMean > 0))
