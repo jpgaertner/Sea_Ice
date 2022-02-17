@@ -18,6 +18,8 @@ from seaice_lsr import lsr_solver
 nLinear = 50
 nonLinTol = 1e-5
 
+useLsrAsPreconditioner = True
+
 nPicard = 10
 computePicardResidual = True
 printPicardResidual = True
@@ -174,7 +176,8 @@ def picard_solver(uIce, vIce, hIceMean, hSnowMean, Area,
     exitCode = 1
     iPicard = -1
     resNonLin = nonLinTol*2
-    linTol = 1e-1
+    linTolMax = 1e-1
+    linTol = linTolMax
     while resNonLin > nonLinTol and iPicard < nPicard:
         iPicard = iPicard+1
         # smoothing
@@ -199,23 +202,20 @@ def picard_solver(uIce, vIce, hIceMean, hSnowMean, Area,
                       SeaIceMassC, SeaIceMassU, SeaIceMassV,
                       cDrag, cBotC, R_low,
                       iPicard, myTime, myIter)
-        # M = preconditionerLSR(u, uVel, vVel, hIceMean, hSnowMean, Area,
-        #                       zeta, eta, cDrag, cBotC, forcingU, forcingV,
-        #                       SeaIceMassC, SeaIceMassU, SeaIceMassV,
-        #                       R_low)
-        # M = preconditionerSolve(u, zeta, eta, press,
-        #                         hIceMean, Area, areaW, areaS,
-        #                         SeaIceMassC, SeaIceMassU, SeaIceMassV,
-        #                         cDrag, cBotC, R_low,
-        #                         iPicard, myTime, myIter)
-        M = preconGmres(u, A)
+        if useLsrAsPreconditioner:
+            M = preconditionerLSR(u, uVel, vVel, hIceMean, hSnowMean, Area,
+                                  zeta, eta, cDrag, cBotC, forcingU, forcingV,
+                                  SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                                  R_low)
+        else:
+            M = preconGmres(u, A)
 
         if exitCode == 0:
             linTolMin = 1e-2
-            linTol = max(linTol*(1-.7),linTolMin)
+            linTol = max(linTol*(1-.1),linTolMin)
         else:
             # reset
-            linTol = 1.e-1
+            linTol = linTolMax
 
         if computePicardResidual:
             # print(np.allclose(A.dot(u1), b))
@@ -344,12 +344,15 @@ def jfnk_solver(uIce, vIce, hIceMean, hSnowMean, Area,
                      uIceRHSfix, vIceRHSfix, uVel, vVel, R_low,
                      iJFNK, myTime, myIter)
         # preconditioner
-        M = preconditionerLSR(u, uVel, vVel, hIceMean, hSnowMean, Area,
-                              zeta, eta, cDrag, cBotC, forcingU, forcingV,
-                              SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                              R_low)
-        # matrix free solver that calls jacobian times vector
-        # M = preconGmres(u, J)
+        if useLsrAsPreconditioner:
+            M = preconditionerLSR(u, uVel, vVel, hIceMean, hSnowMean, Area,
+                                  zeta, eta, cDrag, cBotC, forcingU, forcingV,
+                                  SeaIceMassC, SeaIceMassU, SeaIceMassV,
+                                  R_low)
+        else:
+            # matrix free solver that calls jacobian times vector
+            M = preconGmres(u, J)
+
         if ( iJFNK < 0 ):
             du, exitCode = spla.gmres(J, -b,
                                   maxiter = nLinear, atol = linTol)
