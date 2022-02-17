@@ -63,9 +63,9 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug,
     ##### initializations #####
 
     TSurfOut = TSurfIn.copy()
+
+    # upward seaice/snow surface heat flux to atmosphere [W/m^2]
     F_ia = np.zeros_like(iceMask)
-    #F_ia_net
-    F_io_net = np.zeros_like(iceMask)
 
     # the shortwave radiative flux at the ocean-ice interface (+ = upwards)
     IcePenetSW = np.zeros_like(iceMask)
@@ -103,13 +103,11 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug,
     # make local copies of downward longwave radiation, surface
     # and atmospheric temperatures
     TSurfLoc = TSurfIn.copy()
-    #???: use cap?
-    # TSurfLoc = np.minimum(celsius2k + maxTIce, TSurfIn)
     LWDownLocBound = np.maximum(minLwDown, LWDown)
     ATempLoc = np.maximum(celsius2K + minTAir, ATemp)
 
 
-    ##### determine fixed (relative to surface temperature) forcing term in heat budget #####
+    ##### determine forcing term in heat budget #####
 
     isIce = np.where(hIceActual > 0)
     isSnow = np.where(hSnowActual > 0)
@@ -222,8 +220,9 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug,
     F_c, F_lh, F_ia, dFia_dTs = fluxes(t1)
 
     # case 1: F_c <= 0
-    # F_io_net is already set up as zero everywhere
+    F_io_net = np.zeros_like(iceMask)
     F_ia_net = F_ia.copy()
+
     # case 2: F_c > 0
     upCondflux = np.where(F_c > 0)
     F_io_net[upCondflux] = F_c[upCondflux]
