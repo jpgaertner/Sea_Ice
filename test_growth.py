@@ -24,18 +24,18 @@ from seaice_params import *
 from seaice_growth import growth
 import matplotlib.pyplot as plt
 
-sNx = 1
-sNy = 1
-OLx = 2
-OLy = 2
+# # for the 1d test
+# sNx = 1
+# sNy = 1
+# OLx = 2
+# OLy = 2
 
 
 
-hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 1.3
-Area = np.ones((sNx+2*OLx,sNy+2*OLy))* 0.9
-hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0.1
+hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 1.3 * iceMask
+Area = np.ones((sNx+2*OLx,sNy+2*OLy))* 0.9 * iceMask
+hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0.1 * iceMask
 
-iceMask = np.ones((sNx+2*OLx,sNy+2*OLy))*1
 salt = np.ones((sNx+2*OLx,sNy+2*OLy))*29
 TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC)) * 248.7569580078125
 precip = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #order 1e-6
@@ -64,7 +64,6 @@ days = np.array([0])
 
 timesteps = 60*12
 
-
 for i in range(timesteps):
     hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw_out, Qnet_out, seaIceLoad = (
         growth(hIceMean, hSnowMean, Area, os_hIceMean, os_hSnowMean, salt, TIceSnow, precip, snowPrecip, evap, 
@@ -78,22 +77,23 @@ for i in range(timesteps):
     qsw = np.append(qsw, Qsw[0,0])
     days = np.append(days,i)
 
-
-
-
-fig, axs = plt.subplots(2,2, figsize=(10,6))
-axs[0,0].plot(ice)
-axs[0,0].set_ylabel("Ice Thickness")
-axs[0,1].plot(snow)
-axs[0,1].set_ylabel("Snow Thickness")
-axs[1,0].plot(area)
-axs[1,0].set_ylabel("Area")
-axs[1,1].plot(iceTemp)
-axs[1,1].set_ylabel("Ice Temperature")
-
-
-fig.tight_layout()
+import matplotlib.pyplot as plt
+plt.contourf(hIceMean[OLy:-OLy,OLx:-OLx])
+plt.colorbar()
 plt.show()
+
+# fig, axs = plt.subplots(2,2, figsize=(10,6))
+# axs[0,0].plot(ice)
+# axs[0,0].set_ylabel("Ice Thickness")
+# axs[0,1].plot(snow)
+# axs[0,1].set_ylabel("Snow Thickness")
+# axs[1,0].plot(area)
+# axs[1,0].set_ylabel("Area")
+# axs[1,1].plot(iceTemp)
+# axs[1,1].set_ylabel("Ice Temperature")
+
+# fig.tight_layout()
+# plt.show()
 
 # print(ice[timesteps])
 # print(area[timesteps])
