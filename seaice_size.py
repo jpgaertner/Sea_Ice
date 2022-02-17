@@ -1,38 +1,19 @@
-#Declaring the size of the underlying grid
-
-# The design here supports a three-dimensional model grid
-# with indices I,J and K. The three-dimensional domain
-# is comprised of nPx*nSx blocks (or tiles) of size sNx
-# along the first (left-most index) axis, nPy*nSy blocks
-# of size sNy along the second axis and one block of size
-# Nr along the vertical (third) axis.
-# Blocks/tiles have overlap regions of size OLx and OLy
-# along the dimensions that are subdivided.
-
-
 import numpy as np
 from seaice_fill_overlap import fill_overlap
 
-# for the 1d model
-sNx = 1
-sNy = 1
+# # for the 1d test
+# sNx = 1
+# sNy = 1
+# OLx = 2
+# OLy = 2
+
+# number of cells of tile along x, y axis
+sNx = 65
+sNy = 65
+
+# number of cells in tile overlap
 OLx = 2
 OLy = 2
-
-
-# sNx = 65 #Number of X points in tile
-# sNy = 65 #Number of Y points in tile
-# OLx = 2 #Tile overlap extent in X
-# OLy = 2 #Tile overlap extent in Y
-#nSx =   1 #Number of tiles per process in X
-#nSy =   1 #Number of tiles per process in Y
-#tiles are subprocesses that can work with the same memory
-#nPx =   1 #Number of processes to use in X
-#nPy =   1 #Number of processes to use in Y
-#different processes for working with multiple cpus
-#Nx  = sNx*nSx*nPx #Number of points in X for the full domain
-#Ny  = sNy*nSy*nPy #Number of points in Y for the full domain
-Nr  =  26 #Number of points in vertical direction
 
 # number of ice thickness categories
 # instead of assuming just one thickness for a grid cell, a distribution of
@@ -41,7 +22,8 @@ Nr  =  26 #Number of points in vertical direction
 nITC = 1
 recip_nITC = 1 / nITC
 
-gridcellWidth = 8000. #grid cell width in m
+# grid cell width [m]
+gridcellWidth = 8000.
 
 # grid descriptor variables
 deltaX = np.ones((sNy+2*OLy,sNx+2*OLx))*gridcellWidth
@@ -72,7 +54,7 @@ recip_rAz = 1 / rAz
 recip_rAw = 1 / rAw
 recip_rAs = 1 / rAs
 
-#coriolis parameter at grid center point
+# coriolis parameter at grid center point
 fCori = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0. #1.e-4
 
 # masks for introducing boundaries
@@ -96,10 +78,10 @@ k2AtC = np.zeros((sNy+2*OLy,sNx+2*OLx))
 k1AtZ = np.zeros((sNy+2*OLy,sNx+2*OLx))
 k2AtZ = np.zeros((sNy+2*OLy,sNx+2*OLx))
 
-# for the 1d model
-maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))
-maskInW = np.ones((sNy+2*OLy,sNx+2*OLx))
-maskInS = np.ones((sNy+2*OLy,sNx+2*OLx))
-iceMask = maskInC.copy()
-SeaIceMaskU = maskInW.copy()
-SeaIceMaskV = maskInS.copy()
+# # for the 1d test
+# maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))
+# maskInW = np.ones((sNy+2*OLy,sNx+2*OLx))
+# maskInS = np.ones((sNy+2*OLy,sNx+2*OLx))
+# iceMask = maskInC.copy()
+# SeaIceMaskU = maskInW.copy()
+# SeaIceMaskV = maskInS.copy()
