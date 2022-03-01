@@ -129,9 +129,9 @@ useLSR       = False
 usePicard    = False
 useJFNK      = False
 
-#useEVP = True
+useEVP = True
 #useLSR = True
 #usePicard=True
-useJFNK = True
+# useJFNK = True
 
 noSlip = True

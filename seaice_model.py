@@ -40,8 +40,8 @@ hice = 0.3 + 0.005*(np.sin(60./1000.e3*xx) + np.sin(30./1000.e3*yy))
 # vVel = fill_overlap(vVel)
 
 
-hSnowMean = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-Area = np.ones((sNy+2*OLy,sNx+2*OLx)) * iceMask
+hSnowMean = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0.1
+Area = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0.9
 TIceSnow = np.ones((sNy+2*OLy,sNx+2*OLx,nITC))*celsius2K
 
 uIce = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0.0
@@ -74,7 +74,7 @@ secondOrderBC = False
 
 plt.close('all')
 monFreq = 5
-nTimeSteps = 1
+nTimeSteps = 50
 nIter0 = 0
 
 for i in range(nTimeSteps):
