@@ -32,7 +32,6 @@ from seaice_params import *
 # IcePenetSW: short wave heat flux arriving at the ocean-ice interface (+ = upward) [W/m^2]
 # FWsublim: fresh water (mass) flux due to sublimation (+ = upward) [kg/sm2]
 
-
 def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug,
     SWDown, LWDown, ATemp, aqh):
 
@@ -60,119 +59,74 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug,
     # temperature threshold for when to use wet albedo
     SurfMeltTemp = Tmelt + wetAlbTemp 
 
-
-    ##### initializations #####
-
-    TSurfOut = TSurfIn.copy()
-
-    # upward seaice/snow surface heat flux to atmosphere [W/m^2]
-    F_ia = np.zeros_like(iceMask)
-
-    # the shortwave radiative flux at the ocean-ice interface (+ = upwards)
-    IcePenetSW = np.zeros_like(iceMask)
-
-    # reshwater flux due to sublimation [kg/m2] (+ = upward)
-    FWsublim = np.zeros_like(iceMask)
-        
-    # effective conductivity of ice and snow combined
-    effConduct = np.zeros_like(iceMask)
-
-    # derivative of F_ia w.r.t snow/ice surf. temp
-    dFia_dTs = np.zeros_like(iceMask)
-
-    # shortwave radiative flux convergence in the sea ice
-    absorbedSW = np.zeros_like(iceMask)
-
-    # saturation vapor pressure of snow/ice surface
-    qhice = np.zeros_like(iceMask)
-
-    # derivative of qhice w.r.t snow/ice surf. temp
-    dqh_dTs = np.zeros_like(iceMask)
-
-    # latent heat flux (sublimation) (+ = upward)
-    F_lh = np.zeros_like(iceMask)
-
-    # upward long-wave surface heat flux (+ = upward)
-    F_lwu = np.zeros_like(iceMask)
-
-    # sensible surface heat flux (+ = upward)
-    F_sens = np.zeros_like(iceMask)
-
-    # conductive heat flux through ice and snow (+ = upward)
-    F_c = np.zeros_like(iceMask)
-
     # make local copies of downward longwave radiation, surface
     # and atmospheric temperatures
-    TSurfLoc = TSurfIn.copy()
-    LWDownLocBound = np.maximum(minLwDown, LWDown)
+    TSurfLoc = TSurfIn
+    LWDownLocCapped = np.maximum(minLwDown, LWDown)
     ATempLoc = np.maximum(celsius2K + minTAir, ATemp)
 
 
     ##### determine forcing term in heat budget #####
 
-    isIce = np.where(hIceActual > 0)
-    isSnow = np.where(hSnowActual > 0)
+    # returns arrays with the size of hIceActual with True or False values
+    isIce = (hIceActual > 0)
+    isSnow = (hSnowActual > 0)
 
-    d3 = np.ones((sNy+2*OLy,sNx+2*OLx)) * iceEmiss * stefBoltz
-    d3[isSnow] = snowEmiss * stefBoltz
+    d3 = np.where(isSnow, snowEmiss, iceEmiss) * stefBoltz
 
-    LWDownLoc = iceEmiss * LWDownLocBound
-    LWDownLoc[isSnow] = snowEmiss * LWDownLocBound[isSnow]
+    LWDownLoc = np.where(isSnow, snowEmiss, iceEmiss) * LWDownLocCapped
 
 
     ##### determine albedo #####
 
-    albIce = np.zeros_like(iceMask)
-    albSnow = np.zeros_like(iceMask)
-    alb = np.zeros_like(iceMask)
-
     # use albedo of dry surface (if ice is present)
-    albIce[isIce] = dryIceAlb
-    albSnow[isIce] = drySnowAlb
+    albIce = np.where(isIce, dryIceAlb, 0)
+    albSnow = np.where(isIce, drySnowAlb, 0)
 
     # use albedo of wet surface if surface is thawing
-    useWetAlb = np.where(TSurfLoc[isIce] >= SurfMeltTemp)
-    albIce[isIce][useWetAlb] = dryIceAlb
-    albSnow[isIce][useWetAlb] = drySnowAlb
+    useWetAlb = ((hIceActual > 0) & (TSurfLoc >= SurfMeltTemp))
+    albIce = np.where(useWetAlb, wetIceAlb, albIce)
+    albSnow = np.where(useWetAlb, wetSnowAlb, albSnow)
 
     # same for southern hermisphere
-    south = np.where(fCori[isIce] < 0)
-    albIce[isIce][south] = dryIceAlb_south
-    albSnow[isIce][south] = drySnowAlb_south
-    useWetAlb_south = np.where(TSurfLoc[isIce][south] >= SurfMeltTemp)
-    albIce[isIce][south][useWetAlb_south] = dryIceAlb
-    albSnow[isIce][south][useWetAlb_south] = drySnowAlb
+    south = ((hIceActual > 0) & (fCori < 0))
+    albIce = np.where(south, dryIceAlb_south, albIce)
+    albSnow = np.where(south, drySnowAlb_south, albSnow)
+    useWetAlb_south = ((hIceActual > 0) & (fCori < 0) & (TSurfLoc >= SurfMeltTemp))
+    albIce = np.where(useWetAlb_south, wetIceAlb_south, albIce)
+    albSnow = np.where(useWetAlb_south, wetSnowAlb_south, albSnow)
 
     # if the snow thickness is smaller than hCut, use linear transition
     # between ice and snow albedo
-    alb[isIce] = albIce[isIce] + hSnowActual[isIce] / hCut * (
-        albSnow[isIce] - albIce[isIce])
+    alb = np.where(isIce, albIce + hSnowActual / hCut * (albSnow - albIce), 0)
 
-    # is the snow thickness is larger than hCut, the snow is opaque for
+    # if the snow thickness is larger than hCut, the snow is opaque for
     # shortwave radiation -> use snow albedo
-    alb[isIce] = np.where(hSnowActual[isIce] > hCut, albSnow[isIce], alb[isIce])
+    alb = np.where(hSnowActual > hCut, albSnow, alb)
 
     # if no snow is present, use ice albedo
-    alb[isIce] = np.where(hSnowActual[isIce] == 0, albIce[isIce], alb[isIce])
+    alb = np.where(hSnowActual == 0, albIce, alb)
 
 
     ##### determine the shortwave radiative flux arriving at the     #####
     #####  ice-ocean interface after scattering through snow and ice #####
 
-    # if snow is present, all radiation is absorbed in the ice
-    penetSWFrac = np.zeros_like(iceMask)
-    penetSWFrac[isIce] = shortwave * np.exp(-1.5 * hIceActual[isIce])
-    penetSWFrac[isSnow] = 0
+    # the fraction of shortwave radiative flux that arrives at the ocean
+    # surface after passing the ice
+    penetSWFrac = np.where(isIce, shortwave * np.exp(-1.5 * hIceActual), 0)
+
+    # if snow is present, all radiation is absorbed
+    penetSWFrac = np.where(isSnow, 0, penetSWFrac)
 
     # shortwave radiative flux at the ocean-ice interface (+ = upward)
-    IcePenetSW[isIce] = -(1 - alb[isIce]) * penetSWFrac[isIce] * SWDown[isIce]
+    IcePenetSW = np.where(isIce, -(1 - alb) * penetSWFrac * SWDown, 0)
 
     # shortwave radiative flux convergence in the ice
-    absorbedSW[isIce] = (1 - alb[isIce]) * (1 - penetSWFrac[isIce]) * SWDown[isIce]
+    absorbedSW = np.where(isIce, (1 - alb) * (1 - penetSWFrac) * SWDown, 0)
     
     # effective conductivity of the snow-ice system
-    effConduct[isIce] = iceConduct * snowConduct / (
-        snowConduct * hIceActual[isIce] + iceConduct * hSnowActual[isIce])
+    effConduct = np.where(isIce, iceConduct * snowConduct / (
+                    snowConduct * hIceActual + iceConduct * hSnowActual), 0)
 
 
     ##### calculate the heat fluxes #####
@@ -183,55 +137,68 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug,
         t3 = t2 * t1
         t4 = t2 * t2
 
-        # calculate the saturation vapor pressure in the snow/ ice-atmosphere boundary layer
         mm_log10pi = - aa1 / t1 + aa2
         mm_pi = 10**mm_log10pi
 
-        qhice[isIce] = bb1 * mm_pi / (Ppascals - (1 - bb1) * mm_pi)
+        # saturation vapor pressure of snow/ice surface
+        qhice = np.where(isIce, bb1 * mm_pi / (Ppascals - (1 - bb1) * mm_pi), 0)
         cc3t = 10**(aa1 / t1)
-        dqh_dTs[isIce] = cc1 * cc3t / ((cc2 - cc3t * Ppascals)**2 * t2)
+
+        # derivative of qhice w.r.t snow/ice surface temperature
+        dqh_dTs = np.where(isIce, cc1 * cc3t / ((cc2 - cc3t * Ppascals)**2 * t2), 0)
 
         # calculate the fluxes based on the surface temperature
-        F_c[isIce] = effConduct[isIce] * (TempFrz[isIce] + celsius2K - t1)
-        F_lh[isIce] = d1i * ug[isIce] * (qhice[isIce] - aqh[isIce])
-        F_lwu[isIce] = t4 * d3[isIce]
-        F_sens[isIce] = d1 * ug[isIce] * (t1 - ATempLoc[isIce])
-        F_ia[isIce] = - LWDownLoc[isIce] - absorbedSW[isIce] + F_lwu[isIce] + F_sens[isIce] + F_lh[isIce]
-        dFia_dTs[isIce] = 4 * d3[isIce] * t3 + d1 * ug[isIce] + d1i * ug[isIce] * dqh_dTs[isIce]
+
+        # conductive heat flux through ice and snow (+ = upward)
+        F_c  = np.where(isIce, effConduct * (TempFrz + celsius2K - t1), 0)
+
+        # latent heat flux (sublimation) (+ = upward)
+        F_lh = np.where(isIce, d1i * ug * (qhice - aqh), 0)
+
+        # upward long-wave surface heat flux (+ = upward)
+        F_lwu = np.where(isIce, t4 * d3, 0)
+
+        # sensible surface heat flux (+ = upward)
+        F_sens = np.where(isIce, d1 * ug * (t1 - ATempLoc), 0)
+
+        # upward seaice/snow surface heat flux to atmosphere [W/m^2]
+        F_ia = np.where(isIce, (- LWDownLoc - absorbedSW + F_lwu
+                                + F_sens + F_lh), 0)
+
+        # derivative of F_ia w.r.t snow/ice surf. temp
+        dFia_dTs = np.where(isIce, 4 * d3 * t3 + d1 * ug
+                                    + d1i * ug * dqh_dTs, 0)
 
         return F_c, F_lh, F_ia, dFia_dTs
 
     # do a loop for the fluxes to cenverge
     for i in range(6):
 
-        t1 = TSurfLoc[isIce]
-        F_c, F_lh, F_ia, dFia_dTs = fluxes(t1)
+        F_c, F_lh, F_ia, dFia_dTs = fluxes(TSurfLoc)
 
         # update surface temperature as solution of
         # F_c = F_ia + d/dT (F_c - F_ia) * delta T
-        TSurfLoc[isIce] = TSurfLoc[isIce] + (F_c[isIce] - F_ia[isIce]) \
-            / (effConduct[isIce] + dFia_dTs[isIce])
+        TSurfLoc = np.where(isIce, TSurfLoc + (F_c - F_ia)
+                                    / (effConduct + dFia_dTs), 0)
 
         # add upper and lower boundary
         TSurfLoc = np.minimum(TSurfLoc, Tmelt)
         TSurfLoc = np.maximum(TSurfLoc, celsius2K + minTIce)
 
     # recalculate the fluxes based on the adjusted surface temperature
-    t1 = TSurfLoc[isIce]
-    F_c, F_lh, F_ia, dFia_dTs = fluxes(t1)
+    F_c, F_lh, F_ia, dFia_dTs = fluxes(TSurfLoc)
 
-    # case 1: F_c <= 0
-    F_io_net = np.zeros_like(iceMask)
-    F_ia_net = F_ia.copy()
+    # calculate net ice-ocean and ice-atmosphere fluxes based on the 
+    # direction of the conductive heat flux
+    upCondFlux = (F_c > 0)
+    F_io_net = np.where(upCondFlux, F_c, 0)
+    F_ia_net = np.where(upCondFlux, 0, F_ia)
 
-    # case 2: F_c > 0
-    upCondflux = np.where(F_c > 0)
-    F_io_net[upCondflux] = F_c[upCondflux]
-    F_ia_net[upCondflux] = 0
+    # save updated surface temperature as output
+    TSurfOut = np.where(isIce, TSurfLoc, TSurfIn)
 
-    # save updated surface temperature as output and finalize the flux terms
-    TSurfOut[isIce] = TSurfLoc[isIce]
-    FWsublim[isIce] = F_lh[isIce] / lhSublim
+    # freshwater flux due to sublimation [kg/m2] (+ = upward)
+    FWsublim = np.where(isIce, F_lh / lhSublim, 0)
 
 
     return TSurfOut, F_io_net, F_ia_net, F_ia, IcePenetSW, FWsublim
