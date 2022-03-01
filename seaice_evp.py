@@ -1,4 +1,5 @@
-import numpy as np
+from veros.core.operators import numpy as npx
+from veros.core.operators import update, at
 
 from seaice_params import *
 from seaice_size import *
@@ -8,7 +9,6 @@ from dynamics_routines import strainrates, \
     ocean_drag_coeffs, bottomdrag_coeffs, calc_stressdiv, calc_stress
 
 from seaice_global_sum import global_sum
-from seaice_averaging import c_point_to_z_point
 from seaice_fill_overlap import fill_overlap_uv
 
 ### input
@@ -49,18 +49,16 @@ def evp_solver(uIce, vIce, hIceMean, hSnowMean, Area,
 
     ##### initializations #####
 
-    # change to input with default value = False?
     if useAdaptiveEVP:
         aEVPcStar = 4
-        EVPcFac = deltaTdyn * aEVPcStar * ( np.pi * aEvpCoeff ) ** 2
+        EVPcFac = deltaTdyn * aEVPcStar * ( npx.pi * aEvpCoeff ) ** 2
     else:
         EVPcFac = 0
-    # ... aEVPCoeff
 
-    sinWat = np.sin(np.deg2rad(waterTurnAngle))
-    cosWat = np.cos(np.deg2rad(waterTurnAngle))
+    sinWat = npx.sin(npx.deg2rad(waterTurnAngle))
+    cosWat = npx.cos(npx.deg2rad(waterTurnAngle))
 
-    zero2d = np.zeros((sNy+2*OLy,sNx+2*OLx))
+    zero2d = npx.zeros_like(iceMask)
 
     denom1 = 1 / evpAlpha
     denom2 = denom1
@@ -76,8 +74,8 @@ def evp_solver(uIce, vIce, hIceMean, hSnowMean, Area,
     evpBetaV  = evpBeta
 
     # initialize fractional areas at velocity points
-    areaW = 0.5 * (Area + np.roll(Area,1,1))
-    areaS = 0.5 * (Area + np.roll(Area,1,0))
+    areaW = 0.5 * (Area + npx.roll(Area,1,1))
+    areaS = 0.5 * (Area + npx.roll(Area,1,0))
 
     ##### main loop #####
 
@@ -89,8 +87,8 @@ def evp_solver(uIce, vIce, hIceMean, hSnowMean, Area,
     sigma11 = zero2d.copy()
     sigma22 = zero2d.copy()
     sigma12 = zero2d.copy()
-    resSig  = np.array([None]*(nEVPsteps+1))
-    resU    = np.array([None]*(nEVPsteps+1))
+    resSig  = npx.zeros(nEVPsteps+1)
+    resU    = npx.zeros(nEVPsteps+1)
 
     # calculate ice strength
     press0 = calc_ice_strength(hIceMean, iceMask)
@@ -120,9 +118,9 @@ def evp_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         # following Kimmritz et al. (2016)
 
         if useAdaptiveEVP:
-            evpAlphaC = np.sqrt(zeta * EVPcFac / np.maximum(
+            evpAlphaC = npx.sqrt(zeta * EVPcFac / npx.maximum(
                 SeaIceMassC, 1e-4) * recip_rA) * iceMask
-            evpAlphaC = np.maximum(evpAlphaC, aEVPalphaMin)
+            evpAlphaC = npx.maximum(evpAlphaC, aEVPalphaMin)
             denom1 = 1. / evpAlphaC
             denom2 = denom1.copy()
 
@@ -131,8 +129,8 @@ def evp_solver(uIce, vIce, hIceMean, hSnowMean, Area,
 
         # calculate sigma12 on z points
         if useAdaptiveEVP:
-            evpAlphaZ = 0.5*( evpAlphaC + np.roll(evpAlphaC,1,0) )
-            evpAlphaZ = 0.5*( evpAlphaZ + np.roll(evpAlphaC,1,1) )
+            evpAlphaZ = 0.5*( evpAlphaC + npx.roll(evpAlphaC,1,0) )
+            evpAlphaZ = 0.5*( evpAlphaZ + npx.roll(evpAlphaC,1,1) )
             denom2 = 1. / evpAlphaZ
 
         sigma12 = sigma12 + (sig12 - sigma12) * denom2
@@ -153,46 +151,44 @@ def evp_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         cBotC = bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low)
 
         # over open ocean..., see comments in MITgcm: pkg/seaice/seaice_evp.F
-        locMaskU = SeaIceMassU.copy()
-        locMaskV = SeaIceMassV.copy()
-        maskU = np.where(locMaskU != 0)
-        locMaskU[maskU] = 1
-        maskV = np.where(locMaskV != 0)
-        locMaskV[maskV] = 1
+        locMaskU = SeaIceMassU
+        locMaskV = SeaIceMassV
+        locMaskU = npx.where(locMaskU != 0, 1, locMaskU)
+        locMaskV = npx.where(locMaskV != 0, 1, locMaskV)
 
         # set up anti symmetric drag force and add in ice ocean stress
         # (average to correct velocity points)
-        duAtC = 0.5 * ( uVel-uIce + np.roll(uVel-uIce,-1,1) )
-        dvAtC = 0.5 * ( vVel-vIce + np.roll(vVel-vIce,-1,0) )
+        duAtC = 0.5 * ( uVel-uIce + npx.roll(uVel-uIce,-1,1) )
+        dvAtC = 0.5 * ( vVel-vIce + npx.roll(vVel-vIce,-1,0) )
         IceSurfStressX = IceSurfStressX0 + (
-            0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat *  uVel
-            - np.sign(fCori) * sinWat * 0.5 * (
-                cDrag * dvAtC + np.roll(cDrag * dvAtC,1,1)
+            0.5 * ( cDrag + npx.roll(cDrag,1,1) ) * cosWat *  uVel
+            - npx.sign(fCori) * sinWat * 0.5 * (
+                cDrag * dvAtC + npx.roll(cDrag * dvAtC,1,1)
             ) * locMaskU
         ) * areaW
         IceSurfStressY = IceSurfStressY0 + (
-            0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * vVel
-            + np.sign(fCori) * sinWat * 0.5 * (
-                cDrag * duAtC  + np.roll(cDrag * duAtC,1,0)
+            0.5 * ( cDrag + npx.roll(cDrag,1,0) ) * cosWat * vVel
+            + npx.sign(fCori) * sinWat * 0.5 * (
+                cDrag * duAtC  + npx.roll(cDrag * duAtC,1,0)
             ) * locMaskV
         ) * areaS
 
         # add coriolis terms
-        fvAtC = SeaIceMassC * fCori * 0.5 * ( vIce + np.roll(vIce,-1,0) )
-        fuAtC = SeaIceMassC * fCori * 0.5 * ( uIce + np.roll(uIce,-1,1) )
-        IceSurfStressX = IceSurfStressX + 0.5 * ( fvAtC + np.roll(fvAtC,1,1) )
-        IceSurfStressY = IceSurfStressY - 0.5 * ( fuAtC + np.roll(fuAtC,1,0) )
+        fvAtC = SeaIceMassC * fCori * 0.5 * ( vIce + npx.roll(vIce,-1,0) )
+        fuAtC = SeaIceMassC * fCori * 0.5 * ( uIce + npx.roll(uIce,-1,1) )
+        IceSurfStressX = IceSurfStressX + 0.5 * ( fvAtC + npx.roll(fvAtC,1,1) )
+        IceSurfStressY = IceSurfStressY - 0.5 * ( fuAtC + npx.roll(fuAtC,1,0) )
 
         if useAdaptiveEVP:
-            evpBetaU = 0.5 * ( evpAlphaC + np.roll(evpAlphaC,1,1) )
-            evpBetaV = 0.5 * ( evpAlphaC + np.roll(evpAlphaC,1,0) )
+            evpBetaU = 0.5 * ( evpAlphaC + npx.roll(evpAlphaC,1,1) )
+            evpBetaV = 0.5 * ( evpAlphaC + npx.roll(evpAlphaC,1,0) )
 
-        rMassU = 1./np.where(SeaIceMassU==0,np.Inf,SeaIceMassU)
-        rMassV = 1./np.where(SeaIceMassV==0,np.Inf,SeaIceMassV)
-        dragU = 0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat * areaW \
-              + 0.5 * ( cBotC + np.roll(cBotC,1,1) )          * areaW
-        dragV = 0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * areaS \
-              + 0.5 * ( cBotC + np.roll(cBotC,1,0) )          * areaS
+        rMassU = 1./npx.where(SeaIceMassU==0,npx.inf,SeaIceMassU)
+        rMassV = 1./npx.where(SeaIceMassV==0,npx.inf,SeaIceMassV)
+        dragU = 0.5 * ( cDrag + npx.roll(cDrag,1,1) ) * cosWat * areaW \
+              + 0.5 * ( cBotC + npx.roll(cBotC,1,1) )          * areaW
+        dragV = 0.5 * ( cDrag + npx.roll(cDrag,1,0) ) * cosWat * areaS \
+              + 0.5 * ( cBotC + npx.roll(cBotC,1,0) )          * areaS
 
         # step momentum equations with ice-ocean stress treated ...
         if explicitDrag:
@@ -243,12 +239,12 @@ def evp_solver(uIce, vIce, hIceMean, hSnowMean, Area,
             # vIcePm1 = ( SeaIceMassV * (vIce - vIceNm1)*recip_deltaTdyn
             #             - (IceSurfStressY + stressDivY)
             #            ) * SeaIceMaskV
-            resSig[iEVP] = (sig11Pm1**2 + sig22Pm1**2
-                         + sig12Pm1**2)[OLy:-OLy,OLx:-OLx].sum()
-            resU[iEVP]   = ( uIcePm1**2
-                          + vIcePm1**2 )[OLy:-OLy,OLx:-OLx].sum()
-            resU[iEVP]   = global_sum(resU[iEVP])
-            resSig[iEVP] = global_sum(resSig[iEVP])
+            resSig = update(resSig, at[iEVP], (sig11Pm1**2 + sig22Pm1**2
+                        + sig12Pm1**2)[OLy:-OLy,OLx:-OLx].sum())
+            resSig = update(resSig, at[iEVP], global_sum(resSig[iEVP]))
+            resU = update(resU, at[iEVP], (uIcePm1**2
+                        + vIcePm1**2 )[OLy:-OLy,OLx:-OLx].sum())
+            resU = update(resU, at[iEVP], global_sum(resU[iEVP]))
 
             resEVP = resU[iEVP]
             if iEVP==0: resEVP0 = resEVP
@@ -279,10 +275,10 @@ def evp_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         ax[0].set_title('resU')
         ax[1].semilogy(resSig[:],'x-')
         ax[1].set_title('resSig')
-        # s12 = sigma12 + np.roll(sigma12,-1,0)
-        # s12 = 0.25*(s12 + np.roll(s12,-1,1))
-        # s1=( sigma1 + np.sqrt(sigma2**2 + 4*s12**2) )/press
-        # s2=( sigma1 - np.sqrt(sigma2**2 + 4*s12**2) )/press
+        # s12 = sigma12 + npx.roll(sigma12,-1,0)
+        # s12 = 0.25*(s12 + npx.roll(s12,-1,1))
+        # s1=( sigma1 + npx.sqrt(sigma2**2 + 4*s12**2) )/press
+        # s2=( sigma1 - npx.sqrt(sigma2**2 + 4*s12**2) )/press
         # csf0=ax[0].plot(s1.ravel(),s2.ravel(),'.');#plt.colorbar(csf0,ax=ax[0])
         # ax[0].plot([-1.4,0.1],[-1.4,0.1],'k-'); #plt.colorbar(csf0,ax=ax[0])
         # ax[0].set_title('sigma1')

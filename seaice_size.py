@@ -1,4 +1,6 @@
-import numpy as np
+from veros.core.operators import numpy as npx
+from veros.core.operators import update, at
+
 from seaice_fill_overlap import fill_overlap
 
 # # for the 1d test
@@ -27,7 +29,7 @@ gridcellWidth = 512e3/(sNx-1) #grid cell width in m
 print('gridcellWidth = %e'%gridcellWidth)
 
 # grid descriptor variables
-deltaX = np.ones((sNy+2*OLy,sNx+2*OLx))*gridcellWidth
+deltaX = npx.ones((sNy+2*OLy,sNx+2*OLx))*gridcellWidth
 dxC = deltaX.copy() #distance between two adjacent cell centers in x direction across western cell wall [m]
 dyC = deltaX.copy() #distance between two adjacent cell centers in y direction across southern cell wall [m]
 dxG = deltaX.copy() #distance between cell faces (cell width) in x direction along southern cell wall [m]
@@ -56,33 +58,33 @@ recip_rAw = 1 / rAw
 recip_rAs = 1 / rAs
 
 # coriolis parameter at grid center point
-fCori = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0. #1.e-4
+fCori = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0. #1.e-4
 
 # masks for introducing boundaries
-maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))
-maskInC[sNy+OLy-1,:] = 0
-maskInC[:,sNx+OLx-1] = 0
+maskInC = npx.ones((sNy+2*OLy,sNx+2*OLx))
+maskInC = update(maskInC, at[sNy+OLy-1,:], 0)
+maskInC = update(maskInC, at[:,sNx+OLx-1], 0)
 maskInC = fill_overlap(maskInC)
 
-maskInW = maskInC*np.roll(maskInC,1,axis=1)
+maskInW = maskInC*npx.roll(maskInC,1,axis=1)
 maskInW = fill_overlap(maskInW)
 
-maskInS = maskInC*np.roll(maskInC,1,axis=0)
+maskInS = maskInC*npx.roll(maskInC,1,axis=0)
 maskInS = fill_overlap(maskInS)
 
 iceMask = maskInC.copy()
 SeaIceMaskU = maskInW.copy()
 SeaIceMaskV = maskInS.copy()
 
-k1AtC = np.zeros((sNy+2*OLy,sNx+2*OLx))
-k2AtC = np.zeros((sNy+2*OLy,sNx+2*OLx))
-k1AtZ = np.zeros((sNy+2*OLy,sNx+2*OLx))
-k2AtZ = np.zeros((sNy+2*OLy,sNx+2*OLx))
+k1AtC = npx.zeros((sNy+2*OLy,sNx+2*OLx))
+k2AtC = npx.zeros((sNy+2*OLy,sNx+2*OLx))
+k1AtZ = npx.zeros((sNy+2*OLy,sNx+2*OLx))
+k2AtZ = npx.zeros((sNy+2*OLy,sNx+2*OLx))
 
 # # for the 1d test
-# maskInC = np.ones((sNy+2*OLy,sNx+2*OLx))
-# maskInW = np.ones((sNy+2*OLy,sNx+2*OLx))
-# maskInS = np.ones((sNy+2*OLy,sNx+2*OLx))
+# maskInC = npx.ones((sNy+2*OLy,sNx+2*OLx))
+# maskInW = npx.ones((sNy+2*OLy,sNx+2*OLx))
+# maskInS = npx.ones((sNy+2*OLy,sNx+2*OLx))
 # iceMask = maskInC.copy()
 # SeaIceMaskU = maskInW.copy()
 # SeaIceMaskV = maskInS.copy()

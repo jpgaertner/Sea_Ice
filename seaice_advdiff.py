@@ -1,17 +1,9 @@
-import numpy as np
+from veros.core.operators import numpy as npx
 
 from seaice_size import *
 from seaice_params import *
 
 from seaice_advection import advection
-
-
-# multidimadvection = true
-# seaice_ITD = false
-# diffusion = false
-# no salinity
-# no sitracer (passive tracer, die die dynamik nicht beeinfussen)
-# nur cgrid, b grid conversion not needed, i.e. uc = uIce
 
 ### input
 # hIceMean: mean ice thickness [m3/m2] (= hIceActual * Area with Area the sea ice cover fraction and hIceActual = Vol_ice / x_len y_len)
@@ -25,8 +17,8 @@ from seaice_advection import advection
 # hSnowMean
 # Area
 
-recip_hIceMean = np.ones((sNy+2*OLy,sNx+2*OLx))
 
+recip_hIceMean = npx.ones_like(iceMask)
 
 def advdiff(uIce, vIce, hIceMean, hSnowMean, Area):
 
@@ -45,17 +37,17 @@ def advdiff(uIce, vIce, hIceMean, hSnowMean, Area):
 
     # update mean ice thickness
     gFld = advection(uIce, vIce, uTrans, vTrans, hIceMean,
-                     recip_hIceMean, extensiveFld)
+                        recip_hIceMean, extensiveFld)
     hIceMean = (hIceMean + deltaTtherm * gFld) * iceMask
 
     # update surface cover fraction
     gFld = advection(uIce, vIce, uTrans, vTrans, Area, recip_hIceMean,
-                     extensiveFld)
+                        extensiveFld)
     Area = (Area + deltaTtherm * gFld) * iceMask
 
     # update mean snow thickness
     gFld = advection(uIce, vIce, uTrans, vTrans, hSnowMean,
-                     recip_hIceMean, extensiveFld)
+                        recip_hIceMean, extensiveFld)
     hSnowMean = (hSnowMean + deltaTtherm * gFld) * iceMask
 
 

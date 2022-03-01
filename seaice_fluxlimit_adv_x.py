@@ -1,4 +1,5 @@
-import numpy as np
+from veros.core.operators import numpy as npx
+from veros.core.operators import update, at
 
 from seaice_size import *
 from seaice_params import *
@@ -24,28 +25,20 @@ def fluxlimit_adv_x(uFld, tracer, uTrans, deltatLoc, maskLocW):
 
     CrMax = 1e6
 
-    uCFL = np.abs(uFld * deltatLoc * recip_dxC)
+    uCFL = npx.abs(uFld * deltatLoc * recip_dxC)
 
     Rjp = (tracer[:,3:] - tracer[:,2:-1]) * maskLocW[:,3:]
     Rj = (tracer[:,2:-1] - tracer[:,1:-2]) * maskLocW[:,2:-1]
     Rjm = (tracer[:,1:-2] - tracer[:,:-3]) * maskLocW[:,1:-2]
 
-    Cr = Rjp.copy()
-    uFlow = np.where(uTrans[:,2:-1] > 0)
-    Cr[uFlow] = Rjm[uFlow]
-
-    tmp = np.where(np.abs(Rj) * CrMax > np.abs(Cr))
-    Cr[tmp] = Cr[tmp] / Rj[tmp]
-    tmp2 = np.where(np.abs(Rj) * CrMax <= np.abs(Cr))
-    Cr[tmp2] = np.sign(Cr[tmp2]) * CrMax * np.sign(Rj[tmp2])
-
-    # limit Cr
+    Cr = npx.where(uTrans[:,2:-1] > 0, Rjm, Rjp)
+    Cr = npx.where(npx.abs(Rj) * CrMax > npx.abs(Cr), Cr / Rj, npx.sign(Cr) * CrMax * npx.sign(Rj))
     Cr = limiter(Cr)
     
-    uT = np.zeros_like(iceMask)
-    uT[:,2:-1] = uTrans[:,2:-1] * (tracer[:,2:-1] + tracer[:,1:-2]) * 0.5 \
-                    - np.abs(uTrans[:,2:-1]) * ((1 - Cr) + uCFL[:,2:-1] * Cr ) \
-                    * Rj * 0.5
+    uT = npx.zeros_like(iceMask)
+    uT = update(uT, at[:,2:-1], uTrans[:,2:-1] * (tracer[:,2:-1] + tracer[:,1:-2]) \
+                        * 0.5 - npx.abs(uTrans[:,2:-1]) * ((1 - Cr) + uCFL[:,2:-1] \
+                        * Cr ) * Rj * 0.5)
     uT = fill_overlap(uT)
     
 

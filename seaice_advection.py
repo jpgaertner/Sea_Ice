@@ -1,11 +1,10 @@
-import numpy as np
+from veros.core.operators import numpy as npx
 
 from seaice_size import *
 from seaice_params import *
 
 from seaice_fluxlimit_adv_x import fluxlimit_adv_x
 from seaice_fluxlimit_adv_y import fluxlimit_adv_y
-from seaice_fill_overlap import fill_overlap
 
 # calculates the tendency of a sea ice field due to advection
 
@@ -41,11 +40,11 @@ def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):
     # update the local seaice field
     if extensiveFld:
         localTij = localTij - deltaTtherm * maskInC * recip_rA \
-            * ( np.roll(afx,-1,1) - afx )
+            * ( npx.roll(afx,-1,1) - afx )
     else:
         localTij= localTij- deltaTtherm * maskInC * recip_rA * r_hFld * (
-            ( np.roll(afx,-1,1) - afx )
-            - ( np.roll(uTrans,-1,1) - uTrans ) * iceFld
+            ( npx.roll(afx,-1,1) - afx )
+            - ( npx.roll(uTrans,-1,1) - uTrans ) * iceFld
         )
 
     ##### calculate advective flux in y direction #####
@@ -56,12 +55,15 @@ def advection(uFld, vFld, uTrans, vTrans, iceFld, r_hFld, extensiveFld):
     # update the local seaice field
     if extensiveFld:
         localTij = localTij - deltaTtherm * maskInC * recip_rA \
-            * ( np.roll(afy,-1,0) - afy )
+            * ( npx.roll(afy,-1,0) - afy )
     else:
         localTij = localTij - deltaTtherm * maskInC * recip_rA * r_hFld * (
-            ( np.roll(afy,-1,0) - afy )
-            - ( np.roll(vTrans,-1,0) - vTrans) * iceFld
+            ( npx.roll(afy,-1,0) - afy )
+            - ( npx.roll(vTrans,-1,0) - vTrans) * iceFld
         )
 
     # explicit advection is done, store tendency in gFld
-    return (localTij - iceFld) / deltaTtherm
+    gFld = (localTij - iceFld) / deltaTtherm
+    
+
+    return gFld

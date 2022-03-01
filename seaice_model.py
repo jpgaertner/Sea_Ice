@@ -1,4 +1,8 @@
-import numpy as np
+from veros import runtime_settings
+from seaice_params import backend
+runtime_settings.backend = backend
+from veros.core.operators import numpy as npx
+
 import matplotlib.pyplot as plt
 
 from seaice_size import *
@@ -16,16 +20,16 @@ from seaice_fill_overlap import fill_overlap, fill_overlap3d
 ### input from gendata
 windspd = 5
 waterspd= 0.0
-hIceMean = np.ones((sNy+2*OLy,sNx+2*OLx))*0.3
-uWind = np.ones((32, sNy+2*OLy,sNx+2*OLx))*windspd
-vWind = np.ones((32, sNy+2*OLy,sNx+2*OLx))*windspd
-uVel = np.zeros((sNy+2*OLy,sNx+2*OLx)) + waterspd
-vVel = np.zeros((sNy+2*OLy,sNx+2*OLx)) + waterspd
+hIceMean = npx.ones((sNy+2*OLy,sNx+2*OLx))*0.3
+uWind = npx.ones((32, sNy+2*OLy,sNx+2*OLx))*windspd
+vWind = npx.ones((32, sNy+2*OLy,sNx+2*OLx))*windspd
+uVel = npx.zeros((sNy+2*OLy,sNx+2*OLx)) + waterspd
+vVel = npx.zeros((sNy+2*OLy,sNx+2*OLx)) + waterspd
 
-x = (np.arange(sNx+2*OLx)+0.5)*gridcellWidth;
-y = (np.arange(sNy+2*OLy)+0.5)*gridcellWidth;
-xx,yy = np.meshgrid(x,y);
-hice = 0.3 + 0.005*(np.sin(60./1000.e3*xx) + np.sin(30./1000.e3*yy))
+x = (npx.arange(sNx+2*OLx)+0.5)*gridcellWidth;
+y = (npx.arange(sNy+2*OLy)+0.5)*gridcellWidth;
+xx,yy = npx.meshgrid(x,y);
+hice = 0.3 + 0.005*(npx.sin(60./1000.e3*xx) + npx.sin(30./1000.e3*yy))
 #hIceMean = 0.5*(hice + hice.transpose())
 
 # hIceMean[OLy:-OLy,OLx:-OLx] = hIce_init
@@ -40,35 +44,35 @@ hice = 0.3 + 0.005*(np.sin(60./1000.e3*xx) + np.sin(30./1000.e3*yy))
 # vVel = fill_overlap(vVel)
 
 
-hSnowMean = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0.1
-Area = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0.9
-TIceSnow = np.ones((sNy+2*OLy,sNx+2*OLx,nITC))*celsius2K
+hSnowMean = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0.1
+Area = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0.9
+TIceSnow = npx.ones((sNy+2*OLy,sNx+2*OLx,nITC))*celsius2K
 
-uIce = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0.0
-vIce = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0.0
+uIce = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0.0
+vIce = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0.0
 
-etaN = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-pLoad = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+etaN = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+pLoad = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
 SeaIceLoad = hIceMean * rhoIce + hSnowMean * rhoSnow
 useRealFreshWaterFlux = True
 
-salt = np.ones((sNy+2*OLy,sNx+2*OLx)) * 29
-precip = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-snowPrecip = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-evap = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-runoff = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-wspeed = np.sqrt(uWind[0,:,:]**2 + vWind[0,:,:]**2)
-theta = np.zeros((sNy+2*OLy,sNx+2*OLx))*celsius2K - 1.62
-Qnet = np.ones((sNy+2*OLy,sNx+2*OLx)) * 153.536072
-Qsw = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-SWDown = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-LWDown = np.ones((sNy+2*OLy,sNx+2*OLx)) * 20
-ATemp = np.ones((sNy+2*OLy,sNx+2*OLx)) * celsius2K - 20.16
-aqh = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-fu = np.zeros((sNy+2*OLy,sNx+2*OLx))
-fv = np.zeros((sNy+2*OLy,sNx+2*OLx))
+salt = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 29
+precip = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+snowPrecip = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+evap = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+runoff = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+wspeed = npx.sqrt(uWind[0,:,:]**2 + vWind[0,:,:]**2)
+theta = npx.zeros((sNy+2*OLy,sNx+2*OLx))*celsius2K - 1.62
+Qnet = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 153.536072
+Qsw = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+SWDown = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+LWDown = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 20
+ATemp = npx.ones((sNy+2*OLy,sNx+2*OLx)) * celsius2K - 20.16
+aqh = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+fu = npx.zeros((sNy+2*OLy,sNx+2*OLx))
+fv = npx.zeros((sNy+2*OLy,sNx+2*OLx))
 
-R_low = np.ones((sNy+2*OLy,sNx+2*OLx)) * -1000
+R_low = npx.ones((sNy+2*OLy,sNx+2*OLx)) * -1000
 
 secondOrderBC = False
 
@@ -104,7 +108,7 @@ for i in range(nTimeSteps):
                 runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown,
                 ATemp, aqh)
 
-    printMonitor = monFreq>0 and (np.mod(myIter,monFreq)==0
+    printMonitor = monFreq>0 and (npx.mod(myIter,monFreq)==0
                                   or myIter==nTimeSteps-1)
     print('Time step %04i'%myIter)
     if printMonitor:
@@ -125,9 +129,9 @@ for i in range(nTimeSteps):
 
 # need this for my plots
 def sq(a):
-    import numpy as np
-    a = np.squeeze(a)
-    masked_array=np.ma.masked_where(a==0., a)
+    import numpy as npx
+    a = npx.squeeze(a)
+    masked_array=npx.ma.masked_where(a==0., a)
     return masked_array
 
 from dynamics_routines import strainrates
@@ -138,9 +142,9 @@ e11,e22,e12=strainrates(uIce,vIce)
 divergence = (e11+e22)*iceMask
 # use area weighted average of squares of e12 (more accurate)
 e12Csq = rAz * e12**2
-e12Csq =                     e12Csq + np.roll(e12Csq,-1,0)
-e12Csq = 0.25 * recip_rA * ( e12Csq + np.roll(e12Csq,-1,1) )
-shear = np.sqrt((e11-e22) ** 2 + 4.*e12Csq)*iceMask
+e12Csq =                     e12Csq + npx.roll(e12Csq,-1,0)
+e12Csq = 0.25 * recip_rA * ( e12Csq + npx.roll(e12Csq,-1,1) )
+shear = npx.sqrt((e11-e22) ** 2 + 4.*e12Csq)*iceMask
 
 fig, ax = plt.subplots(nrows=1,ncols=3,figsize=(15,5),sharex=True,sharey=True,)
 csf0=ax[0].pcolormesh(sq(uIce[OLy:-OLy,OLx:-OLx]))
@@ -174,11 +178,11 @@ plt.colorbar(csf2,ax=ax[2],orientation='horizontal')
 # fig.tight_layout()
 # plt.show()
 # =======
-# # print(np.mean(hIceMean))
-# # print(np.mean(uWind))
-# # print(np.mean(vWind))
-# # print(np.max(uIce))
-# # print(np.max(vIce))
+# # print(npx.mean(hIceMean))
+# # print(npx.mean(uWind))
+# # print(npx.mean(vWind))
+# # print(npx.max(uIce))
+# # print(npx.max(vIce))
 # plt.close('all')
 # fig, ax = plt.subplots(nrows=1,ncols=3,figsize=(15,5),sharex=True,sharey=True,)
 # csf0=ax[0].pcolormesh(sq(uIce[OLy:-OLy,OLx:-OLx]))

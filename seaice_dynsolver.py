@@ -1,9 +1,9 @@
-import numpy as np
+from veros.core.operators import numpy as npx
 
 from seaice_size import *
 from seaice_params import *
 
-from seaice_freedrift import seaIceFreeDrift
+from seaice_freedrift import freedrift_solver
 from seaice_evp import evp_solver
 from seaice_implicit_solver import picard_solver, jfnk_solver
 from seaice_lsr import lsr_solver
@@ -33,17 +33,18 @@ from seaice_ocean_stress import ocean_stress
 # fu: zonal stress on ocean surface (ice or atmopshere)
 # fv: meridional stress on ocean surface (ice or atmopshere)
 
+
 def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean,
-              hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux,
-              fu, fv, secondOrderBC, R_low, myTime, myIter):
+                hSnowMean, Area, etaN, pLoad, SeaIceLoad, useRealFreshWaterFlux,
+                fu, fv, secondOrderBC, R_low, myTime, myIter):
 
     # set up mass per unit area
     SeaIceMassC = rhoIce * hIceMean
 
     # if SEAICEaddSnowMass (true)
     SeaIceMassC= SeaIceMassC + rhoSnow * hSnowMean
-    SeaIceMassU = 0.5 * ( SeaIceMassC + np.roll(SeaIceMassC,1,1) )
-    SeaIceMassV = 0.5 * ( SeaIceMassC + np.roll(SeaIceMassC,1,0) )
+    SeaIceMassU = 0.5 * ( SeaIceMassC + npx.roll(SeaIceMassC,1,1) )
+    SeaIceMassV = 0.5 * ( SeaIceMassC + npx.roll(SeaIceMassC,1,0) )
 
     # if SEAICE_maskRHS... (false)
 
@@ -63,20 +64,20 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean,
 
     # forcing by surface stress
     #if SEAICEscaleSurfStress (true)
-    IceSurfStressX0 = tauX * 0.5 * (Area + np.roll(Area,1,1)) #forcex0 in F
-    IceSurfStressY0 = tauY * 0.5 * (Area + np.roll(Area,1,0)) #forcey0 in F
+    IceSurfStressX0 = tauX * 0.5 * (Area + npx.roll(Area,1,1)) #forcex0 in F
+    IceSurfStressY0 = tauY * 0.5 * (Area + npx.roll(Area,1,0)) #forcey0 in F
 
     # add in tilt
     #if SEAICEuseTILT (true)
     IceSurfStressX0 = IceSurfStressX0 \
-        - SeaIceMassU * recip_dxC * ( phiSurf - np.roll(phiSurf,1,1) )
+        - SeaIceMassU * recip_dxC * ( phiSurf - npx.roll(phiSurf,1,1) )
     IceSurfStressY0 = IceSurfStressY0 \
-        - SeaIceMassV * recip_dyC * ( phiSurf - np.roll(phiSurf,1,0) )
+        - SeaIceMassV * recip_dyC * ( phiSurf - npx.roll(phiSurf,1,0) )
 
     #if SEAICEuseDYNAMICS (true)
     if useFreedrift:
-        uIce, vIce = seaIceFreeDrift(hIceMean, uVel, vVel,
-                                     IceSurfStressX0, IceSurfStressY0)
+        uIce, vIce = freedrift_solver(hIceMean, uVel, vVel,
+                                    IceSurfStressX0, IceSurfStressY0)
 
     # #ifdef ALLOW_OBCS
     # #call OBCS_APPLY_UVICE
@@ -115,8 +116,8 @@ def dynsolver(uIce, vIce, uVel, vVel, uWind, vWind, hIceMean,
 
     # cap the ice velicity at 0.4 m/s to avoid CFL violations in open
     # water areas (drift of zero thickness ice)
-    # uIce = np.clip(uIce, -0.4, 0.4)
-    # vIce = np.clip(vIce, -0.4, 0.4)
+    # uIce = npx.clip(uIce, -0.4, 0.4)
+    # vIce = npx.clip(vIce, -0.4, 0.4)
 
 
     return uIce, vIce, fu, fv
