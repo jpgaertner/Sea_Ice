@@ -1,23 +1,27 @@
 from veros.core.operators import numpy as npx
+from veros import veros_kernel
 
 from seaice_size import *
 from seaice_params import *
 
 from seaice_fill_overlap import fill_overlap
 
-
-def freedrift_solver(hIceMean, uVel, vVel, IceSurfStressX0, IceSurfStressY0):
+# calculate ice velocities from surface stress
+@veros_kernel
+def freedrift_solver(state):
 
     # air-ice stress at cell center
-    tauXIceCenter = 0.5 * (IceSurfStressX0 + npx.roll(IceSurfStressX0,-1,1))
-    tauYIceCenter = 0.5 * (IceSurfStressY0 + npx.roll(IceSurfStressY0,-1,0))
+    tauXIceCenter = 0.5 * (state.variables.IceSurfStressX0 \
+                + npx.roll(state.variables.IceSurfStressX0,-1,1))
+    tauYIceCenter = 0.5 * (state.variables.IceSurfStressY0 \
+                + npx.roll(state.variables.IceSurfStressY0,-1,0))
 
     # mass of ice per unit area times coriolis factor
-    mIceCor = rhoIce * hIceMean * fCori
+    mIceCor = rhoIce * state.variables.hIceMean * fCori
 
     # ocean surface velocity at the cell center
-    uVelCenter = 0.5 * (uVel + npx.roll(uVel,-1,1))
-    vVelCenter = 0.5 * (vVel + npx.roll(vVel,-1,0))
+    uVelCenter = 0.5 * (state.variables.uVel + npx.roll(state.variables.uVel,-1,1))
+    vVelCenter = 0.5 * (state.variables.vVel + npx.roll(state.variables.vVel,-1,0))
 
     # right hand side of the free drift equation
     rhsX = - tauXIceCenter - mIceCor * vVelCenter
