@@ -1,0 +1,120 @@
+from numpy import ones
+from veros.state import VerosState
+from veros.settings import Setting
+from veros.variables import Variable
+from veros import veros_routine, veros_kernel, KernelOutput
+from veros.core.operators import numpy as npx
+
+from seaice_size import *
+from seaice_params import *
+
+dimensions = dict(x=nx+2*olx, y=ny+2*oly, z=nITC)
+dims = ("x","y")
+
+var_meta = dict(
+    hIceMean        = Variable("Mean ice thickness", dims, "m"),
+    hSnowMean       = Variable("Mean snow thickness", dims, "m"),
+    Area            = Variable("Sea ice cover fraction", dims, " "),
+    TIceSnow        = Variable("Ice/ snow temperature", ("x","y","z"), "K"),
+    uIce            = Variable("Zonal ice velocity", dims, "m/s"),
+    vIce            = Variable("Merdidional ice velocity", dims, "m/s"),
+    uVel            = Variable("Zonal ocean surface velocity", dims, "m/s"),
+    vVel            = Variable("Merdional ocean surface velocity", dims, "m/s"),
+    uWind           = Variable("Zonal wind velocity", dims, "m/s"),
+    vWind           = Variable("Merdional wind velocity", dims, "m/s"),
+    wSpeed          = Variable("Total wind speed", dims, "m/s"),
+    fu              = Variable("Zonal stress on ocean surface", dims, "N/m^2"),
+    fv              = Variable("Meridional stress on ocean surface", dims, "N/m^2"),
+    IceSurfStressX0 = Variable("Zonal forcing by surface stress", dims, " "), #??? unit
+    IceSurfStressY0 = Variable("Meridional forcing by surface stress", dims, " "), #??? unit
+    uTrans          = Variable("Zonal ice transport", dims, "m^2/s"), #??? unit correct?
+    vTrans          = Variable("Meridional ice transport", dims, "m^2/s"),
+    etaN            = Variable("Ocean surface elevation", dims, "m"), #???
+    pLoad           = Variable("Surface pressure", dims, "P"), #??? unit
+    SeaIceLoad      = Variable("Load of sea ice on ocean surface", dims, " "), # ??? unit
+    salt            = Variable("Ocean surface salinity", dims, "g/kg"),
+    theta           = Variable("Ocean surface temperature", dims, "K"),
+    Qnet            = Variable("Net heat flux out of the ocean", dims, "W/m^2"),
+    Qsw             = Variable("Shortwave heatflux into the ocean", dims, "W/m^2"),
+    SWDown          = Variable("Downward shortwave radiation", dims, "W/m^2"),
+    LWDown          = Variable("Downward longwave radiation", dims, "W/m^2"),
+    ATemp           = Variable("Atmospheric temperature", dims, "K"),
+    aqh             = Variable("Atmospheric specific humidity", dims, "g/kg"),
+    precip          = Variable("Precipitation", dims, "m/s"), #??? accumulation?
+    snowPrecip      = Variable("Snowfall", dims, "m/s"), #??? same
+    evap            = Variable("Evaporation over open ocean", dims, "m/s"), #??? right?
+    runoff          = Variable("Runoff into ocean", dims, "m/s"),
+    R_low           = Variable("Sea floor depth (<0)", dims, "m"),
+    SeaIceMassC     = Variable("Sea ice mass centered around c point", dims, "kg"),
+    SeaIceMassU     = Variable("Sea ice mass centered around u point", dims, "kg"),
+    SeaIceMassV     = Variable("Sea ice mass centered around v point", dims, "kg"),
+    e11             = Variable("strain rate", dims, " "), #??? name, unit
+    e22             = Variable("strain rate", dims, " "), #??? same
+    e12             = Variable("strain rate", dims, " "), #??? same
+    press0          = Variable("Ice Strength", dims, " "), #??? unit, change name
+    press           = Variable("Ice Pressure", dims, "P"), #??? unit? what exactly is it?
+    zeta            = Variable("Bulk ice viscosity", dims, "Ns/m^2"), #??? right?
+    eta             = Variable("Shear ice viscosity", dims, "Ns/m^2")
+)
+
+sett_meta = dict(
+    deltaTtherm     = Setting(0, float, "Timestep for thermodynamic equations"),
+    deltaTdyn       = Setting(0, float, "Timestep for dynamic equations"),
+    nx              = Setting(0, int, "Grid points in zonal direction"),
+    ny              = Setting(0, int, "Grid points in meridional direction"),
+    noSlip          = Setting(False, bool, "flag whether to use no slip condition"),
+    secondOrderBC   = Setting(False, bool, "flag"), #???
+    useFreedrift    = Setting(False, bool, "flag whether to use freedrift solver"),
+    useEVP          = Setting(False, bool, "flag whether to use EVP solver"),
+    useLSR          = Setting(False, bool, "flag whether to use LSR solver"),
+    usePicard       = Setting(False, bool, "flag whether to use Picard solver"),
+    useJNFK         = Setting(False, bool, "flag whether to use JNFK solver"),
+)
+
+ones2d = npx.ones((nx+2*olx,ny+2*oly))
+ones3d = npx.ones((nx+2*olx,ny+2*oly,nITC))
+
+init_values = dict(
+    hIceMean_init   = ones2d * 1.3,
+    hSnowMean_init  = ones2d * 0.1,
+    Area_init       = ones2d * 0.9,
+    TIceSnow_init   = ones3d * celsius2K,
+    uWind_init      = ones2d * 5,
+    vWind_init      = ones2d * 5,
+    wSpeed_init     = ones2d * npx.sqrt(5**2+5**2),
+    SeaIceLoad_init = ones2d * (rhoIce * 1.3 + rhoSnow * 0.1),
+    salt_init       = ones2d * 29,
+    theta_init      = ones2d * celsius2K - 1.62,
+    Qnet_init       = ones2d * 153.536072,
+    Qsw_init        = ones2d * 0,
+    SWDown_init     = ones2d * 0,
+    LWDown_init     = ones2d * 20,
+    ATemp_init      = ones2d * celsius2K - 20.16,
+    R_low_init      = ones2d * -1000
+)
+
+@veros_routine
+def set_inits(state):
+    state.variables.hIceMean    = init_values["hIceMean_init"]
+    state.variables.hSnowMean   = init_values["hSnowMean_init"]
+    state.variables.Area        = init_values["Area_init"]
+    state.variables.TIceSnow    = init_values["TIceSnow_init"]
+    state.variables.uWind       = init_values["uWind_init"]
+    state.variables.vWind       = init_values["vWind_init"]
+    state.variables.SeaIceLoad  = init_values["SeaIceLoad_init"]
+    state.variables.salt        = init_values["salt_init"]
+    state.variables.theta       = init_values["theta_init"]
+    state.variables.Qnet        = init_values["Qnet_init"]
+    state.variables.Qsw         = init_values["Qsw_init"]
+    state.variables.SWDown      = init_values["SWDown_init"]
+    state.variables.LWDown      = init_values["LWDown_init"]
+    state.variables.ATemp       = init_values["ATemp_init"]
+    state.variables.wSpeed      = init_values["wSpeed_init"]
+    state.variables.R_low       = init_values["R_low_init"]
+
+
+state = VerosState(var_meta, sett_meta, dimensions)
+state.initialize_variables()
+
+set_inits(state)
+#print(state.variables.hIceMean)
