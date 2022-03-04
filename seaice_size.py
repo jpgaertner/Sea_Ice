@@ -81,6 +81,8 @@ k2AtC = npx.zeros((ny+2*oly,nx+2*olx))
 k1AtZ = npx.zeros((ny+2*oly,nx+2*olx))
 k2AtZ = npx.zeros((ny+2*oly,nx+2*olx))
 
+recip_hIceMean = npx.ones_like(iceMask) #???
+
 # # for the 1d test
 # maskInC = npx.ones((ny+2*oly,nx+2*olx))
 # maskInW = npx.ones((ny+2*oly,nx+2*olx))

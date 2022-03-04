@@ -1,4 +1,4 @@
-backend = 'jax' # flag which backend to use (numpy or jax)
+backend = 'numpy' # flag which backend to use (numpy or jax)
 
 # densities [kg/m3]
 rhoIce = 910        # density of ice
@@ -138,9 +138,18 @@ SeaIceStrength = 27.5e3 # sea ice strength P^star
 zetaMaxfac = 2.5e8  # factor determining the maximum viscosity [s]
 zetaMin = 0         # minimum viscosity
 
+CrMax = 1e6 #??? used in adv_x,y
+
 noSlip = True # flag whether to use no slip conditions
 
 secondOrderBC = False #??? flag
+
+useRealFreshWaterFlux = True    # flag for using the sea ice load in the
+                                # calculation of the ocean surface height
+                                #??? better name
+
+extensiveFld = True #??? what does it actually mean?
+
 
 # flag which solver to use
 useFreedrift = False
@@ -149,7 +158,8 @@ useLSR       = False
 usePicard    = False
 useJFNK      = False
 
-useEVP = True
+useFreedrift = True
+# useEVP = True
 # useLSR = True
 # usePicard=True
 # useJFNK = True
