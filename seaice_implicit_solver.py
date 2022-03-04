@@ -32,16 +32,16 @@ plotJFNKResidual = True
 
 def _vecTo2d(vec):
     n = vec.shape[0]//2
-    u = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    v = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    u[OLy:-OLy,OLx:-OLx]=vec[:n].reshape((sNy,sNx))
-    v[OLy:-OLy,OLx:-OLx]=vec[n:].reshape((sNy,sNx))
+    u = np.zeros((ny+2*oly,nx+2*olx))
+    v = np.zeros((ny+2*oly,nx+2*olx))
+    u[oly:-oly,olx:-olx]=vec[:n].reshape((ny,nx))
+    v[oly:-oly,olx:-olx]=vec[n:].reshape((ny,nx))
     u,v=fill_overlap_uv(u,v)
     return u,v
 
 def _2dToVec(u,v):
-    vec = np.hstack((u[OLy:-OLy,OLx:-OLx].ravel(),
-                     v[OLy:-OLy,OLx:-OLx].ravel()))
+    vec = np.hstack((u[oly:-oly,olx:-olx].ravel(),
+                     v[oly:-oly,olx:-olx].ravel()))
     return vec
 
 def calc_nonlinear_residual( Fu, Fv ):
@@ -246,7 +246,7 @@ def picard_solver(uIce, vIce, hIceMean, hSnowMean, Area,
             #                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
             #                   cDrag, cBotC, R_low,
             #                   iPicard, myIter, myTime)
-            # print(np.sqrt(((Au-bu)**2+(Av-bv)**2)[OLy:-OLy,OLx:-OLx].sum()),
+            # print(np.sqrt(((Au-bu)**2+(Av-bv)**2)[oly:-oly,olx:-olx].sum()),
             #       residual[iPicard])
 
 

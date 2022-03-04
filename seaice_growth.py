@@ -7,10 +7,10 @@ from seaice_params import *
 from seaice_solve4temp import solve4temp
 
 # # for the 1d test
-# sNx = 1
-# sNy = 1
-# OLx = 2
-# OLy = 2
+# nx = 1
+# ny = 1
+# olx = 2
+# oly = 2
 
 ### input
 # hIceMean: mean ice thickness [m3/m2] (= hIceActual * Area with Area the

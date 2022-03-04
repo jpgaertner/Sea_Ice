@@ -254,9 +254,9 @@ def lsr_residual( rhsU, rhsV, uRt1, uRt2, vRt1, vRt2,
     )
     if calcMeanResid:
         residU = (uRes*uRes*rAw*maskInW
-                  *maskInC*np.roll(maskInC,1,1))[OLy:-OLy,OLx:-OLx].sum()
+                  *maskInC*np.roll(maskInC,1,1))[oly:-oly,olx:-olx].sum()
         residV = (vRes*vRes*rAs*maskInS
-                  *maskInC*np.roll(maskInC,1,0))[OLy:-OLy,OLx:-OLx].sum()
+                  *maskInC*np.roll(maskInC,1,0))[oly:-oly,olx:-olx].sum()
         residU = global_sum( residU )
         residV = global_sum( residV )
         # scale residuals by globalArea so that they do not get
@@ -293,15 +293,15 @@ def tridiag(a,b,c,d):
 
 def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
 
-    iMin = max(OLx-2,2)
-    iMax = max(OLx + sNx, 2*OLx+sNx-2)
+    iMin = max(olx-2,2)
+    iMax = max(olx + nx, 2*olx+nx-2)
     iMxx = iMax-1
     # initialisation
     cuu = CU.copy()
     # zebra loop
     if useLsrZebra: ks = 2
     else:           ks = 1
-    for k in range(OLy,OLy+ks):
+    for k in range(oly,oly+ks):
         # boundary conditions
         uIc[k::ks,:]    = rhsU[k::ks,:] \
             + uRt1[k::ks,:]*np.roll(uIc, 1,0)[k::ks,:] \
@@ -331,15 +331,15 @@ def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
 
 def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
 
-    jMin = max(OLy-2,2)
-    jMax = max(OLy + sNy, 2*OLy+sNy-2)
+    jMin = max(oly-2,2)
+    jMax = max(oly + ny, 2*oly+ny-2)
     jMxx = jMax-1
     # initialisation
     cvv = CV.copy()
     # zebra loop
     if useLsrZebra: ks = 2
     else:           ks = 1
-    for k in range(OLx,OLx+ks):
+    for k in range(olx,olx+ks):
         # boundary conditions
         vIc[:,k::ks]    = rhsV[:,k::ks] \
             + vRt1[:,k::ks]*np.roll(vIc, 1,1)[:,k::ks] \
@@ -476,10 +476,10 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
 
             resUU = np.sqrt( global_sum(
                 (uu**2*rAw*maskInW*maskInC*np.roll(maskInC,1,1))
-                [OLy:-OLy,OLx:-OLx].sum() )/globalArea )
+                [oly:-oly,olx:-olx].sum() )/globalArea )
             resVV = np.sqrt( global_sum(
                 (vv**2*rAs*maskInS*maskInC*np.roll(maskInC,1,0))
-                [OLy:-OLy,OLx:-OLx].sum() )/globalArea )
+                [oly:-oly,olx:-olx].sum() )/globalArea )
 
             if printLsrResidual:
                 print ( 'pre  lin: %i      %e %e %e %e'%(
@@ -546,9 +546,9 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
             if not useAsPreconditioner:
                 if iLin>1:
                     doIterU = np.sqrt((uIce-uNm1)**2
-                                      )[OLy:-OLy,OLx:-OLx].max() > linTol
+                                      )[oly:-oly,olx:-olx].max() > linTol
                     doIterV = np.sqrt((vIce-vNm1)**2
-                                      )[OLy:-OLy,OLx:-OLx].max() > linTol
+                                      )[oly:-oly,olx:-olx].max() > linTol
             # else:
             #     print('precond: iLin %i', iLin)
 
@@ -586,7 +586,7 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
     return uIce, vIce
 
         # n = iMax-iMin
-        # for j in range(OLy,sNy+OLy):
+        # for j in range(oly,ny+oly):
         #     b = uIc[j,iMin:iMax]
         #     A = sp.spdiags([AU[j,iMin:iMax],
         #                     BU[j,iMin:iMax],
@@ -594,7 +594,7 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         #     uIc[j,iMin:iMax] = solve(A,b,overwrite_b=True)
 
         # n = jMax-jMin
-        # for i in range(OLx,sNx+OLx):
+        # for i in range(olx,nx+olx):
             # b = vIc[jMin:jMax,i]
             # A = sp.spdiags([AV[jMin:jMax,i],
             #                 BV[jMin:jMax,i],

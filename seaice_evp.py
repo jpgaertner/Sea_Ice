@@ -240,10 +240,10 @@ def evp_solver(uIce, vIce, hIceMean, hSnowMean, Area,
             #             - (IceSurfStressY + stressDivY)
             #            ) * SeaIceMaskV
             resSig = update(resSig, at[iEVP], (sig11Pm1**2 + sig22Pm1**2
-                        + sig12Pm1**2)[OLy:-OLy,OLx:-OLx].sum())
+                        + sig12Pm1**2)[oly:-oly,olx:-olx].sum())
             resSig = update(resSig, at[iEVP], global_sum(resSig[iEVP]))
             resU = update(resU, at[iEVP], (uIcePm1**2
-                        + vIcePm1**2 )[OLy:-OLy,OLx:-OLx].sum())
+                        + vIcePm1**2 )[oly:-oly,olx:-olx].sum())
             resU = update(resU, at[iEVP], global_sum(resU[iEVP]))
 
             resEVP = resU[iEVP]

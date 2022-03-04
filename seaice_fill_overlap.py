@@ -1,7 +1,7 @@
 from veros.core.operators import update, at
 
 ### input:
-# field of size (sNy+2*OLy, sNx+2*OLx) where [OLy:-OLy,OLx:-OLx] (=[OLy:-OLy,OLx:-OLx]) is the actual cell
+# field of size (ny+2*oly, nx+2*olx) where [oly:-oly,olx:-olx] (=[oly:-oly,olx:-olx]) is the actual cell
 
 ### output:
 # field with filled overlaps (using the values from the actual cell)
@@ -9,21 +9,21 @@ from veros.core.operators import update, at
 
 
 def fill_overlap(A):
-    from seaice_size import OLy, OLx
-    A = update(A, at[:OLy,:], A[-2*OLy:-OLy,:])
-    A = update(A, at[-OLy:,:], A[OLy:2*OLy,:])
-    A = update(A, at[:,:OLx], A[:,-2*OLx:-OLx])
-    A = update(A, at[:,-OLx:], A[:,OLx:2*OLx])
+    from seaice_size import oly, olx
+    A = update(A, at[:oly,:], A[-2*oly:-oly,:])
+    A = update(A, at[-oly:,:], A[oly:2*oly,:])
+    A = update(A, at[:,:olx], A[:,-2*olx:-olx])
+    A = update(A, at[:,-olx:], A[:,olx:2*olx])
 
     return A
 
 
 def fill_overlap3d(A):
-    from seaice_size import OLy, OLx
-    A = update(A, at[:,:OLy,:], A[:,-2*OLy:-OLy,:])
-    A = update(A, at[:,-OLy:,:], A[:,OLy:2*OLy,:])
-    A = update(A, at[:,:,:OLx], A[:,:,-2*OLx:-OLx])
-    A = update(A, at[:,:,-OLx:], A[:,:,OLx:2*OLx])
+    from seaice_size import oly, olx
+    A = update(A, at[:,:oly,:], A[:,-2*oly:-oly,:])
+    A = update(A, at[:,-oly:,:], A[:,oly:2*oly,:])
+    A = update(A, at[:,:,:olx], A[:,:,-2*olx:-olx])
+    A = update(A, at[:,:,-olx:], A[:,:,olx:2*olx])
 
     return A
 

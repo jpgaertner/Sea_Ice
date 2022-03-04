@@ -45,10 +45,10 @@ if variableWindField:
         tP=np.mod(t,period/2)
         tP[t>=period/2.]=period/2.-tP[t>=period/2.]
         tP = tP/(0.5*period)
-        oLx=150.e3
-        oLy=oLx
-        mx = -oLx+(2*oLx+Lx)*tP
-        my = -oLy+(2*oLy+Ly)*tP
+        olx=150.e3
+        oly=olx
+        mx = -olx+(2*olx+Lx)*tP
+        my = -oly+(2*oly+Ly)*tP
 
     alpha0= np.pi/2. - np.pi/2./5. # 90 grad ist ohne Konvergenz oder Divergenz
     alpha = np.pi/2. - np.pi/2./5.*np.maximum(np.sign(np.roll(mx,-1)-mx),0.) \

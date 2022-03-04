@@ -25,31 +25,31 @@ from seaice_growth import growth
 import matplotlib.pyplot as plt
 
 # # for the 1d test
-# sNx = 1
-# sNy = 1
-# OLx = 2
-# OLy = 2
+# nx = 1
+# ny = 1
+# olx = 2
+# oly = 2
 
 
 
-hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 1.3 * iceMask
-Area = np.ones((sNx+2*OLx,sNy+2*OLy))* 0.9 * iceMask
-hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0.1 * iceMask
+hIceMean = np.ones((nx+2*olx,ny+2*oly)) * 1.3 * iceMask
+Area = np.ones((nx+2*olx,ny+2*oly))* 0.9 * iceMask
+hSnowMean = np.ones((nx+2*olx,ny+2*oly)) * 0.1 * iceMask
 
-salt = np.ones((sNx+2*OLx,sNy+2*OLy))*29
-TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC)) * 248.7569580078125
-precip = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #order 1e-6
-snowPrecip = np.ones((sNx+2*OLx,sNy+2*OLy))*0
-evap = np.ones((sNx+2*OLx,sNy+2*OLy))*0
-runoff = np.ones((sNx+2*OLx,sNy+2*OLy))*0
-wspeed = np.ones((sNx+2*OLx,sNy+2*OLy))*2
-theta = np.zeros((sNx+2*OLx,sNy+2*OLy)) -1.66 #-1.96
-Qnet = np.ones((sNx+2*OLx,sNy+2*OLy))* 173.03212617345582#29.694019940648037
-Qsw = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #winter condition
-SWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #winter
-LWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*180 #20 winter
-ATemp = np.ones((sNx+2*OLx,sNy+2*OLy))* 253
-aqh = np.ones((sNx+2*OLx,sNy+2*OLy))*0#1e-4
+salt = np.ones((nx+2*olx,ny+2*oly))*29
+TIceSnow = np.ones((nx+2*olx,ny+2*oly,nITC)) * 248.7569580078125
+precip = np.ones((nx+2*olx,ny+2*oly))*0 #order 1e-6
+snowPrecip = np.ones((nx+2*olx,ny+2*oly))*0
+evap = np.ones((nx+2*olx,ny+2*oly))*0
+runoff = np.ones((nx+2*olx,ny+2*oly))*0
+wspeed = np.ones((nx+2*olx,ny+2*oly))*2
+theta = np.zeros((nx+2*olx,ny+2*oly)) -1.66 #-1.96
+Qnet = np.ones((nx+2*olx,ny+2*oly))* 173.03212617345582#29.694019940648037
+Qsw = np.ones((nx+2*olx,ny+2*oly))*0 #winter condition
+SWDown = np.ones((nx+2*olx,ny+2*oly))*0 #winter
+LWDown = np.ones((nx+2*olx,ny+2*oly))*180 #20 winter
+ATemp = np.ones((nx+2*olx,ny+2*oly))* 253
+aqh = np.ones((nx+2*olx,ny+2*oly))*0#1e-4
 
 os_hIceMean = np.zeros_like(iceMask)
 os_hSnowMean = np.zeros_like(iceMask)
@@ -78,7 +78,7 @@ for i in range(timesteps):
     days = np.append(days,i)
 
 import matplotlib.pyplot as plt
-plt.contourf(hIceMean[OLy:-OLy,OLx:-OLx])
+plt.contourf(hIceMean[oly:-oly,olx:-olx])
 plt.colorbar()
 plt.show()
 
