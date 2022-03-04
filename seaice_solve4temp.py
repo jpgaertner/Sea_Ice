@@ -7,10 +7,10 @@ from seaice_size import *
 from seaice_params import *
 
 # # for the 1d test
-# sNx = 1
-# sNy = 1
-# OLx = 2
-# OLy = 2
+# nx = 1
+# ny = 1
+# olx = 2
+# oly = 2
 
 ### input
 # hIceActual: actual ice thickness [m]
