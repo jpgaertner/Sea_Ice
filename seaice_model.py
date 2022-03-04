@@ -20,65 +20,63 @@ from seaice_fill_overlap import fill_overlap, fill_overlap3d
 ### input from gendata
 windspd = 5
 waterspd= 0.0
-hIceMean = npx.ones((sNy+2*OLy,sNx+2*OLx))*0.3
-uWind = npx.ones((32, sNy+2*OLy,sNx+2*OLx))*windspd
-vWind = npx.ones((32, sNy+2*OLy,sNx+2*OLx))*windspd
-uVel = npx.zeros((sNy+2*OLy,sNx+2*OLx)) + waterspd
-vVel = npx.zeros((sNy+2*OLy,sNx+2*OLx)) + waterspd
+hIceMean = npx.ones((ny+2*oly,nx+2*olx))*0.3
+uWind = npx.ones((32, ny+2*oly,nx+2*olx))*windspd
+vWind = npx.ones((32, ny+2*oly,nx+2*olx))*windspd
+uVel = npx.zeros((ny+2*oly,nx+2*olx)) + waterspd
+vVel = npx.zeros((ny+2*oly,nx+2*olx)) + waterspd
 
-x = (npx.arange(sNx+2*OLx)+0.5)*gridcellWidth;
-y = (npx.arange(sNy+2*OLy)+0.5)*gridcellWidth;
+x = (npx.arange(nx+2*olx)+0.5)*gridcellWidth;
+y = (npx.arange(ny+2*oly)+0.5)*gridcellWidth;
 xx,yy = npx.meshgrid(x,y);
 hice = 0.3 + 0.005*(npx.sin(60./1000.e3*xx) + npx.sin(30./1000.e3*yy))
 #hIceMean = 0.5*(hice + hice.transpose())
 
-# hIceMean[OLy:-OLy,OLx:-OLx] = hIce_init
+# hIceMean[oly:-oly,olx:-olx] = hIce_init
 # hIceMean = fill_overlap(hIceMean)
-# uWind[:,OLy:-OLy,OLx:-OLx] = uWind_gendata
+# uWind[:,oly:-oly,olx:-olx] = uWind_gendata
 # uWind = fill_overlap3d(uWind)
-# vWind[:,OLy:-OLy,OLx:-OLx] = vWind_gendata
+# vWind[:,oly:-oly,olx:-olx] = vWind_gendata
 # vWind = fill_overlap3d(vWind)
-# uVel[OLy:-OLy,OLx:-OLx] = uVel_gendata
+# uVel[oly:-oly,olx:-olx] = uVel_gendata
 # uVel = fill_overlap(uVel)
-# vVel[OLy:-OLy,OLx:-OLx] = vVel_gendata
+# vVel[oly:-oly,olx:-olx] = vVel_gendata
 # vVel = fill_overlap(vVel)
 
 
-hSnowMean = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0.1
-Area = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0.9
-TIceSnow = npx.ones((sNy+2*OLy,sNx+2*OLx,nITC))*celsius2K
+hSnowMean = npx.ones((ny+2*oly,nx+2*olx)) * 0.1
+Area = npx.ones((ny+2*oly,nx+2*olx)) * 0.9
+TIceSnow = npx.ones((ny+2*oly,nx+2*olx,nITC))*celsius2K
 
-uIce = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0.0
-vIce = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0.0
+uIce = npx.ones((ny+2*oly,nx+2*olx)) * 0.0
+vIce = npx.ones((ny+2*oly,nx+2*olx)) * 0.0
 
-etaN = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-pLoad = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+etaN = npx.ones((ny+2*oly,nx+2*olx)) * 0
+pLoad = npx.ones((ny+2*oly,nx+2*olx)) * 0
 SeaIceLoad = hIceMean * rhoIce + hSnowMean * rhoSnow
-useRealFreshWaterFlux = True
+useRealFreshWaterFlux = True # ??? parameter?
 
-salt = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 29
-precip = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-snowPrecip = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-evap = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-runoff = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
+salt = npx.ones((ny+2*oly,nx+2*olx)) * 29
+precip = npx.ones((ny+2*oly,nx+2*olx)) * 0
+snowPrecip = npx.ones((ny+2*oly,nx+2*olx)) * 0
+evap = npx.ones((ny+2*oly,nx+2*olx)) * 0
+runoff = npx.ones((ny+2*oly,nx+2*olx)) * 0
 wspeed = npx.sqrt(uWind[0,:,:]**2 + vWind[0,:,:]**2)
-theta = npx.zeros((sNy+2*OLy,sNx+2*OLx))*celsius2K - 1.62
-Qnet = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 153.536072
-Qsw = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-SWDown = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-LWDown = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 20
-ATemp = npx.ones((sNy+2*OLy,sNx+2*OLx)) * celsius2K - 20.16
-aqh = npx.ones((sNy+2*OLy,sNx+2*OLx)) * 0
-fu = npx.zeros((sNy+2*OLy,sNx+2*OLx))
-fv = npx.zeros((sNy+2*OLy,sNx+2*OLx))
+theta = npx.zeros((ny+2*oly,nx+2*olx))*celsius2K - 1.62
+Qnet = npx.ones((ny+2*oly,nx+2*olx)) * 153.536072
+Qsw = npx.ones((ny+2*oly,nx+2*olx)) * 0
+SWDown = npx.ones((ny+2*oly,nx+2*olx)) * 0
+LWDown = npx.ones((ny+2*oly,nx+2*olx)) * 20
+ATemp = npx.ones((ny+2*oly,nx+2*olx)) * celsius2K - 20.16
+aqh = npx.ones((ny+2*oly,nx+2*olx)) * 0
+fu = npx.zeros((ny+2*oly,nx+2*olx))
+fv = npx.zeros((ny+2*oly,nx+2*olx))
 
-R_low = npx.ones((sNy+2*OLy,sNx+2*OLx)) * -1000
-
-secondOrderBC = False
+R_low = npx.ones((ny+2*oly,nx+2*olx)) * -1000
 
 plt.close('all')
 monFreq = 5
-nTimeSteps = 50
+nTimeSteps = 2
 nIter0 = 0
 
 for i in range(nTimeSteps):
@@ -147,32 +145,32 @@ e12Csq = 0.25 * recip_rA * ( e12Csq + npx.roll(e12Csq,-1,1) )
 shear = npx.sqrt((e11-e22) ** 2 + 4.*e12Csq)*iceMask
 
 fig, ax = plt.subplots(nrows=1,ncols=3,figsize=(15,5),sharex=True,sharey=True,)
-csf0=ax[0].pcolormesh(sq(uIce[OLy:-OLy,OLx:-OLx]))
+csf0=ax[0].pcolormesh(sq(uIce[oly:-oly,olx:-olx]))
 ax[0].set_title('uIce')
-# csf0=ax[0].pcolormesh(sq(shear[OLy:-OLy,OLx:-OLx]),norm=mynorm)
+# csf0=ax[0].pcolormesh(sq(shear[oly:-oly,olx:-olx]),norm=mynorm)
 # ax[0].set_title('shear')
-csf0=ax[0].pcolormesh(sq(uIce-vIce.transpose())[OLy:-OLy,OLx:-OLx]) #
-# csf0=ax[0].pcolormesh(sq(vIce-vIce[:,::-1])[OLy:-OLy,OLx:-OLx],
+csf0=ax[0].pcolormesh(sq(uIce-vIce.transpose())[oly:-oly,olx:-olx]) #
+# csf0=ax[0].pcolormesh(sq(vIce-vIce[:,::-1])[oly:-oly,olx:-olx],
 #                       vmin=-1e-7,vmax=1e-7)
 ax[0].set_title('uIce-vIce.transpose()')
-csf1=ax[1].pcolormesh(sq(vIce[OLy:-OLy,OLx:-OLx]))
+csf1=ax[1].pcolormesh(sq(vIce[oly:-oly,olx:-olx]))
 ax[1].set_title('vIce')
-csf2=ax[2].pcolormesh( hIceMean[OLy:-OLy,OLx:-OLx]*
-                        sq(iceMask[OLy:-OLy,OLx:-OLx]))
+csf2=ax[2].pcolormesh( hIceMean[oly:-oly,olx:-olx]*
+                        sq(iceMask[oly:-oly,olx:-olx]))
 ax[2].set_title('hIce')
-#plt.contourf(vWind[0,OLy:-OLy,OLx:-OLx])
+#plt.contourf(vWind[0,oly:-oly,olx:-olx])
 plt.colorbar(csf0,ax=ax[0],orientation='horizontal')
 plt.colorbar(csf1,ax=ax[1],orientation='horizontal')
 plt.colorbar(csf2,ax=ax[2],orientation='horizontal')
 
 # fig, axs = plt.subplots(1,3, figsize = (10,3))
-# ax1 = axs[0].pcolormesh(uIce[OLy:-OLy,OLx:-OLx])
+# ax1 = axs[0].pcolormesh(uIce[oly:-oly,olx:-olx])
 # axs[0].set_title('uIce')
 # plt.colorbar(ax1, ax = axs[0])
-# ax2 = axs[1].pcolormesh(vIce[OLy:-OLy,OLx:-OLx])
+# ax2 = axs[1].pcolormesh(vIce[oly:-oly,olx:-olx])
 # axs[1].set_title('vIce')
 # plt.colorbar(ax2, ax = axs[1])
-# ax3 = axs[2].pcolormesh(hIceMean[OLy:-OLy,OLx:-OLx])
+# ax3 = axs[2].pcolormesh(hIceMean[oly:-oly,olx:-olx])
 # axs[2].set_title('hIceMean')
 # plt.colorbar(ax3, ax = axs[2])
 # fig.tight_layout()
@@ -185,13 +183,13 @@ plt.colorbar(csf2,ax=ax[2],orientation='horizontal')
 # # print(npx.max(vIce))
 # plt.close('all')
 # fig, ax = plt.subplots(nrows=1,ncols=3,figsize=(15,5),sharex=True,sharey=True,)
-# csf0=ax[0].pcolormesh(sq(uIce[OLy:-OLy,OLx:-OLx]))
+# csf0=ax[0].pcolormesh(sq(uIce[oly:-oly,olx:-olx]))
 # ax[0].set_title('uIce')
-# csf1=ax[0].pcolormesh(sq(vIce[OLy:-OLy,OLx:-OLx]))
+# csf1=ax[0].pcolormesh(sq(vIce[oly:-oly,olx:-olx]))
 # ax[1].set_title('vIce')
-# csf2=ax[2].pcolormesh(sq(hIceMean[OLy:-OLy,OLx:-OLx]))
+# csf2=ax[2].pcolormesh(sq(hIceMean[oly:-oly,olx:-olx]))
 # ax[2].set_title('hIce')
-# #plt.contourf(vWind[0,OLy:-OLy,OLx:-OLx])
+# #plt.contourf(vWind[0,oly:-oly,olx:-olx])
 # plt.colorbar(csf0,ax=ax[0],orientation='horizontal')
 # plt.colorbar(csf1,ax=ax[1],orientation='horizontal')
 # plt.colorbar(csf2,ax=ax[2],orientation='horizontal')

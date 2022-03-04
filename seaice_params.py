@@ -1,4 +1,4 @@
-backend = 'numpy' # flag which backend to use (numpy or jax)
+backend = 'jax' # flag which backend to use (numpy or jax)
 
 # densities [kg/m3]
 rhoIce = 910        # density of ice
@@ -140,6 +140,7 @@ zetaMin = 0         # minimum viscosity
 
 noSlip = True # flag whether to use no slip conditions
 
+secondOrderBC = False #??? flag
 
 # flag which solver to use
 useFreedrift = False
