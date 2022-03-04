@@ -26,8 +26,8 @@ from seaice_solve4temp import solve4temp
 # runoff: runoff into ocean [m/s]   = 0 for now
 # wspeed: wind speed [m/s]
 # theta: potential temperature of the ocean surface [K]
-# Qnet: surface net heat flux out of the ocean (open water or under ice) [W/m2]
-# Qsw: surface shortwave heat flux out of the ocean (open water or under ice) [W/m2]
+# Qnet: net heat flux out of the ocean (open water or under ice) [W/m2]
+# Qsw: shortwave heat flux out of the ocean (open water or under ice) [W/m2]
 # SWDown: shortwave downward radiation [W/m2]
 # LWDown: longwave downward radiation [W/m2]
 # ATemp: atmospheric temperature [K]
@@ -112,9 +112,9 @@ def growth(hIceMean, hSnowMean, Area, os_hIceMean, os_hSnowMean, salt,
 
     # store mean ice and snow thickness and sea ice cover fraction
     # (prior to any thermodynamical changes)
-    hIceMeanpreTH = hIceMean
-    hSnowMeanpreTH = hSnowMean
-    AreapreTH = Area
+    hIceMeanpreTH = hIceMean.copy()
+    hSnowMeanpreTH = hSnowMean.copy()
+    AreapreTH = Area.copy()
 
     # compute actual ice and snow thickness using the regularized area.
     # ice or snow thickness divided by Area does not work if Area -> 0,
@@ -138,8 +138,8 @@ def growth(hIceMean, hSnowMean, Area, os_hIceMean, os_hSnowMean, salt,
     ug = npx.maximum(eps, wspeed)
 
     # set fluxed in (qswo) and out (F_ao) of the ocean
-    F_ao = Qnet
-    qswo = Qsw
+    F_ao = Qnet.copy()
+    qswo = Qsw.copy()
 
     # the fraction of shortwave radiation that passes the ocean surface layer
     swFracPassTopOcean = 0
@@ -156,7 +156,7 @@ def growth(hIceMean, hSnowMean, Area, os_hIceMean, os_hSnowMean, salt,
     ##### calculate surface temperature and heat fluxes ##### 
 
     # record prior ice surface temperatures
-    TIce_mult = TIceSnow
+    TIce_mult = TIceSnow.copy()
 
     for l in range(0, nITC):
         # set relative thickness of ice and snow categories
@@ -187,7 +187,7 @@ def growth(hIceMean, hSnowMean, Area, os_hIceMean, os_hSnowMean, salt,
     # ocean (flowing through cracks in the ice). if the temperature is
     # above the freezing point, the precipitation remains wet and runs
     # into the ocean
-    PrecipRateOverIceSurfaceToSea = precip
+    PrecipRateOverIceSurfaceToSea = precip.copy()
 
     # if there is ice and the temperature is below the freezing point,
     # the precipitation falls and accumulates as snow
