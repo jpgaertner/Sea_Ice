@@ -1,14 +1,30 @@
 from veros.core.operators import numpy as npx
+from veros import veros_kernel, KernelOutput, veros_routine
 
 from seaice_params import *
 from seaice_size import *
 
 secondOrderBC = False
 
-def calc_ice_strength(hIceMean, Area):
-    return SeaIceStrength * hIceMean * npx.exp(-cStar * (1 - Area)) * iceMask
+# calculate ice strength from ice thickness and ice cover fraction
+@veros_kernel
+def calc_ice_strength(state):
 
-def ocean_drag_coeffs(uIce, vIce, uVel, vVel):
+    press0 = SeaIceStrength * state.variables.hIceMean \
+                * npx.exp(-cStar * (1 - state.variables.Area)) * iceMask
+    return KernelOutput(press0 = press0)
+
+@veros_routine
+def update_IceStrength(state):
+
+    # retrieve sea ice strength and update state object
+    IceStrength = calc_ice_strength(state)
+    state.variables.update(IceStrength)
+
+
+# calculate ocean drag coefficients from ice and ocean velocities
+@veros_kernel
+def ocean_drag_coeffs(state):
 
     ### input:
     # uIce: zonal ice velocity
@@ -26,8 +42,8 @@ def ocean_drag_coeffs(uIce, vIce, uVel, vVel):
     dragCoeff = npx.where(fCori < 0, waterIceDrag_south, waterIceDrag) * rhoConst
 
     # calculate linear drag coefficient
-    du = (uIce - uVel)*maskInW
-    dv = (vIce - vVel)*maskInS
+    du = (state.variables.uIce - state.variables.uVel)*maskInW
+    dv = (state.variables.vIce - state.variables.vVel)*maskInS
     tmpVar = 0.25 * ( du**2 + npx.roll(du,-1,1)**2
                     + dv**2 + npx.roll(dv,-1,0)**2 )
 
@@ -35,10 +51,10 @@ def ocean_drag_coeffs(uIce, vIce, uVel, vVel):
                         dragCoeff * npx.sqrt(tmpVar), cDragMin)
     cDrag = cDrag * iceMask
 
-
     return cDrag
 
-def bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low):
+@veros_kernel
+def bottomdrag_coeffs(state):
 
     ### input:
     # uIce: zonal ice velocity
@@ -53,13 +69,13 @@ def bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low):
     fac = 10. #scales the soft maximum for more accuracy
     recip_fac = 1. / fac
 
-    tmpFld = npx.zeros_like(uIce)
-
-    tmpFld = 0.25 * ( (uIce*maskInW)**2 + npx.roll(uIce*maskInW,-1,1)**2
-                    + (vIce*maskInS)**2 + npx.roll(vIce*maskInS,-1,1)**2 )
+    tmpFld = 0.25 * ( (state.variables.uIce*maskInW)**2
+                    + npx.roll(state.variables.uIce*maskInW,-1,1)**2
+                    + (state.variables.vIce*maskInS)**2
+                    + npx.roll(state.variables.vIce*maskInS,-1,1)**2 )
     tmpFld = basalDragK2 / npx.sqrt(tmpFld + basalDragU0**2)
 
-    hCrit = npx.abs(R_low) * Area / basalDragK1
+    hCrit = npx.abs(state.variables.R_low) * state.variables.Area / basalDragK1
 
     # we want to have some soft maximum for better differentiability:
     # max(a,b;k) = ln(exp(k*a)+exp(k*b))/k
@@ -67,20 +83,20 @@ def bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low):
     # max(a,0;k) = ln(exp(k*a)+1)/k
     # If k*a gets too large, EXP will overflow, but for the anticipated
     # values of hActual < 100m, and k=10, this should be very unlikely
-    cBot = npx.where(Area > 0.01,
+    cBot = npx.where(state.variables.Area > 0.01,
             tmpFld
-                * npx.log(npx.exp(fac * (hIceMean-hCrit)) + 1.) * recip_fac
-                * npx.exp(-cBasalStar * (1. - Area)),
+                * npx.log(npx.exp(fac * (state.variables.hIceMean-hCrit)) + 1.)
+                * recip_fac * npx.exp(-cBasalStar * (1. - state.variables.Area)),
                 0.)
 
     return cBot
 
-def strainrates(uFld, vFld):
+@veros_kernel
+def strainrates(state):
 
     ### input
-    # uFld: zonal ice field velocity
-    # vFld: meridional ice Field velocity
-    # secondOrderBC: flag
+    # uIce: zonal ice velocity
+    # vIce: meridional ice velocity
 
     ### output
     # e11: 1,1 component of strain rate tensor
@@ -88,25 +104,25 @@ def strainrates(uFld, vFld):
     # e12: 1,2 component of strain rate tensor
 
     # abbreviations at c points
-    dudx = ( npx.roll(uFld,-1,axis=1) - uFld ) * recip_dxF
-    uave = ( npx.roll(uFld,-1,axis=1) + uFld ) * 0.5
-    dvdy = ( npx.roll(vFld,-1,axis=0) - vFld ) * recip_dyF
-    vave = ( npx.roll(vFld,-1,axis=0) + vFld ) * 0.5
+    dudx = ( npx.roll(state.variables.uIce,-1,axis=1) - state.variables.uIce ) * recip_dxF
+    uave = ( npx.roll(state.variables.uIce,-1,axis=1) + state.variables.uIce ) * 0.5
+    dvdy = ( npx.roll(state.variables.vIce,-1,axis=0) - state.variables.vIce ) * recip_dyF
+    vave = ( npx.roll(state.variables.vIce,-1,axis=0) + state.variables.vIce ) * 0.5
 
     # evaluate strain rates at c points
-    e11 = (dudx + vave * k2AtC) * maskInC
-    e22 = (dvdy + uave * k1AtC) * maskInC
+    e11 = ( dudx + vave * k2AtC ) * maskInC
+    e22 = ( dvdy + uave * k1AtC ) * maskInC
 
     # abbreviations at z points
-    dudy = ( uFld - npx.roll(uFld,1,axis=0) ) * recip_dyU
-    uave = ( uFld + npx.roll(uFld,1,axis=0) ) * 0.5
-    dvdx = ( vFld - npx.roll(vFld,1,axis=1) ) * recip_dxV
-    vave = ( vFld + npx.roll(vFld,1,axis=1) ) * 0.5
+    dudy = ( state.variables.uIce - npx.roll(state.variables.uIce,1,axis=0) ) * recip_dyU
+    uave = ( state.variables.uIce + npx.roll(state.variables.uIce,1,axis=0) ) * 0.5
+    dvdx = ( state.variables.vIce - npx.roll(state.variables.vIce,1,axis=1) ) * recip_dxV
+    vave = ( state.variables.vIce + npx.roll(state.variables.vIce,1,axis=1) ) * 0.5
 
     # evaluate strain rate at z points
     mskZ = iceMask*npx.roll(iceMask,1,axis=1)
     mskZ =    mskZ*npx.roll(   mskZ,1,axis=0)
-    e12 = 0.5 * (dudy + dvdx - k1AtZ * vave - k2AtZ * uave ) * mskZ
+    e12 = 0.5 * ( dudy + dvdx - k1AtZ * vave - k2AtZ * uave ) * mskZ
     if noSlip:
         hFacU = SeaIceMaskU - npx.roll(SeaIceMaskU,1,axis=0)
         hFacV = SeaIceMaskV - npx.roll(SeaIceMaskV,1,axis=1)
@@ -134,16 +150,18 @@ def strainrates(uFld, vFld):
         # The masking is ugly, but hopefully effective.
         e12 = e12 + 0.5 * (
             recip_dyU * ( 6. * uave
-                          - npx.roll(uFld, 2,0) * npx.roll(SeaIceMaskU,1,0)
-                          - npx.roll(uFld,-1,0) * SeaIceMaskU ) * hFacU
+                          - npx.roll(state.variables.uIce, 2,0) * npx.roll(SeaIceMaskU,1,0)
+                          - npx.roll(state.variables.uIce,-1,0) * SeaIceMaskU ) * hFacU
           + recip_dxV * ( 6. * vave
-                          - npx.roll(vFld, 2,1) * npx.roll(SeaIceMaskV,1,1)
-                          - npx.roll(vFld,-1,1) * SeaIceMaskV ) * hFacV
+                          - npx.roll(state.variables.vIce, 2,1) * npx.roll(SeaIceMaskV,1,1)
+                          - npx.roll(state.variables.vIce,-1,1) * SeaIceMaskV ) * hFacV
         )
 
     return e11, e22, e12
 
-def viscosities(e11,e22,e12,press0,iStep,myTime,myIter):
+@veros_kernel
+def viscosities(state, e11,e22,e12,iEVP):
+    #??? remove iEVP when debugged
 
     """Usage: zeta, eta, press =
           viscosities(e11,e22,e12,press0,iStep,myTime,myIter)
@@ -177,25 +195,29 @@ def viscosities(e11,e22,e12,press0,iStep,myTime,myIter):
     # deltaCreg = npx.sqrt( deltaSq + deltaMin**2 )
     deltaCreg = npx.maximum(deltaC,deltaMin)
 
-    zeta = 0.5 * (press0 * (1 + tensileStrFac)) / deltaCreg
+    zeta = 0.5 * ( state.variables.press0 * (1 + tensileStrFac) ) / deltaCreg
     eta  = zeta * recip_PlasDefCoeffSq
 
     # recalculate pressure
-    press = ( press0 * (1 - pressReplFac)
+    press = ( state.variables.press0 * (1 - pressReplFac)
               + 2. * zeta * deltaC * pressReplFac / (1 + tensileStrFac)
              ) * (1 - tensileStrFac)
 
     return zeta, eta, press
 
 
-def calc_stress(e11, e22, e12, zeta, eta, press, iStep, myTime, myIter):
+@veros_kernel
+def calc_stress(e11, e22, e12, zeta, eta, press, iStep):
+    #??? remove iStep when debugged
     from seaice_averaging import c_point_to_z_point
     sig11 = zeta*(e11 + e22) + eta*(e11 - e22) - 0.5 * press
     sig22 = zeta*(e11 + e22) - eta*(e11 - e22) - 0.5 * press
     sig12 = 2. * e12 * c_point_to_z_point(eta)
     return sig11, sig22, sig12
 
-def calc_stressdiv(sig11, sig22, sig12, iStep, myTime, myIter):
+@veros_kernel
+def calc_stressdiv(sig11, sig22, sig12, iStep):
+    #??? remove iStep when debugged
     stressDivX = (
           sig11*dyF - npx.roll(sig11*dyF, 1,axis=1)
         - sig12*dxV + npx.roll(sig12*dxV,-1,axis=0)
