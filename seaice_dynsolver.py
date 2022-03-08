@@ -43,8 +43,8 @@ def calc_SurfaceForcing(state):
     tauX, tauY = get_dynforcing(state)
 
     # calculate forcing by surface stress
-    IceSurfStressX0 = tauX * 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,1))
-    IceSurfStressY0 = tauY * 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,0))
+    WindForcingX = tauX * 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,1))
+    WindForcingY = tauY * 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,0))
 
     # compute surface pressure at z = 0: #???
     # calculate actual sea surface height #??? phi = geopotential height?
@@ -57,13 +57,13 @@ def calc_SurfaceForcing(state):
         phiSurf = phiSurf + state.variables.pLoad * recip_rhoConst
 
     # add in tilt
-    IceSurfStressX0 = IceSurfStressX0 - state.variables.SeaIceMassU \
+    WindForcingX = WindForcingX - state.variables.SeaIceMassU \
                     * recip_dxC * ( phiSurf - npx.roll(phiSurf,1,1) )
-    IceSurfStressY0 = IceSurfStressY0 - state.variables.SeaIceMassV \
+    WindForcingY = WindForcingY - state.variables.SeaIceMassV \
                     * recip_dyC * ( phiSurf - npx.roll(phiSurf,1,0) )
 
-    return KernelOutput(IceSurfStressX0 = IceSurfStressX0,
-                        IceSurfStressY0 = IceSurfStressY0)
+    return KernelOutput(WindForcingX = WindForcingX,
+                        WindForcingY = WindForcingY)
 
 @veros_routine
 def update_SurfaceForcing(state):
