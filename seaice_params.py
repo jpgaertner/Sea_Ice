@@ -123,6 +123,7 @@ deltaMin = 2.e-9    # regularization value for delta
 
 pressReplFac = 0    # interpolator between press0 and regularized pressure
 
+SeaIceStrength = 27.5e3 # sea ice strength P^star #??? change name to P_star, standart sea ice strength
 cStar = 20  # sea ice strength parameter
 
 # basal drag parameters
@@ -132,8 +133,6 @@ basalDragK2 = 0
 cBasalStar = cStar
 
 tensileStrFac = 0 # sea ice tensile strength factor
-
-SeaIceStrength = 27.5e3 # sea ice strength P^star
 
 zetaMaxfac = 2.5e8  # factor determining the maximum viscosity [s]
 zetaMin = 0         # minimum viscosity
