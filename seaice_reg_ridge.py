@@ -50,7 +50,7 @@ def clean_up_advection(state):
                         npx.maximum(Area, area_floor), Area)
 
     return KernelOutput(hIceMean = hIceMean,
-                        hSnowMean = hIceMean,
+                        hSnowMean = hSnowMean,
                         Area = Area,
                         TIceSnow = TIceSnow,
                         os_hIceMean = os_hIceMean,
