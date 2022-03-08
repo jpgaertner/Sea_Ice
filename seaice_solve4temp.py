@@ -2,6 +2,7 @@
 # (see Hibler, MWR, 108, 1943-1973, 1980)
 
 from veros.core.operators import numpy as npx
+from veros import veros_kernel
 
 from seaice_size import *
 from seaice_params import *
@@ -32,8 +33,9 @@ from seaice_params import *
 # IcePenetSW: short wave heat flux arriving at the ocean-ice interface (+ = upward) [W/m^2]
 # FWsublim: fresh water (mass) flux due to sublimation (+ = upward) [kg/sm2]
 
-def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug,
-    SWDown, LWDown, ATemp, aqh):
+
+@veros_kernel
+def solve4temp(state, hIceActual, hSnowActual, TSurfIn, TempFrz):
 
     ##### define local constants used for calculations #####
 
@@ -61,9 +63,12 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug,
 
     # make local copies of downward longwave radiation, surface
     # and atmospheric temperatures
-    TSurfLoc = TSurfIn.copy()
-    LWDownLocCapped = npx.maximum(minLwDown, LWDown)
-    ATempLoc = npx.maximum(celsius2K + minTAir, ATemp)
+    TSurfLoc = update(TSurfIn, at[:,:], TSurfIn)
+    LWDownLocCapped = npx.maximum(minLwDown, state.variables.LWDown)
+    ATempLoc = npx.maximum(celsius2K + minTAir, state.variables.ATemp)
+
+    # set wind speed
+    ug = npx.maximum(eps, state.variables.wSpeed)
 
 
     ##### determine forcing term in heat budget #####
@@ -119,10 +124,10 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug,
     penetSWFrac = npx.where(isSnow, 0, penetSWFrac)
 
     # shortwave radiative flux at the ocean-ice interface (+ = upward)
-    IcePenetSW = npx.where(isIce, -(1 - alb) * penetSWFrac * SWDown, 0)
+    IcePenetSW = npx.where(isIce, -(1 - alb) * penetSWFrac * state.variables.SWDown, 0)
 
     # shortwave radiative flux convergence in the ice
-    absorbedSW = npx.where(isIce, (1 - alb) * (1 - penetSWFrac) * SWDown, 0)
+    absorbedSW = npx.where(isIce, (1 - alb) * (1 - penetSWFrac) * state.variables.SWDown, 0)
     
     # effective conductivity of the snow-ice system
     effConduct = npx.where(isIce, iceConduct * snowConduct / (
@@ -153,7 +158,7 @@ def solve4temp(hIceActual, hSnowActual, TSurfIn, TempFrz, ug,
         F_c  = npx.where(isIce, effConduct * (TempFrz + celsius2K - t1), 0)
 
         # latent heat flux (sublimation) (+ = upward)
-        F_lh = npx.where(isIce, d1i * ug * (qhice - aqh), 0)
+        F_lh = npx.where(isIce, d1i * ug * (qhice - state.variables.aqh), 0)
 
         # upward long-wave surface heat flux (+ = upward)
         F_lwu = npx.where(isIce, t4 * d3, 0)
