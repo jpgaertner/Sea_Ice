@@ -11,10 +11,10 @@ from seaice_fill_overlap import fill_overlap
 def freedrift_solver(state):
 
     # air-ice stress at cell center
-    tauXIceCenter = 0.5 * (state.variables.IceSurfStressX0 \
-                + npx.roll(state.variables.IceSurfStressX0,-1,1))
-    tauYIceCenter = 0.5 * (state.variables.IceSurfStressY0 \
-                + npx.roll(state.variables.IceSurfStressY0,-1,0))
+    tauXIceCenter = 0.5 * (state.variables.WindForcingX \
+                + npx.roll(state.variables.WindForcingX,-1,1))
+    tauYIceCenter = 0.5 * (state.variables.WindForcingY \
+                + npx.roll(state.variables.WindForcingY,-1,0))
 
     # mass of ice per unit area times coriolis factor
     mIceCor = rhoIce * state.variables.hIceMean * fCori
