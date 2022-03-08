@@ -130,11 +130,9 @@ def growth(state):
     # add lower boundary
     hIceActual = npx.maximum(hIceActual, 0.05)
 
+
     ##### retrieve the air-sea heat and shortwave radiative fluxes and #####
     #####   calculate the corresponding ice growth rate for open water #####
-
-    # set wind speed
-    ug = npx.maximum(eps, state.variables.wSpeed)
 
     # set fluxed in (qswo) and out (F_ao) of the ocean
     F_ao = state.variables.Qnet
@@ -165,7 +163,7 @@ def growth(state):
         hSnowActual_mult = update(hSnowActual_mult, at[:,:,l], hSnowActual * pFac)
 
     # calculate freezing temperature
-    TempFrz = tempFrz0 + dTempFrz_dS * state.variables.salt
+    TempFrz = tempFrz0 + dTempFrz_dS * state.variables.salt + celsius2K
 
     # calculate heat fluxes and ice/ snow surface temperature
     for l in range(nITC):
@@ -214,6 +212,7 @@ def growth(state):
     #F_ia = npx.sum(F_ia_mult*recip_nITC, axis=2) * AreapreTH
     qswi = npx.sum(qswi_mult*recip_nITC, axis=2) * AreapreTH
     #FWsublim = npx.sum(FWsublim_mult*recip_nITC, axis=2) * AreapreTH
+
 
     ##### calculate growth rates of ice and snow #####
 
