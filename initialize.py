@@ -1,4 +1,3 @@
-from numpy import ones
 from veros.state import VerosState
 from veros.settings import Setting
 from veros.variables import Variable
@@ -25,7 +24,7 @@ var_meta = dict(
     wSpeed          = Variable("Total wind speed", dims, "m/s"),
     fu              = Variable("Zonal stress on ocean surface", dims, "N/m^2"),
     fv              = Variable("Meridional stress on ocean surface", dims, "N/m^2"),
-    IceSurfStressX0 = Variable("Zonal forcing by surface stress", dims, " "), #??? unit
+    IceSurfStressX0 = Variable("Zonal forcing by surface stress", dims, " "), #??? change name?, unit?
     IceSurfStressY0 = Variable("Meridional forcing by surface stress", dims, " "), #??? unit
     uTrans          = Variable("Zonal ice transport", dims, "m^2/s"), #??? unit correct?
     vTrans          = Variable("Meridional ice transport", dims, "m^2/s"),
@@ -44,6 +43,8 @@ var_meta = dict(
     snowPrecip      = Variable("Snowfall", dims, "m/s"), #??? same
     evap            = Variable("Evaporation over open ocean", dims, "m/s"), #??? right?
     runoff          = Variable("Runoff into ocean", dims, "m/s"),
+    EmPmR           = Variable("Evaporation minus precipitation minus runoff", dims, "m/s"),
+    saltflux        = Variable("Salt flux into the ocean", dims, "m/s"),
     R_low           = Variable("Sea floor depth (<0)", dims, "m"),
     SeaIceMassC     = Variable("Sea ice mass centered around c point", dims, "kg"),
     SeaIceMassU     = Variable("Sea ice mass centered around u point", dims, "kg"),
@@ -54,7 +55,9 @@ var_meta = dict(
     press0          = Variable("Ice Strength", dims, " "), #??? unit, change name
     press           = Variable("Ice Pressure", dims, "P"), #??? unit? what exactly is it?
     zeta            = Variable("Bulk ice viscosity", dims, "Ns/m^2"), #??? right?
-    eta             = Variable("Shear ice viscosity", dims, "Ns/m^2")
+    eta             = Variable("Shear ice viscosity", dims, "Ns/m^2"),
+    os_hIceMean     = Variable("Overshoot of ice thickness from advection", dims, "m"),
+    os_hSnowMean    = Variable("Overshoot of snow thickness from advection", dims, "m/s")
 )
 
 sett_meta = dict(
@@ -69,6 +72,10 @@ sett_meta = dict(
     useLSR          = Setting(False, bool, "flag whether to use LSR solver"),
     usePicard       = Setting(False, bool, "flag whether to use Picard solver"),
     useJNFK         = Setting(False, bool, "flag whether to use JNFK solver"),
+    SeaIceStrength  = Setting(27.5e3, float, "Standart sea ice strength"),
+    cStar           = Setting(20, float, "Sea ice strength parameter"),
+    PlasDefCoeff    = Setting(2, float, "Axes ratio of the elliptical yield curve"),
+    h0              = Setting(0.5, float, "Lead closing parameter")
 )
 
 ones2d = npx.ones((nx+2*olx,ny+2*oly))
@@ -90,6 +97,7 @@ init_values = dict(
     SWDown_init     = ones2d * 0,
     LWDown_init     = ones2d * 20,
     ATemp_init      = ones2d * celsius2K - 20.16,
+    precip_init     = ones2d * 0,
     R_low_init      = ones2d * -1000
 )
 
@@ -111,6 +119,7 @@ def set_inits(state):
     state.variables.ATemp       = init_values["ATemp_init"]
     state.variables.wSpeed      = init_values["wSpeed_init"]
     state.variables.R_low       = init_values["R_low_init"]
+    state.variables.precip      = init_values["precip_init"]
 
 
 state = VerosState(var_meta, sett_meta, dimensions)
