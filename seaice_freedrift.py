@@ -35,13 +35,14 @@ def freedrift_solver(state):
 
     # solve for norm
     south = (fCori < 0)
-    tmp1 = npx.where(south, waterIceDrag_south, waterIceDrag) * rhoConst
+    tmp1 = 1 / (npx.where(south, waterIceDrag_south, waterIceDrag) * rhoConst)
     tmp2 = tmp1**2 * mIceCor**2
     tmp3 = tmp1**2 * rhsN**2
     tmp4 = tmp2**2 + 4 * tmp3
     solNorm = npx.where(tmp3 > 0, npx.sqrt(0.5 * (npx.sqrt(tmp4) - tmp2)), 0)
 
     # solve for angle
+    tmp1 = 1 / tmp1
     tmp2 = tmp1 * solNorm**2
     tmp3 = mIceCor * solNorm
     tmp4 = tmp2**2 + tmp3**2
@@ -51,16 +52,9 @@ def freedrift_solver(state):
     uIceCenter = uVelCenter - solNorm * npx.cos(solAngle)
     vIceCenter = vVelCenter - solNorm * npx.sin(solAngle)
 
-    uIceCenter = fill_overlap(uIceCenter)
-    vIceCenter = fill_overlap(vIceCenter)
-
     # interpolate to velocity points
     uIceFD = 0.5 * (npx.roll(uIceCenter,1,1) + uIceCenter)
     vIceFD = 0.5 * (npx.roll(vIceCenter,1,0) + vIceCenter)
-
-    # fill the overlap regions
-    uIceFD = fill_overlap(uIceFD)
-    vIceFD = fill_overlap(vIceFD)
 
     # apply masks
     uIceFD = uIceFD * SeaIceMaskU
