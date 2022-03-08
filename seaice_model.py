@@ -16,7 +16,7 @@ from seaice_fill_overlap import fill_overlap, fill_overlap3d
 ### input from gendata
 windspd = 5
 waterspd= 0.0
-hIceMean = np.ones((sNy+2*OLy,sNx+2*OLx))*0.3
+hIceMean = np.ones((sNy+2*OLy,sNx+2*OLx))*1.3
 uWind = np.ones((32, sNy+2*OLy,sNx+2*OLx))*windspd
 vWind = np.ones((32, sNy+2*OLy,sNx+2*OLx))*windspd
 uVel = np.zeros((sNy+2*OLy,sNx+2*OLx)) + waterspd
@@ -74,7 +74,7 @@ secondOrderBC = False
 
 plt.close('all')
 monFreq = 5
-nTimeSteps = 50
+nTimeSteps = 5
 nIter0 = 0
 
 for i in range(nTimeSteps):

@@ -129,7 +129,8 @@ useLSR       = False
 usePicard    = False
 useJFNK      = False
 
-useEVP = True
+useFreedrift = True
+# useEVP = True
 #useLSR = True
 #usePicard=True
 # useJFNK = True

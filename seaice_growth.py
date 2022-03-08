@@ -220,6 +220,12 @@ def growth(hIceMean, hSnowMean, Area, os_hIceMean, os_hSnowMean, salt, TIceSnow,
     qswi = np.sum(qswi_mult*recip_nITC, axis=2) * AreapreTH
     FWsublim = np.sum(FWsublim_mult*recip_nITC, axis=2) * AreapreTH
 
+    import matplotlib.pyplot as plt
+
+    plt.pcolormesh(F_io_net)
+    plt.colorbar()
+    plt.show()
+
 
     ##### calculate growth rates of ice and snow #####
 
