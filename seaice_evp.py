@@ -57,8 +57,8 @@ def evp_solver(state):
     denom2 = denom1
 
     # copy previous time step (n-1) of uIce, vIce
-    uIceNm1 = update(state.variables.uIce, at[:,:], state.variables.uIce)
-    vIceNm1 = update(state.variables.vIce, at[:,:], state.variables.vIce)
+    uIceNm1 = state.variables.uIce
+    vIceNm1 = state.variables.vIce
 
     # initialize adaptive EVP specific fields
     evpAlphaC = evpAlpha
@@ -70,11 +70,11 @@ def evp_solver(state):
 
     # should initialised elsewhere (but this will work, too, just more
     # expensive) #???
-    # sigma1  = zero2d.copy()
-    # sigma2  = zero2d.copy()
-    sigma11 = update(zero2d, at[:,:], zero2d)
-    sigma22 = update(zero2d, at[:,:], zero2d)
-    sigma12 = update(zero2d, at[:,:], zero2d)
+    # sigma1  = zero2d
+    # sigma2  = zero2d
+    sigma11 = zero2d
+    sigma22 = zero2d
+    sigma12 = zero2d
     resSig  = npx.zeros(nEVPsteps+1)
     resU    = npx.zeros(nEVPsteps+1)
 
@@ -83,16 +83,15 @@ def evp_solver(state):
     resEVP = evpTol*2
     #while resEVP > evpTol and iEVP < nEVPsteps:
     for iEVP in range (nEVPsteps):
-        print(iEVP)
         #iEVP = iEVP + 1
 
         if computeEvpResidual:
             # save previous (p-1) iteration for residual computation
-            sig11Pm1 = update(sigma11, at[:,:], sigma11)
-            sig22Pm1 = update(sigma22, at[:,:], sigma22)
-            sig12Pm1 = update(sigma12, at[:,:], sigma12)
-            uIcePm1  = update(state.variables.uIce, at[:,:], state.variables.uIce)
-            vIcePm1  = update(state.variables.vIce, at[:,:], state.variables.vIce)
+            sig11Pm1 = sigma11
+            sig22Pm1 = sigma22
+            sig12Pm1 = sigma12
+            uIcePm1  = state.variables.uIce
+            vIcePm1  = state.variables.vIce
 
         # calculate strain rates and bulk moduli/ viscosities
         e11, e22, e12 = strainrates(state.variables.uIce, state.variables.vIce)
@@ -139,8 +138,8 @@ def evp_solver(state):
         cBotC = bottomdrag_coeffs(state, state.variables.uIce, state.variables.vIce)
 
         # over open ocean..., see comments in MITgcm: pkg/seaice/seaice_evp.F
-        locMaskU = update(state.variables.SeaIceMassU, at[:,:], state.variables.SeaIceMassU)
-        locMaskV = update(state.variables.SeaIceMassV, at[:,:], state.variables.SeaIceMassU)
+        locMaskU = state.variables.SeaIceMassU
+        locMaskV = state.variables.SeaIceMassV
         locMaskU = npx.where(locMaskU != 0, 1, locMaskU)
         locMaskV = npx.where(locMaskV != 0, 1, locMaskV)
 
