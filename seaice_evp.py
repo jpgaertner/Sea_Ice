@@ -99,7 +99,7 @@ def evp_solver(state):
             vIcePm1  = update(state.variables.vIce, at[:,:], state.variables.vIce)
 
         # calculate strain rates and bulk moduli/ viscosities
-        e11, e22, e12 = strainrates(state)
+        e11, e22, e12 = strainrates(state.variables.uIce, state.variables.vIce)
 
         zeta, eta, press = viscosities(state,e11,e22,e12,iEVP)
 
@@ -139,8 +139,8 @@ def evp_solver(state):
             sigma11, sigma22, sigma12, iEVP)
 
         # drag coefficients for implicit/explicit treatment of drag
-        cDrag = ocean_drag_coeffs(state)
-        cBotC = bottomdrag_coeffs(state)
+        cDrag = ocean_drag_coeffs(state, state.variables.uIce, state.variables.vIce)
+        cBotC = bottomdrag_coeffs(state, state.variables.uIce, state.variables.vIce)
 
         # over open ocean..., see comments in MITgcm: pkg/seaice/seaice_evp.F
         locMaskU = update(state.variables.SeaIceMassU, at[:,:], state.variables.SeaIceMassU)

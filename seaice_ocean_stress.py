@@ -13,7 +13,7 @@ from dynamics_routines import ocean_drag_coeffs
 def calc_OceanStress(state):
 
     # get linear drag coefficient at c point
-    cDrag = ocean_drag_coeffs(state)
+    cDrag = ocean_drag_coeffs(state, state.variables.uIce, state.variables.vIce)
 
     # introduce turning angle (default is zero)
     sinWat = npx.sin(npx.deg2rad(waterTurnAngle))

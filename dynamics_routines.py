@@ -24,7 +24,7 @@ def update_IceStrength(state):
 
 # calculate ocean drag coefficients from ice and ocean velocities
 @veros_kernel
-def ocean_drag_coeffs(state):
+def ocean_drag_coeffs(state,uIce,vIce):
 
     ### input:
     # uIce: zonal ice velocity
@@ -42,8 +42,8 @@ def ocean_drag_coeffs(state):
     dragCoeff = npx.where(fCori < 0, waterIceDrag_south, waterIceDrag) * rhoConst
 
     # calculate linear drag coefficient
-    du = (state.variables.uIce - state.variables.uVel)*maskInW
-    dv = (state.variables.vIce - state.variables.vVel)*maskInS
+    du = (uIce - state.variables.uVel)*maskInW
+    dv = (vIce - state.variables.vVel)*maskInS
     tmpVar = 0.25 * ( du**2 + npx.roll(du,-1,1)**2
                     + dv**2 + npx.roll(dv,-1,0)**2 )
 
@@ -54,7 +54,7 @@ def ocean_drag_coeffs(state):
     return cDrag
 
 @veros_kernel
-def bottomdrag_coeffs(state):
+def bottomdrag_coeffs(state, uIce, vIce):
 
     ### input:
     # uIce: zonal ice velocity
@@ -69,10 +69,10 @@ def bottomdrag_coeffs(state):
     fac = 10. #scales the soft maximum for more accuracy
     recip_fac = 1. / fac
 
-    tmpFld = 0.25 * ( (state.variables.uIce*maskInW)**2
-                    + npx.roll(state.variables.uIce*maskInW,-1,1)**2
-                    + (state.variables.vIce*maskInS)**2
-                    + npx.roll(state.variables.vIce*maskInS,-1,1)**2 )
+    tmpFld = 0.25 * ( (uIce*maskInW)**2
+                    + npx.roll(uIce*maskInW,-1,1)**2
+                    + (vIce*maskInS)**2
+                    + npx.roll(vIce*maskInS,-1,1)**2 )
     tmpFld = basalDragK2 / npx.sqrt(tmpFld + basalDragU0**2)
 
     hCrit = npx.abs(state.variables.R_low) * state.variables.Area / basalDragK1
@@ -92,7 +92,7 @@ def bottomdrag_coeffs(state):
     return cBot
 
 @veros_kernel
-def strainrates(state):
+def strainrates(uIce, vIce):
 
     ### input
     # uIce: zonal ice velocity
@@ -104,20 +104,20 @@ def strainrates(state):
     # e12: 1,2 component of strain rate tensor
 
     # abbreviations at c points
-    dudx = ( npx.roll(state.variables.uIce,-1,axis=1) - state.variables.uIce ) * recip_dxF
-    uave = ( npx.roll(state.variables.uIce,-1,axis=1) + state.variables.uIce ) * 0.5
-    dvdy = ( npx.roll(state.variables.vIce,-1,axis=0) - state.variables.vIce ) * recip_dyF
-    vave = ( npx.roll(state.variables.vIce,-1,axis=0) + state.variables.vIce ) * 0.5
+    dudx = ( npx.roll(uIce,-1,axis=1) - uIce ) * recip_dxF
+    uave = ( npx.roll(uIce,-1,axis=1) + uIce ) * 0.5
+    dvdy = ( npx.roll(vIce,-1,axis=0) - vIce ) * recip_dyF
+    vave = ( npx.roll(vIce,-1,axis=0) + vIce ) * 0.5
 
     # evaluate strain rates at c points
     e11 = ( dudx + vave * k2AtC ) * maskInC
     e22 = ( dvdy + uave * k1AtC ) * maskInC
 
     # abbreviations at z points
-    dudy = ( state.variables.uIce - npx.roll(state.variables.uIce,1,axis=0) ) * recip_dyU
-    uave = ( state.variables.uIce + npx.roll(state.variables.uIce,1,axis=0) ) * 0.5
-    dvdx = ( state.variables.vIce - npx.roll(state.variables.vIce,1,axis=1) ) * recip_dxV
-    vave = ( state.variables.vIce + npx.roll(state.variables.vIce,1,axis=1) ) * 0.5
+    dudy = ( uIce - npx.roll(uIce,1,axis=0) ) * recip_dyU
+    uave = ( uIce + npx.roll(uIce,1,axis=0) ) * 0.5
+    dvdx = ( vIce - npx.roll(vIce,1,axis=1) ) * recip_dxV
+    vave = ( vIce + npx.roll(vIce,1,axis=1) ) * 0.5
 
     # evaluate strain rate at z points
     mskZ = iceMask*npx.roll(iceMask,1,axis=1)
@@ -150,11 +150,11 @@ def strainrates(state):
         # The masking is ugly, but hopefully effective.
         e12 = e12 + 0.5 * (
             recip_dyU * ( 6. * uave
-                          - npx.roll(state.variables.uIce, 2,0) * npx.roll(SeaIceMaskU,1,0)
-                          - npx.roll(state.variables.uIce,-1,0) * SeaIceMaskU ) * hFacU
+                          - npx.roll(uIce, 2,0) * npx.roll(SeaIceMaskU,1,0)
+                          - npx.roll(uIce,-1,0) * SeaIceMaskU ) * hFacU
           + recip_dxV * ( 6. * vave
-                          - npx.roll(state.variables.vIce, 2,1) * npx.roll(SeaIceMaskV,1,1)
-                          - npx.roll(state.variables.vIce,-1,1) * SeaIceMaskV ) * hFacV
+                          - npx.roll(vIce, 2,1) * npx.roll(SeaIceMaskV,1,1)
+                          - npx.roll(vIce,-1,1) * SeaIceMaskV ) * hFacV
         )
 
     return e11, e22, e12
