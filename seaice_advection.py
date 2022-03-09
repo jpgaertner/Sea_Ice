@@ -41,28 +41,30 @@ def calc_Advection(state):
     # calculate zonal advective fluxes of hIceMean, hSnowMean, Area
     ZonalFlux = calc_ZonalFlux(state)
 
-    # calculate meridional advective fluxes of hIceMean, hSnowMean, Area
-    MeridionalFlux = calc_MeridionalFlux(state)
-
     # changes due to zonal fluxes
-    if extensiveFld:
-        fields = fields - deltaTtherm * maskInC * recip_rA \
-            * ( npx.roll(ZonalFlux,-1,1) - ZonalFlux )
-    else:
-        fields= fields- deltaTtherm * maskInC * recip_rA * recip_hIceMean * (
-            ( npx.roll(ZonalFlux,-1,1) - ZonalFlux )
-            - ( npx.roll(state.variable.uTrans,-1,1) - state.variable.uTrans )
-            * fields_preAdv)
+    for i in range(3):
+        if extensiveFld:
+            fields[i] = fields[i] - deltaTtherm * maskInC * recip_rA \
+                * ( npx.roll(ZonalFlux[i],-1,1) - ZonalFlux[i] )
+        else:
+            fields[i] = fields[i] - deltaTtherm * maskInC * recip_rA * recip_hIceMean * (
+                ( npx.roll(ZonalFlux[i],-1,1) - ZonalFlux[i] )
+                - ( npx.roll(state.variable.uTrans,-1,1) - state.variable.uTrans )
+                * fields_preAdv[i])
+
+    # calculate meridional advective fluxes of hIceMean, hSnowMean, Area
+    MeridionalFlux = calc_MeridionalFlux(state, fields)
 
     # changes due to meridional fluxes
-    if extensiveFld:
-        fields = fields - deltaTtherm * maskInC * recip_rA \
-            * ( npx.roll(MeridionalFlux,-1,0) - MeridionalFlux )
-    else:
-        fields = fields - deltaTtherm * maskInC * recip_rA * recip_hIceMean * (
-            ( npx.roll(MeridionalFlux,-1,0) - MeridionalFlux )
-            - ( npx.roll(state.variable.vTrans,-1,0) - state.variables.vTrans)
-            * fields_preAdv)
+    for i in range(3):
+        if extensiveFld:
+            fields[i] = fields[i] - deltaTtherm * maskInC * recip_rA \
+                * ( npx.roll(MeridionalFlux[i],-1,0) - MeridionalFlux[i] )
+        else:
+            fields[i] = fields[i] - deltaTtherm * maskInC * recip_rA * recip_hIceMean * (
+                ( npx.roll(MeridionalFlux[i],-1,0) - MeridionalFlux[i] )
+                - ( npx.roll(state.variable.vTrans,-1,0) - state.variables.vTrans)
+                * fields_preAdv[i])
 
     # apply mask
     fields = fields * iceMask
