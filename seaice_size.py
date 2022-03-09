@@ -30,14 +30,14 @@ print('gridcellWidth = %e'%gridcellWidth)
 
 # grid descriptor variables
 deltaX = npx.ones((ny+2*oly,nx+2*olx))*gridcellWidth
-dxC = deltaX.copy() #distance between two adjacent cell centers in x direction across western cell wall [m]
-dyC = deltaX.copy() #distance between two adjacent cell centers in y direction across southern cell wall [m]
-dxG = deltaX.copy() #distance between cell faces (cell width) in x direction along southern cell wall [m]
-dyG = deltaX.copy() #distance between cell faces (cell width) in y direction along western cell wall [m]
-dxF = deltaX.copy() #distance between cell faces (cell width) in x direction through cell center [m]
-dyF = deltaX.copy() #distance between cell faces (cell width) in y direction through cell center [m]
-dxV = deltaX.copy() #distance between two adjacent v points in x direction across south-west corner of the cell [m]
-dyU = deltaX.copy() #distance between two adjacent u points in y direction across south-west corner of the cell [m]
+dxC = deltaX #distance between two adjacent cell centers in x direction across western cell wall [m]
+dyC = deltaX #distance between two adjacent cell centers in y direction across southern cell wall [m]
+dxG = deltaX #distance between cell faces (cell width) in x direction along southern cell wall [m]
+dyG = deltaX #distance between cell faces (cell width) in y direction along western cell wall [m]
+dxF = deltaX #distance between cell faces (cell width) in x direction through cell center [m]
+dyF = deltaX #distance between cell faces (cell width) in y direction through cell center [m]
+dxV = deltaX #distance between two adjacent v points in x direction across south-west corner of the cell [m]
+dyU = deltaX #distance between two adjacent u points in y direction across south-west corner of the cell [m]
 recip_dxC = 1 / dxC
 recip_dyC = 1 / dyC
 recip_dxG = 1 / dxG
@@ -71,9 +71,9 @@ maskInW = fill_overlap(maskInW)
 maskInS = maskInC*npx.roll(maskInC,1,axis=0)
 maskInS = fill_overlap(maskInS)
 
-iceMask = maskInC.copy()
-SeaIceMaskU = maskInW.copy()
-SeaIceMaskV = maskInS.copy()
+iceMask = maskInC
+SeaIceMaskU = maskInW
+SeaIceMaskV = maskInS
 
 k1AtC = npx.zeros((ny+2*oly,nx+2*olx))
 k2AtC = npx.zeros((ny+2*oly,nx+2*olx))
@@ -86,9 +86,9 @@ recip_hIceMean = npx.ones_like(iceMask) #???
 # maskInC = npx.ones((ny+2*oly,nx+2*olx))
 # maskInW = npx.ones((ny+2*oly,nx+2*olx))
 # maskInS = npx.ones((ny+2*oly,nx+2*olx))
-# iceMask = maskInC.copy()
-# SeaIceMaskU = maskInW.copy()
-# SeaIceMaskV = maskInS.copy()
+# iceMask = maskInC
+# SeaIceMaskU = maskInW
+# SeaIceMaskV = maskInS
 
 globalArea = (maskInC*rA).sum()
 if globalArea == 0: print('globalArea = 0, something is wrong')
