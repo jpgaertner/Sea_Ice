@@ -44,34 +44,28 @@ def calc_Advection(state):
     # calculate meridional advective fluxes of hIceMean, hSnowMean, Area
     MeridionalFlux = calc_MeridionalFlux(state)
 
-    # update the fields hIceMean, hSnowMean, Area
-    for i in range(3):
+    # changes due to zonal fluxes
+    if extensiveFld:
+        fields = fields - deltaTtherm * maskInC * recip_rA \
+            * ( npx.roll(ZonalFlux,-1,1) - ZonalFlux )
+    else:
+        fields= fields- deltaTtherm * maskInC * recip_rA * recip_hIceMean * (
+            ( npx.roll(ZonalFlux,-1,1) - ZonalFlux )
+            - ( npx.roll(state.variable.uTrans,-1,1) - state.variable.uTrans )
+            * fields_preAdv)
 
-        field = fields[i]
-        field_preAdv = fields_preAdv[i]
+    # changes due to meridional fluxes
+    if extensiveFld:
+        fields = fields - deltaTtherm * maskInC * recip_rA \
+            * ( npx.roll(MeridionalFlux,-1,0) - MeridionalFlux )
+    else:
+        fields = fields - deltaTtherm * maskInC * recip_rA * recip_hIceMean * (
+            ( npx.roll(MeridionalFlux,-1,0) - MeridionalFlux )
+            - ( npx.roll(state.variable.vTrans,-1,0) - state.variables.vTrans)
+            * fields_preAdv)
 
-        # changes due to zonal fluxes
-        if extensiveFld:
-            field = field - deltaTtherm * maskInC * recip_rA \
-                * ( npx.roll(ZonalFlux[i],-1,1) - ZonalFlux[i] )
-        else:
-            field= field- deltaTtherm * maskInC * recip_rA * recip_hIceMean * (
-                ( npx.roll(ZonalFlux[i],-1,1) - ZonalFlux[i] )
-                - ( npx.roll(state.variable.uTrans,-1,1) - state.variable.uTrans ) * field_preAdv
-            )
-
-        # changes due to meridional fluxes
-        if extensiveFld:
-            field = field - deltaTtherm * maskInC * recip_rA \
-                * ( npx.roll(MeridionalFlux[i],-1,0) - MeridionalFlux[i] )
-        else:
-            field = field - deltaTtherm * maskInC * recip_rA * recip_hIceMean * (
-                ( npx.roll(MeridionalFlux[i],-1,0) - MeridionalFlux[i] )
-                - ( npx.roll(state.variable.vTrans,-1,0) - state.variables.vTrans) * field_preAdv
-            )
-
-        # save updated fields
-        fields = update(fields, at[i], field * iceMask)
+    # apply mask
+    fields = fields * iceMask
     
     return KernelOutput(hIceMean = fields[0], hSnowMean = fields[1], Area = fields[2])
 
