@@ -17,12 +17,14 @@ maskLocS = SeaIceMaskV * maskInS
 # calculates the area integrated zonal flux due to advection using
 # second-order interpolation with a flux limiter
 @veros_kernel
-def calc_MeridionalFlux(state):
+def calc_MeridionalFlux(state, hIceMean, hSnowMean, Area):
 
-    fields = [state.variables.hIceMean, state.variables.hSnowMean, state.variables.Area]
+    fields = [hIceMean, hSnowMean, Area]
+
+    state.variables.vTrans = npx.ones_like(hIceMean) * 1000
 
     # CFL number of meridional flow
-    vCFL = npx.abs(state.variables.vIce * deltatLoc * recip_dyC)
+    vCFL = npx.abs(state.variables.vIce * deltatLoc * recip_dyC) * 0
 
     # initialize output array
     MeridionalFlux = npx.zeros((3,nx+2*olx,ny+2*oly))
@@ -38,7 +40,7 @@ def calc_MeridionalFlux(state):
 
         Cr = npx.where(state.variables.vTrans[2:-1,:] > 0, Rjm, Rjp)
         Cr = npx.where(npx.abs(Rj) * CrMax > npx.abs(Cr),
-                        Cr / Rj, Cr * CrMax * npx.sign(Rj))
+                        Cr / Rj, npx.sign(Cr) * CrMax * npx.sign(Rj))
         Cr = limiter(Cr)
 
         vF = npx.zeros_like(iceMask)
