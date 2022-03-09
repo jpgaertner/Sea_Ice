@@ -155,7 +155,7 @@ def solve4temp(state, hIceActual, hSnowActual, TSurfIn, TempFrz):
         # calculate the fluxes based on the surface temperature
 
         # conductive heat flux through ice and snow (+ = upward)
-        F_c  = npx.where(isIce, effConduct * (TempFrz + celsius2K - t1), 0)
+        F_c  = npx.where(isIce, effConduct * (TempFrz - t1), 0)
 
         # latent heat flux (sublimation) (+ = upward)
         F_lh = npx.where(isIce, d1i * ug * (qhice - state.variables.aqh), 0)
