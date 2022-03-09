@@ -44,13 +44,14 @@ def calc_Advection(state):
     # changes due to zonal fluxes
     for i in range(3):
         if extensiveFld:
-            fields[i] = fields[i] - deltaTtherm * maskInC * recip_rA \
-                * ( npx.roll(ZonalFlux[i],-1,1) - ZonalFlux[i] )
+            fields = update(fields, at[i], fields[i] - deltaTtherm * maskInC
+                * recip_rA * ( npx.roll(ZonalFlux[i],-1,1) - ZonalFlux[i] ))
         else:
-            fields[i] = fields[i] - deltaTtherm * maskInC * recip_rA * recip_hIceMean * (
-                ( npx.roll(ZonalFlux[i],-1,1) - ZonalFlux[i] )
+            fields = update(fields, at[i], fields[i] - deltaTtherm * maskInC
+                * recip_rA * recip_hIceMean
+                * (( npx.roll(ZonalFlux[i],-1,1) - ZonalFlux[i] )
                 - ( npx.roll(state.variable.uTrans,-1,1) - state.variable.uTrans )
-                * fields_preAdv[i])
+                * fields_preAdv[i]))
 
     # calculate meridional advective fluxes of hIceMean, hSnowMean, Area
     MeridionalFlux = calc_MeridionalFlux(state, fields)
@@ -58,13 +59,14 @@ def calc_Advection(state):
     # changes due to meridional fluxes
     for i in range(3):
         if extensiveFld:
-            fields[i] = fields[i] - deltaTtherm * maskInC * recip_rA \
-                * ( npx.roll(MeridionalFlux[i],-1,0) - MeridionalFlux[i] )
+            fields = update(fields, at[i], fields[i] - deltaTtherm * maskInC
+            * recip_rA * ( npx.roll(MeridionalFlux[i],-1,0) - MeridionalFlux[i] ))
         else:
-            fields[i] = fields[i] - deltaTtherm * maskInC * recip_rA * recip_hIceMean * (
-                ( npx.roll(MeridionalFlux[i],-1,0) - MeridionalFlux[i] )
+            fields = update(fields, at[i], fields[i] - deltaTtherm * maskInC
+                * recip_rA * recip_hIceMean
+                * (( npx.roll(MeridionalFlux[i],-1,0) - MeridionalFlux[i] )
                 - ( npx.roll(state.variable.vTrans,-1,0) - state.variables.vTrans)
-                * fields_preAdv[i])
+                * fields_preAdv[i]))
 
     # apply mask
     fields = fields * iceMask
