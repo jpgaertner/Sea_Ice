@@ -46,7 +46,6 @@ recip_dxF = 1 / dxF
 recip_dyF = 1 / dyF
 recip_dxV = 1 / dxV
 recip_dyU = 1 / dyU
-dxN = 1
 
 rA = dxF * dyF #grid width with c point at center
 rAz = dxV * dyU #grid width with z point at center
