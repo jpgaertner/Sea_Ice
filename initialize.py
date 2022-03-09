@@ -52,12 +52,14 @@ var_meta = dict(
     e11             = Variable("strain rate", dims, " "), #??? name, unit
     e22             = Variable("strain rate", dims, " "), #??? same
     e12             = Variable("strain rate", dims, " "), #??? same
-    press0          = Variable("Ice Strength", dims, " "), #??? unit, change name
+    press0          = Variable("Ice Strength", dims, "N/m"), #??? unit, change name
     press           = Variable("Ice Pressure", dims, "P"), #??? unit? what exactly is it?
     zeta            = Variable("Bulk ice viscosity", dims, "Ns/m^2"), #??? right?
     eta             = Variable("Shear ice viscosity", dims, "Ns/m^2"),
     os_hIceMean     = Variable("Overshoot of ice thickness from advection", dims, "m"),
-    os_hSnowMean    = Variable("Overshoot of snow thickness from advection", dims, "m/s")
+    os_hSnowMean    = Variable("Overshoot of snow thickness from advection", dims, "m/s"),
+    AreaW           = Variable("Sea ice cover fraction centered around u point", dims, " "),
+    AreaS           = Variable("Sea ice cover fraction centered around v point", dims, " ")
 )
 
 sett_meta = dict(
