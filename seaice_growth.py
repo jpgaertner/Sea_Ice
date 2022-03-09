@@ -376,6 +376,8 @@ def growth(state):
     ResidualEnergyOutOfOcean = NetEnergyFluxOutOfOcean - EnergyInNewTotalIceVolume
 
     # total heat flux out of the ocean [W/m2]
+    Qnet_preth = state.variables.Qnet #TODO: using this ensures that the
+    # forcing is constant (for testing), remove this when given an input from veros
     Qnet = ResidualEnergyOutOfOcean * recip_deltaTtherm
 
     # the freshwater contribution to (from) the ocean from melting (growing)
@@ -419,7 +421,7 @@ def growth(state):
                         saltflux = saltflux,
                         EmPmR = EmPmR,
                         Qsw = Qsw,
-                        Qnet = Qnet,
+                        Qnet = Qnet_preth,
                         SeaIceLoad = SeaIceLoad)
 
 @veros_routine
