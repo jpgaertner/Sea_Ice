@@ -36,7 +36,7 @@ def calc_Advection(state):
 
     #store fields prior to advective changes
     fields = npx.array([state.variables.hIceMean, state.variables.hSnowMean, state.variables.Area])
-    fields_preAdv = update(fields, at[:], fields)
+    fields_preAdv = fields
 
     # calculate zonal advective fluxes of hIceMean, hSnowMean, Area
     ZonalFlux = calc_ZonalFlux(state)
