@@ -66,10 +66,6 @@ def evp_solver(state):
     evpBetaU  = evpBeta
     evpBetaV  = evpBeta
 
-    # initialize fractional areas at velocity points
-    areaW = 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,1))
-    areaS = 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,0))
-
     zero2d = npx.zeros_like(iceMask)
 
     # should initialised elsewhere (but this will work, too, just more
@@ -159,13 +155,13 @@ def evp_solver(state):
             - npx.sign(fCori) * sinWat * 0.5 * (
                 cDrag * dvAtC + npx.roll(cDrag * dvAtC,1,1)
             ) * locMaskU
-        ) * areaW
+        ) * state.variables.AreaW
         ForcingY = state.variables.WindForcingY + (
             0.5 * ( cDrag + npx.roll(cDrag,1,0) ) * cosWat * state.variables.vVel
             + npx.sign(fCori) * sinWat * 0.5 * (
                 cDrag * duAtC  + npx.roll(cDrag * duAtC,1,0)
             ) * locMaskV
-        ) * areaS
+        ) * state.variables.AreaS
 
         # add coriolis terms
         fvAtC = state.variables.SeaIceMassC * fCori * 0.5 \
@@ -181,10 +177,10 @@ def evp_solver(state):
 
         rMassU = 1./npx.where(state.variables.SeaIceMassU==0,npx.inf,state.variables.SeaIceMassU)
         rMassV = 1./npx.where(state.variables.SeaIceMassV==0,npx.inf,state.variables.SeaIceMassV)
-        dragU = 0.5 * ( cDrag + npx.roll(cDrag,1,1) ) * cosWat * areaW \
-              + 0.5 * ( cBotC + npx.roll(cBotC,1,1) )          * areaW
-        dragV = 0.5 * ( cDrag + npx.roll(cDrag,1,0) ) * cosWat * areaS \
-              + 0.5 * ( cBotC + npx.roll(cBotC,1,0) )          * areaS
+        dragU = 0.5 * ( cDrag + npx.roll(cDrag,1,1) ) * cosWat * state.variables.AreaW \
+              + 0.5 * ( cBotC + npx.roll(cBotC,1,1) )          * state.variables.AreaW
+        dragV = 0.5 * ( cDrag + npx.roll(cDrag,1,0) ) * cosWat * state.variables.AreaS \
+              + 0.5 * ( cBotC + npx.roll(cBotC,1,0) )          * state.variables.AreaS
 
         # step momentum equations with ice-ocean stress treated ...
         if explicitDrag:

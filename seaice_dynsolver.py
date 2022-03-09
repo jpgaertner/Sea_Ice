@@ -72,6 +72,24 @@ def update_SurfaceForcing(state):
     SurfaceForcing = calc_SurfaceForcing(state)
     state.variables.update(SurfaceForcing)
 
+# calculate sea ice cover fraction centered around velocity points
+@veros_kernel
+def calc_AreaWS(state):
+
+    AreaW = 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,1))
+    AreaS = 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,0))
+
+    return KernelOutput(AreaW = AreaW, AreaS = AreaS)
+
+@veros_routine
+def update_AreaWS(state):
+
+    # retrieve sea ice cover fraction centered around u,v points and update state object
+    AreaWS = calc_AreaWS(state)
+    state.variables.update(AreaWS)
+
+
+
 # calculate ice velocities from surface forcing
 @veros_kernel
 def calc_IceVelocities(state):
