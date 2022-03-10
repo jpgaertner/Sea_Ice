@@ -30,52 +30,61 @@ def update_Transport(state):
     Transport = calc_Transport(state)
     state.variables.update(Transport)
 
-# calculate change in sea ice fields due to advection
+# calculate change in sea ice field due to advection
 @veros_kernel
-def calc_Advection(state):
+def calc_Advection(state, field):
 
-    #store fields prior to advective changes
-    fields = npx.array([state.variables.hIceMean, state.variables.hSnowMean, state.variables.Area])
-    fields_preAdv = fields
+    # make local copy of field prior to advective changes
+    fieldLoc = field
 
-    # calculate zonal advective fluxes of hIceMean, hSnowMean, Area
-    ZonalFlux = calc_ZonalFlux(state)
+    # calculate zonal advective fluxes
+    ZonalFlux = calc_ZonalFlux(state, fieldLoc)
 
-    # changes due to zonal fluxes
-    for i in range(3):
-        if extensiveFld:
-            fields = update(fields, at[i], fields[i] - deltaTtherm * maskInC
-                * recip_rA * ( npx.roll(ZonalFlux[i],-1,1) - ZonalFlux[i] ))
-        else:
-            fields = update(fields, at[i], fields[i] - deltaTtherm * maskInC
-                * recip_rA * recip_hIceMean
-                * (( npx.roll(ZonalFlux[i],-1,1) - ZonalFlux[i] )
-                - ( npx.roll(state.variable.uTrans,-1,1) - state.variable.uTrans )
-                * fields_preAdv[i]))
+    # update field according to zonal fluxes
+    if extensiveFld:
+        fieldLoc = fieldLoc - deltaTtherm * maskInC * recip_rA \
+                * ( npx.roll(ZonalFlux,-1,1) - ZonalFlux )
+    else:
+        fieldLoc = fieldLoc - deltaTtherm * maskInC * recip_rA * recip_hIceMean \
+            * (( npx.roll(ZonalFlux,-1,1) - ZonalFlux )
+            - ( npx.roll(state.variable.uTrans,-1,1) - state.variable.uTrans )
+            * field)
 
-    # calculate meridional advective fluxes of hIceMean, hSnowMean, Area
-    MeridionalFlux = calc_MeridionalFlux(state, fields)
+    # calculate meridional advective fluxes
+    MeridionalFlux = calc_MeridionalFlux(state, fieldLoc)
 
-    # changes due to meridional fluxes
-    for i in range(3):
-        if extensiveFld:
-            fields = update(fields, at[i], fields[i] - deltaTtherm * maskInC
-            * recip_rA * ( npx.roll(MeridionalFlux[i],-1,0) - MeridionalFlux[i] ))
-        else:
-            fields = update(fields, at[i], fields[i] - deltaTtherm * maskInC
-                * recip_rA * recip_hIceMean
-                * (( npx.roll(MeridionalFlux[i],-1,0) - MeridionalFlux[i] )
-                - ( npx.roll(state.variable.vTrans,-1,0) - state.variables.vTrans)
-                * fields_preAdv[i]))
+    # update field according to meridional fluxes
+    if extensiveFld:
+        fieldLoc = fieldLoc - deltaTtherm * maskInC * recip_rA \
+            * ( npx.roll(MeridionalFlux,-1,0) - MeridionalFlux )
+    else:
+        fieldLoc = fieldLoc - deltaTtherm * maskInC * recip_rA * recip_hIceMean \
+            * (( npx.roll(MeridionalFlux,-1,0) - MeridionalFlux )
+            - ( npx.roll(state.variable.vTrans,-1,0) - state.variables.vTrans)
+            * field)
 
     # apply mask
-    fields = fields * iceMask
-    
-    return KernelOutput(hIceMean = fields[0], hSnowMean = fields[1], Area = fields[2])
+    fieldLoc = fieldLoc * iceMask
+
+    return fieldLoc
+
+@veros_kernel
+def do_Advections(state):
+
+    # retrieve change of ice thickness due to advection
+    hIceMean = calc_Advection(state, state.variables.hIceMean)
+
+    # retrieve change of snow thickness due to advection
+    hSnowMean = calc_Advection(state, state.variables.hSnowMean)
+
+    # retrieve change of sea ice cover fraction due to advection
+    Area = calc_Advection(state, state.variables.Area)
+
+    return KernelOutput(hIceMean = hIceMean, hSnowMean = hSnowMean, Area = Area)
 
 @veros_routine
 def update_Advection(state):
 
-    # retrieve change of hIceMean, hSnowMean, Area due to advection and update state object
-    Advection = calc_Advection(state)
+    # retrieve changes of ice fields due to advection and update state object
+    Advection = do_Advections(state)
     state.variables.update(Advection)

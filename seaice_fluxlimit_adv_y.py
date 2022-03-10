@@ -9,43 +9,32 @@ from seaice_flux_limiter import limiter
 from seaice_fill_overlap import fill_overlap
 
 
-deltatLoc = deltaTdyn #??? is this really needed?
-
-# mask West #??? is this needed later?
-maskLocS = SeaIceMaskV * maskInS
-
 # calculates the area integrated zonal flux due to advection using
 # second-order interpolation with a flux limiter
 @veros_kernel
-def calc_MeridionalFlux(state, fields):
+def calc_MeridionalFlux(state, field):
+
+    maskLocS = SeaIceMaskV * maskInS
 
     # CFL number of meridional flow
-    vCFL = npx.abs(state.variables.vIce * deltatLoc * recip_dyC)
+    vCFL = npx.abs(state.variables.vIce * deltaTdyn * recip_dyC)
 
-    # initialize output array
-    MeridionalFlux = npx.zeros((3,nx+2*olx,ny+2*oly))
+    # calculate meridional advective fluxes for the given field
+    Rjp = (field[3:,:] - field[2:-1,:]) * maskLocS[3:,:]
+    Rj = (field[2:-1,:] - field[1:-2,:]) * maskLocS[2:-1,:]
+    Rjm = (field[1:-2,:] - field[:-3,:]) * maskLocS[1:-2,:]
 
-    # calculate advective fluxes for the fields hIceMean, hSnowMean, Area
-    for i in range(3):
+    Cr = npx.where(state.variables.vTrans[2:-1,:] > 0, Rjm, Rjp)
+    Cr = npx.where(npx.abs(Rj) * CrMax > npx.abs(Cr),
+                    Cr / Rj, npx.sign(Cr) * CrMax * npx.sign(Rj))
+    Cr = limiter(Cr)
 
-        field = fields[i]
+    MeridionalFlux = npx.zeros_like(iceMask)
+    MeridionalFlux = update(MeridionalFlux, at[2:-1,:], state.variables.vTrans[2:-1,:] * (
+                field[2:-1,:] + field[1:-2,:]) * 0.5
+                - npx.abs(state.variables.vTrans[2:-1,:]) * ((1 - Cr)
+                + vCFL[2:-1,:] * Cr ) * Rj * 0.5)
+    MeridionalFlux = fill_overlap(MeridionalFlux)
 
-        Rjp = (field[3:,:] - field[2:-1,:]) * maskLocS[3:,:]
-        Rj = (field[2:-1,:] - field[1:-2,:]) * maskLocS[2:-1,:]
-        Rjm = (field[1:-2,:] - field[:-3,:]) * maskLocS[1:-2,:]
-
-        Cr = npx.where(state.variables.vTrans[2:-1,:] > 0, Rjm, Rjp)
-        Cr = npx.where(npx.abs(Rj) * CrMax > npx.abs(Cr),
-                        Cr / Rj, npx.sign(Cr) * CrMax * npx.sign(Rj))
-        Cr = limiter(Cr)
-
-        vF = npx.zeros_like(iceMask)
-        vF = update(vF, at[2:-1,:], state.variables.vTrans[2:-1,:] * (
-                    field[2:-1,:] + field[1:-2,:]) * 0.5
-                    - npx.abs(state.variables.vTrans[2:-1,:]) * ((1 - Cr)
-                    + vCFL[2:-1,:] * Cr ) * Rj * 0.5)
-        vF = fill_overlap(vF)
-
-        MeridionalFlux = update(MeridionalFlux, at[i], vF)
 
     return MeridionalFlux
