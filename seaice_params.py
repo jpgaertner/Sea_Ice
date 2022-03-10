@@ -121,9 +121,9 @@ PlasDefCoeff = 2    # coefficient for plastic deformation/ axes ratio of the
 
 deltaMin = 2.e-9    # regularization value for delta
 
-pressReplFac = 0    # interpolator between press0 and regularized pressure
+pressReplFac = 0    # interpolator between SeaIceStrength and regularized pressure
 
-SeaIceStrength = 27.5e3 # sea ice strength P^star #??? change name to P_star, standart sea ice strength
+pStar = 27.5e3 # sea ice strength parameter
 cStar = 20  # sea ice strength parameter
 
 # basal drag parameters
@@ -137,17 +137,16 @@ tensileStrFac = 0 # sea ice tensile strength factor
 zetaMaxfac = 2.5e8  # factor determining the maximum viscosity [s]
 zetaMin = 0         # minimum viscosity
 
-CrMax = 1e6 #??? used in adv_x,y
+CrMax = 1e6 # paramter used for calculating advective fluxes
 
 noSlip = True # flag whether to use no slip conditions
 
-secondOrderBC = False #??? flag
+secondOrderBC = False # flag whether to use second order appreoximation for boundary conditions
 
-useRealFreshWaterFlux = True    # flag for using the sea ice load in the
+useRealFreshWaterFlux = False   # flag for using the sea ice load in the
                                 # calculation of the ocean surface height
-                                #??? better name
 
-extensiveFld = True #??? what does it actually mean?
+extensiveFld = True # flag whether the advected field is an extensive one
 
 
 # flag which solver to use
