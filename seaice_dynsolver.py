@@ -46,8 +46,8 @@ def calc_SurfaceForcing(state):
     WindForcingX = tauX * 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,1))
     WindForcingY = tauY * 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,0))
 
-    # compute surface pressure at z = 0: #???
-    # calculate actual sea surface height #??? phi = geopotential height?
+    # calculate actual sea surface height/ geopotential height anomaly
+    # (equivalent to surface pressure)
     phiSurf = gravity * state.variables.etaN
     if useRealFreshWaterFlux:
         phiSurf = phiSurf + (state.variables.pLoad \
@@ -109,11 +109,6 @@ def calc_IceVelocities(state):
     if useJFNK:
         uIce, vIce = jfnk_solver(state)
 
-    # ??? leave in?
-    # cap the ice velicity at 0.4 m/s to avoid CFL violations in open
-    # water areas (drift of zero thickness ice)
-    # uIce = npx.clip(uIce, -0.4, 0.4)
-    # vIce = npx.clip(vIce, -0.4, 0.4)
 
     return KernelOutput(uIce = uIce, vIce = vIce)
 
