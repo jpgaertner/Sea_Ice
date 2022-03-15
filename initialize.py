@@ -49,9 +49,6 @@ var_meta = dict(
     SeaIceMassC     = Variable("Sea ice mass centered around c point", dims, "kg"),
     SeaIceMassU     = Variable("Sea ice mass centered around u point", dims, "kg"),
     SeaIceMassV     = Variable("Sea ice mass centered around v point", dims, "kg"),
-    e11             = Variable("strain rate", dims, " "),
-    e22             = Variable("strain rate", dims, " "),
-    e12             = Variable("strain rate", dims, " "),
     SeaIceStrength  = Variable("Ice Strength", dims, "N/m"),
     press           = Variable("Ice Pressure", dims, "P"), #??? unit? difference to SeaIceStrength?
     zeta            = Variable("Bulk ice viscosity", dims, "Ns/m^2"),
@@ -59,7 +56,10 @@ var_meta = dict(
     os_hIceMean     = Variable("Overshoot of ice thickness from advection", dims, "m"),
     os_hSnowMean    = Variable("Overshoot of snow thickness from advection", dims, "m/s"),
     AreaW           = Variable("Sea ice cover fraction centered around u point", dims, " "),
-    AreaS           = Variable("Sea ice cover fraction centered around v point", dims, " ")
+    AreaS           = Variable("Sea ice cover fraction centered around v point", dims, " "),
+    sigma11         = Variable("Stress tensor element", dims, "N/m^2"),
+    sigma22         = Variable("Stress tensor element", dims, "N/m^2"),
+    sigma12         = Variable("Stress tensor element", dims, "N/m^2"),
 )
 
 sett_meta = dict(
