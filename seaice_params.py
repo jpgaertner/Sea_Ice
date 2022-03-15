@@ -1,5 +1,8 @@
 backend = 'numpy' # flag which backend to use (numpy or jax)
 
+import numpy as npx
+
+
 # densities [kg/m3]
 rhoIce = 910        # density of ice
 rhoSnow = 330       # density of snow
@@ -94,6 +97,8 @@ recip_h0_south = 1 / h0_south
 
 airTurnAngle = 0    # turning angle of air-ice stress
 waterTurnAngle = 0  # turning angle of the water-ice stress
+sinWat = npx.sin(npx.deg2rad(waterTurnAngle))
+cosWat = npx.cos(npx.deg2rad(waterTurnAngle))
 
 # minimum wind speed [m/s]
 eps = 1e-10         
