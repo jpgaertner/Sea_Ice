@@ -57,7 +57,7 @@ recip_rAw = 1 / rAw
 recip_rAs = 1 / rAs
 
 # coriolis parameter at grid center point
-fCori = npx.ones((ny+2*oly,nx+2*olx)) * 0. #1.e-4
+fCori = npx.ones((ny+2*oly,nx+2*olx)) * 0. #1.46e-4
 
 # masks for introducing boundaries
 maskInC = npx.ones((ny+2*oly,nx+2*olx))
@@ -80,7 +80,7 @@ k2AtC = npx.zeros((ny+2*oly,nx+2*olx))
 k1AtZ = npx.zeros((ny+2*oly,nx+2*olx))
 k2AtZ = npx.zeros((ny+2*oly,nx+2*olx))
 
-recip_hIceMean = npx.ones_like(iceMask) #???
+recip_hIceMean = npx.ones_like(iceMask) #TODO
 
 # # for the 1d test
 # maskInC = npx.ones((ny+2*oly,nx+2*olx))
