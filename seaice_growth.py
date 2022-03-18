@@ -181,20 +181,20 @@ def growth(state):
 
     ##### evaluate precipitation as snow or rain #####
 
-    # the precipitation rate over the ice which goes immediately into the
-    # ocean (flowing through cracks in the ice). if the temperature is
-    # above the freezing point, the precipitation remains wet and runs
-    # into the ocean
-    PrecipRateOverIceSurfaceToSea = state.variables.precip
-
     # if there is ice and the temperature is below the freezing point,
     # the precipitation falls and accumulates as snow
     tmp = ((AreapreTH > 0) & (TIce_mult[:,:,0] < celsius2K))
 
     # snow accumulation rate over ice [m/s]
-    SnowAccRateOverIce = npx.where(tmp, state.variables.snowPrecip * rhoFresh2rhoSnow, 0)
+    SnowAccRateOverIce = npx.where(tmp, state.variables.snowPrecip
+                            + state.variables.precip, 0) * rhoFresh2rhoSnow
+                            #???
 
-    PrecipRateOverIceSurfaceToSea *= ~tmp
+    # the precipitation rate over the ice which goes immediately into the
+    # ocean (flowing through cracks in the ice). if the temperature is
+    # above the freezing point, the precipitation remains wet and runs
+    # into the ocean
+    PrecipRateOverIceSurfaceToSea = npx.where(tmp, 0, state.variables.precip)
 
     # total snow accumulation over ice [m]
     SnowAccOverIce = SnowAccRateOverIce * AreapreTH * deltaTtherm
