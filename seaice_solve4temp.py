@@ -63,7 +63,7 @@ def solve4temp(state, hIceActual, hSnowActual, TSurfIn, TempFrz):
 
     # make local copies of downward longwave radiation, surface
     # and atmospheric temperatures
-    TSurfLoc = update(TSurfIn, at[:,:], TSurfIn)
+    TSurfLoc = TSurfIn
     LWDownLocCapped = npx.maximum(minLwDown, state.variables.LWDown)
     ATempLoc = npx.maximum(celsius2K + minTAir, state.variables.ATemp)
 
