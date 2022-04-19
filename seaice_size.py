@@ -10,7 +10,7 @@ from seaice_fill_overlap import fill_overlap
 # oly = 2
 
 # number of cells of tile along x, y axis
-nx = 32+1
+nx = 64+1
 ny = nx
 
 # number of cells in tile overlap
@@ -25,19 +25,20 @@ nITC = 1
 recip_nITC = 1 / nITC
 
 # grid cell width [m]
-gridcellWidth = 512e3/(nx-1) #grid cell width in m
+# gridcellWidth = 512e3/(nx-1) #grid cell width in m
+gridcellWidth = 8000 #grid cell width in m
 print('gridcellWidth = %e'%gridcellWidth)
 
 # grid descriptor variables
 deltaX = npx.ones((ny+2*oly,nx+2*olx))*gridcellWidth
-dxC = deltaX #distance between two adjacent cell centers in x direction across western cell wall [m]
-dyC = deltaX #distance between two adjacent cell centers in y direction across southern cell wall [m]
-dxG = deltaX #distance between cell faces (cell width) in x direction along southern cell wall [m]
-dyG = deltaX #distance between cell faces (cell width) in y direction along western cell wall [m]
-dxF = deltaX #distance between cell faces (cell width) in x direction through cell center [m]
-dyF = deltaX #distance between cell faces (cell width) in y direction through cell center [m]
-dxV = deltaX #distance between two adjacent v points in x direction across south-west corner of the cell [m]
-dyU = deltaX #distance between two adjacent u points in y direction across south-west corner of the cell [m]
+dxC = deltaX    # distance between two adjacent cell centers in x direction across western cell wall [m]
+dyC = deltaX    # distance between two adjacent cell centers in y direction across southern cell wall [m]
+dxG = deltaX    # distance between cell faces (cell width) in x direction along southern cell wall [m]
+dyG = deltaX    # distance between cell faces (cell width) in y direction along western cell wall [m]
+dxF = deltaX    # distance between cell faces (cell width) in x direction through cell center [m]
+dyF = deltaX    # distance between cell faces (cell width) in y direction through cell center [m]
+dxV = deltaX    # distance between two adjacent v points in x direction through south-west corner of the cell [m]
+dyU = deltaX    # distance between two adjacent u points in y direction through south-west corner of the cell [m]
 recip_dxC = 1 / dxC
 recip_dyC = 1 / dyC
 recip_dxG = 1 / dxG
@@ -47,17 +48,17 @@ recip_dyF = 1 / dyF
 recip_dxV = 1 / dxV
 recip_dyU = 1 / dyU
 
-rA = dxF * dyF #grid width with c point at center
-rAz = dxV * dyU #grid width with z point at center
-rAw = dxC * dyG #grid width with u point at center
-rAs = dxG * dyC #grid width with v point at center
+rA = dxF * dyF      # grid area with c point at center
+rAz = dxV * dyU     # grid area with z point at center
+rAw = dxC * dyG     # grid area with u point at center
+rAs = dxG * dyC     # grid area with v point at center
 recip_rA = 1 / rA
 recip_rAz = 1 / rAz
 recip_rAw = 1 / rAw
 recip_rAs = 1 / rAs
 
 # coriolis parameter at grid center point
-fCori = npx.ones((ny+2*oly,nx+2*olx)) * 0. #1.46e-4
+fCori = npx.ones((ny+2*oly,nx+2*olx)) * 1.46e-4
 
 # masks for introducing boundaries
 maskInC = npx.ones((ny+2*oly,nx+2*olx))
