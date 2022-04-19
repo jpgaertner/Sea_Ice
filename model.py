@@ -1,8 +1,8 @@
 from veros import runtime_settings
-from seaice_params import backend
+backend = 'numpy' # flag which backend to use (numpy or jax)
 runtime_settings.backend = backend
 
-from veros import veros_routine, veros_kernel, KernelOutput
+from veros import veros_routine
 
 from seaice_reg_ridge import update_clean_up_advection, update_ridging
 from dynamics_routines import update_IceStrength
@@ -43,15 +43,6 @@ def model(state):
     # calculate transport through tracer cells
     update_Transport(state)
 
-    import matplotlib.pyplot as plt
-
-    # fig, axs = plt.subplots(1,2, figsize=(14,6))
-    # axs[0].pcolormesh(state.variables.uIce[olx:-olx,oly:-oly])
-    # axs[0].set_title('uIce')
-    # axs[1].pcolormesh(state.variables.vIce[olx:-olx,oly:-oly])
-    # axs[1].set_title('vIce')
-    # plt.show()
-
     # calculate change in sea ice fields due to advection
     update_Advection(state)
 
@@ -62,15 +53,15 @@ def model(state):
     update_ridging(state)
 
     # calculate thermodynamic ice growth
-    update_Growth(state)
+    # update_Growth(state)
 
 
-for i in range(5):
+for i in range(1):
     model(state)
 
 import matplotlib.pyplot as plt
 
-plt.pcolormesh(state.variables.hIceMean[olx:-olx,oly:-oly])
+plt.pcolormesh(state.variables.hIceMean[olx:-olx-1,oly:-oly-1])
 plt.colorbar()
 plt.title('hIceMean')
 plt.show()
