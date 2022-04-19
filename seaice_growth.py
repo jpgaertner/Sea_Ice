@@ -55,9 +55,6 @@ def growth(state):
 
     # heat fluxes in [W/m2]
 
-    # sea ice/snow surface heat flux to atmosphere (+ = upward)
-    # F_ia
-
     # net heat flux divergence at the
     # sea ice/snow surface including sea ice conductive fluxes and
     # atmospheric fluxes
@@ -71,7 +68,7 @@ def growth(state):
     # F_ia_net_before_snow
 
     # net upward conductive heat flux
-    # through sea ice and snow realized at the sea ice/snow surface (+ = upward)
+    # through sea ice and snow realized at the sea ice/snow surface
     # F_io_net
 
     # heat flux from atmosphere to ocean (+ = upward)
@@ -185,9 +182,10 @@ def growth(state):
     tmp = ((AreapreTH > 0) & (TIce_mult[:,:,0] < celsius2K))
 
     # snow accumulation rate over ice [m/s]
-    SnowAccRateOverIce = npx.where(tmp, state.variables.snowPrecip
-                            + state.variables.precip, 0) * rhoFresh2rhoSnow
-                            #??? leave it like this?
+    SnowAccRateOverIce = state.variables.snowPrecip
+    SnowAccRateOverIce = npx.where(tmp, SnowAccRateOverIce
+                            + state.variables.precip * rhoFresh2rhoSnow,
+                            SnowAccRateOverIce)
 
     # the precipitation rate over the ice which goes immediately into the
     # ocean (flowing through cracks in the ice). if the temperature is
@@ -209,7 +207,6 @@ def growth(state):
     # TODO: maybe define a temperature for the case hIceMean = 0
     F_io_net = npx.sum(F_io_net_mult*recip_nITC, axis=2) * AreapreTH
     F_ia_net = npx.sum(F_ia_net_mult*recip_nITC, axis=2) * AreapreTH
-    #F_ia = npx.sum(F_ia_mult*recip_nITC, axis=2) * AreapreTH
     qswi = npx.sum(qswi_mult*recip_nITC, axis=2) * AreapreTH
     #FWsublim = npx.sum(FWsublim_mult*recip_nITC, axis=2) * AreapreTH
 
@@ -311,7 +308,7 @@ def growth(state):
                                 dArea_oaFlux * recip_h0)
 
     # ice growth mixed layer (due to ocean-ice fluxes)
-    # (if the ocean is warmer than the ice IceGrowthRateMixedLayer > 0.
+    # (if the ocean is warmer than the ice: IceGrowthRateMixedLayer > 0.
     # the supercooled state of the ocean is ignored/ does not lead to ice
     # growth. ice growth is only due to fluxes calculated by solve4temp)
     dArea_oiFlux = npx.where(IceGrowthRateMixedLayer <= 0,
@@ -346,8 +343,8 @@ def growth(state):
 
     # change of ice thickness due to conversion of snow to ice if snow
     # is submerged with water
-    tmpscal0 = (hSnowMean * rhoSnow + hIceMean * rhoIce) * recip_rhoConst
-    d_hIceMeanByFlood = npx.maximum(0, tmpscal0 - hIceMean)
+    h_sub = (hSnowMean * rhoSnow + hIceMean * rhoIce) * recip_rhoConst
+    d_hIceMeanByFlood = npx.maximum(0, h_sub - hIceMean)
     hIceMean = hIceMean + d_hIceMeanByFlood
     hSnowMean = hSnowMean - d_hIceMeanByFlood * rhoice2rhosnow
 
