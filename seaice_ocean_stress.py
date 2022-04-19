@@ -8,7 +8,7 @@ from seaice_fill_overlap import fill_overlap_uv
 from dynamics_routines import ocean_drag_coeffs
 
 
-# calculate stress on ocean stress from ocean, ice or wind velocities
+# calculate stress on ocean surface from ocean and ice velocities
 @veros_kernel
 def calc_OceanStress(state):
 
@@ -19,12 +19,15 @@ def calc_OceanStress(state):
     sinWat = npx.sin(npx.deg2rad(waterTurnAngle))
     cosWat = npx.cos(npx.deg2rad(waterTurnAngle))
 
-    # calculate ice affected wind stress by averaging wind stress and
-    # ice-ocean stress according to ice cover
+    # calculate velocity of ice relative to ocean surface 
     du = state.variables.uIce - state.variables.uVel
     dv = state.variables.vIce - state.variables.vVel
+
+    # interpolate to c points
     duAtC = 0.5 * (du + npx.roll(du,-1,1))
     dvAtC = 0.5 * (dv + npx.roll(dv,-1,0))
+
+    # calculate forcing in u and v direction
     fuLoc = 0.5 * (cDrag + npx.roll(cDrag,1,1)) * cosWat * du \
         - npx.sign(fCori) * sinWat * 0.5 * (
             cDrag * dvAtC + npx.roll(cDrag * dvAtC,1,0) )
@@ -32,13 +35,17 @@ def calc_OceanStress(state):
         + npx.sign(fCori) * sinWat * 0.5 * (
             cDrag * duAtC + npx.roll(cDrag * duAtC,1,1) )
 
+    # calculate ice cover area centered around u and v points
     areaW = 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,1))
     areaS = 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,0))
+
+    # update forcing for ice covered area
     fu = (1 - areaW) * state.variables.fu + areaW * fuLoc
     fv = (1 - areaS) * state.variables.fv + areaS * fvLoc
 
     # fill overlaps
     fu, fv = fill_overlap_uv(fu,fv)
+
 
     return KernelOutput(fu = fu, fv = fv)
 
