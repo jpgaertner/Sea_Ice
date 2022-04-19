@@ -18,7 +18,7 @@ from seaice_params import *
 # hSnowActual: actual snow thickness [m]
 # TSurfIn: surface temperature of ice/snow [K]
 # TempFrz: freezing temperature [K]
-# ug: atmospheric wind speed [m/s]
+# ug: atmospheric geostrophic wind speed [m/s]
 # SWDown: shortwave radiative downward flux [W/m2]
 # LWDown: longwave radiative downward flux [W/m2]
 # ATemp: atmospheric temperature [K]
@@ -45,14 +45,13 @@ def solve4temp(state, hIceActual, hSnowActual, TSurfIn, TempFrz):
     bb1 = 0.622
     bb2 = 1 - bb1
     Ppascals = 100000
-    lnTen = npx.log(10)
     cc0 = 10**aa2
-    cc1 = cc0 * aa1 * bb1 * Ppascals * lnTen
+    cc1 = cc0 * aa1 * bb1 * Ppascals * npx.log(10)
     cc2 = cc0 * bb2
     
     # sensible heat constant
     d1 = seaice_dalton * cpAir * rhoAir
-    # ice latent heat constant
+    # latent heat constant
     d1i = seaice_dalton * lhSublim * rhoAir
 
     # melting temperature of ice
@@ -67,7 +66,7 @@ def solve4temp(state, hIceActual, hSnowActual, TSurfIn, TempFrz):
     LWDownLocCapped = npx.maximum(minLwDown, state.variables.LWDown)
     ATempLoc = npx.maximum(celsius2K + minTAir, state.variables.ATemp)
 
-    # set wind speed
+    # set geostrophic wind speed
     ug = npx.maximum(eps, state.variables.wSpeed)
 
 
@@ -142,15 +141,16 @@ def solve4temp(state, hIceActual, hSnowActual, TSurfIn, TempFrz):
         t3 = t2 * t1
         t4 = t2 * t2
 
-        mm_log10pi = - aa1 / t1 + aa2
-        mm_pi = 10**mm_log10pi
 
         # saturation vapor pressure of snow/ice surface
-        qhice = npx.where(isIce, bb1 * mm_pi / (Ppascals - (1 - bb1) * mm_pi), 0)
-        cc3t = 10**(aa1 / t1)
+        svp = 10**(- aa1 / t1 + aa2)
 
-        # derivative of qhice w.r.t snow/ice surface temperature
-        dqh_dTs = npx.where(isIce, cc1 * cc3t / ((cc2 - cc3t * Ppascals)**2 * t2), 0)
+        # specific humidity at the surface
+        q_s = npx.where(isIce, bb1 * svp / (Ppascals - (1 - bb1) * svp), 0)
+
+        # derivative of q_s w.r.t snow/ice surface temperature
+        cc3t = 10**(aa1 / t1)
+        dqs_dTs = npx.where(isIce, cc1 * cc3t / ((cc2 - cc3t * Ppascals)**2 * t2), 0)
 
         # calculate the fluxes based on the surface temperature
 
@@ -158,25 +158,25 @@ def solve4temp(state, hIceActual, hSnowActual, TSurfIn, TempFrz):
         F_c  = npx.where(isIce, effConduct * (TempFrz - t1), 0)
 
         # latent heat flux (sublimation) (+ = upward)
-        F_lh = npx.where(isIce, d1i * ug * (qhice - state.variables.aqh), 0)
+        F_lh = npx.where(isIce, d1i * ug * (q_s - state.variables.aqh), 0)
 
-        # upward long-wave surface heat flux (+ = upward)
+        # long-wave surface heat flux (+ = upward)
         F_lwu = npx.where(isIce, t4 * d3, 0)
 
         # sensible surface heat flux (+ = upward)
         F_sens = npx.where(isIce, d1 * ug * (t1 - ATempLoc), 0)
 
-        # upward seaice/snow surface heat flux to atmosphere [W/m^2]
+        # upward seaice/snow surface heat flux to atmosphere
         F_ia = npx.where(isIce, (- LWDownLoc - absorbedSW + F_lwu
                                 + F_sens + F_lh), 0)
 
         # derivative of F_ia w.r.t snow/ice surf. temp
         dFia_dTs = npx.where(isIce, 4 * d3 * t3 + d1 * ug
-                                    + d1i * ug * dqh_dTs, 0)
+                                    + d1i * ug * dqs_dTs, 0)
 
         return F_c, F_lh, F_ia, dFia_dTs
 
-    # do a loop for the fluxes to cenverge
+    # iterate for the temperatue to converge (Newton-Raphson method)
     for i in range(6):
 
         F_c, F_lh, F_ia, dFia_dTs = fluxes(TSurfLoc)
@@ -193,8 +193,8 @@ def solve4temp(state, hIceActual, hSnowActual, TSurfIn, TempFrz):
     # recalculate the fluxes based on the adjusted surface temperature
     F_c, F_lh, F_ia, dFia_dTs = fluxes(TSurfLoc)
 
-    # calculate net ice-ocean and ice-atmosphere fluxes based on the 
-    # direction of the conductive heat flux
+    # set net ocean-ice flux and surface heat flux divergence based on
+    # the direction of the conductive heat flux
     upCondFlux = (F_c > 0)
     F_io_net = npx.where(upCondFlux, F_c, 0)
     F_ia_net = npx.where(upCondFlux, 0, F_ia)
