@@ -21,7 +21,7 @@ def update_IceStrength(state):
     state.variables.update(IceStrength)
 
 
-# calculate ocean drag coefficients from ice and ocean velocities
+# calculate linear ocean drag coefficient from ice and ocean velocities
 @veros_kernel
 def ocean_drag_coeffs(state,uIce,vIce):
 
@@ -71,7 +71,7 @@ def bottomdrag_coeffs(state, uIce, vIce):
     tmpFld = 0.25 * ( (uIce*maskInW)**2
                     + npx.roll(uIce*maskInW,-1,1)**2
                     + (vIce*maskInS)**2
-                    + npx.roll(vIce*maskInS,-1,1)**2 )
+                    + npx.roll(vIce*maskInS,-1,0)**2 )
     tmpFld = basalDragK2 / npx.sqrt(tmpFld + basalDragU0**2)
 
     hCrit = npx.abs(state.variables.R_low) * state.variables.Area / basalDragK1
@@ -91,7 +91,7 @@ def bottomdrag_coeffs(state, uIce, vIce):
     return cBot
 
 @veros_kernel
-def strainrates(uIce, vIce):
+def strainrates(uIce, vIce,iEVP):
 
     ### input
     # uIce: zonal ice velocity
