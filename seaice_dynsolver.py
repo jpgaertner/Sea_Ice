@@ -63,7 +63,9 @@ def calc_SurfaceForcing(state):
                     * recip_dyC * ( phiSurf - npx.roll(phiSurf,1,0) )
 
     return KernelOutput(WindForcingX = WindForcingX,
-                        WindForcingY = WindForcingY)
+                        WindForcingY = WindForcingY,
+                        tauX         = tauX,
+                        tauY         = tauY)
 
 @veros_routine
 def update_SurfaceForcing(state):
