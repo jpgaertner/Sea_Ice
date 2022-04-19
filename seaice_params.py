@@ -1,15 +1,12 @@
-backend = 'numpy' # flag which backend to use (numpy or jax)
-
-import numpy as npx
-
+from veros.core.operators import numpy as npx
 
 # densities [kg/m3]
-rhoIce = 910        # density of ice
+rhoIce = 900        # density of ice
 rhoSnow = 330       # density of snow
-rhoFresh = 999.8    # density of fresh water
+rhoFresh = 1000     # density of fresh water
 recip_rhoFresh = 1 / rhoFresh
-rhoAir = 1.2        # density of air
-rhoConst = 1027     # constant reference density of sea water (Boussineq approximation)
+rhoAir = 1.3        # density of air
+rhoConst = 1026     # constant reference density of sea water (Boussineq approximation)
 recip_rhoConst = 1 / rhoConst
 rhoice2rhosnow     = rhoIce / rhoSnow
 rhoIce2rhoFresh = rhoIce / rhoFresh
@@ -49,7 +46,7 @@ snowConduct = 0.31  # snow conductivity
 
 hCut = 0.15 # cut off snow thickness (for h >= hCut the snow is shortwave opaque)
 
-shortwave = 0.3 # ice penetration shortwave radiation factor
+shortwave = 0.3 # ice penetration by shortwave radiation factor
 
 heatCapacity = 3986.0   # heat capacity of water
 
@@ -64,7 +61,7 @@ maxTIce = 30    # maximum ice temperature
 minTIce = -50   # minimum ice temperature
 minTAir = -50   # minimum air temperature
 
-seaice_dalton = 0.00175 # dalton number/ sensible heat transfer coefficient
+seaice_dalton = 0.00175 # dalton number/ sensible and latent #??? heat transfer coefficient
 
 # regularization values for area and ice thickness
 area_reg = 0.15
@@ -75,7 +72,7 @@ hice_reg_sq = hice_reg**2
 celsius2K = 273.15 # conversion from [K] to [°C]
 
 # timesteps [s]
-deltaTtherm = 7200          # timestep for thermodynamic equations
+deltaTtherm = 10800          # timestep for thermodynamic equations
 recip_deltaTtherm = 1 / deltaTtherm
 deltaTdyn = deltaTtherm     # timestep for dynamic equations
 recip_deltaTdyn = 1 / deltaTdyn
@@ -83,15 +80,13 @@ recip_deltaTdyn = 1 / deltaTdyn
 # constants for McPhee formula for calculating turbulent ocean heat fluxes
 stantonNr = 0.0056      # stanton number
 uStarBase = 0.0125      # typical friction velocity beneath sea ice [m/s]
-McPheeTaperFac = 12.5   # tapering factor
-
+McPheeTaperFac = 12.5   # tapering factor at the ice bottom
 # lead closing parameter/ demarcation thickness between thin and thick ice
 # ('thin ice' = open water)
 h0 = 0.5
 recip_h0 = 1 / h0
-h0_south = 0.5
+h0_south = h0
 recip_h0_south = 1 / h0_south
-
 
 ##### constants in advection routines #####
 
@@ -101,7 +96,7 @@ sinWat = npx.sin(npx.deg2rad(waterTurnAngle))
 cosWat = npx.cos(npx.deg2rad(waterTurnAngle))
 
 # minimum wind speed [m/s]
-eps = 1e-10         
+eps = 1e-10
 eps_sq = eps**2
 
 si_eps = 1e-5       # 'minimum' ice thickness [m] (smaller ice thicknesses are set to zero)
@@ -109,9 +104,9 @@ area_floor = si_eps # minimum ice cover fraction if ice is present
 
 # drag coefficients
 airIceDrag = 0.0012         # air-ice drag coefficient
-airIceDrag_south = 0.001
+airIceDrag_south = airIceDrag
 waterIceDrag = 0.0055       # water-ice drag coefficient
-waterIceDrag_south = 0.0055
+waterIceDrag_south = waterIceDrag
 cDragMin = 0.25             # minimum of linear ice-ocean drag coefficient
 
 seaIceLoadFac = 1   # factor to scale (and turn off) sea ice loading
@@ -124,7 +119,7 @@ PlasDefCoeff = 2    # coefficient for plastic deformation/ axes ratio of the
     # stresses needed for plastic deformation when pushing ice together vs.
     # pulling it apart)
 
-deltaMin = 2.e-9    # regularization value for delta
+deltaMin = 2e-9    # regularization value for delta
 
 pressReplFac = 0    # interpolator between SeaIceStrength and regularized pressure
 
@@ -161,8 +156,8 @@ useLSR       = False
 usePicard    = False
 useJFNK      = False
 
-useFreedrift = True
-# useEVP = True
+# useFreedrift = True
+useEVP = True
 # useLSR = True
 # usePicard=True
 # useJFNK = True
