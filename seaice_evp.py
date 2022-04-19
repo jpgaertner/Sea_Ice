@@ -35,13 +35,14 @@ plotEvpResidual    = False
 evpAlpha        = 500
 evpBeta         = evpAlpha
 useAdaptiveEVP  = True
+#useAdaptiveEVP  = False #now mEVP is used
 aEVPalphaMin    = 5
 aEvpCoeff       = 0.5
 explicitDrag    = False
-nEVPsteps = 500
+nEVPsteps = 400
 
 @veros_kernel
-def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12,
+def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
                     iEVP, EVPcFac, evpAlphaC, evpAlphaZ, evpBetaU, evpBetaV, resSig, resU, resEVP0):
 
     if computeEvpResidual:
@@ -53,7 +54,7 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
         vIcePm1  = vIce
 
     # calculate strain rates and bulk moduli/ viscosities
-    e11, e22, e12 = strainrates(uIce, vIce)
+    e11, e22, e12 = strainrates(uIce, vIce,iEVP)
 
     zeta, eta, press = viscosities(state,e11,e22,e12,iEVP)
 
@@ -66,7 +67,8 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
             state.variables.SeaIceMassC, 1e-4) * recip_rA) * iceMask
         evpAlphaC = npx.maximum(evpAlphaC, aEVPalphaMin)
         denom1 = 1. / evpAlphaC
-        denom2 = update(denom1, at[:,:], denom1)
+        denom2 = denom1
+
 
     sigma11 = sigma11 + (sig11 - sigma11) * denom1 * iceMask
     sigma22 = sigma22 + (sig22 - sigma22) * denom2 * iceMask
@@ -74,7 +76,7 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
     # calculate sigma12 on z points
     if useAdaptiveEVP:
         evpAlphaZ = 0.5*( evpAlphaC + npx.roll(evpAlphaC,1,0) )
-        evpAlphaZ = 0.5*( evpAlphaZ + npx.roll(evpAlphaC,1,1) )
+        evpAlphaZ = 0.5*( evpAlphaZ + npx.roll(evpAlphaZ,1,1) ) #??? or roll evpAlphaC?
         denom2 = 1. / evpAlphaZ
 
     sigma12 = sigma12 + (sig12 - sigma12) * denom2
@@ -99,12 +101,14 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
     locMaskU = npx.where(locMaskU != 0, 1, locMaskU)
     locMaskV = npx.where(locMaskV != 0, 1, locMaskV)
 
-    # set up anti symmetric drag force and add in ice ocean stress
-    # (average to correct velocity points)
+    # calculate velocity of ice relative to ocean surface
+    # and interpolate to c points
     duAtC = 0.5 * ( state.variables.uVel-uIce
             + npx.roll(state.variables.uVel-uIce,-1,1) )
     dvAtC = 0.5 * ( state.variables.vVel-vIce
             + npx.roll(state.variables.vVel-vIce,-1,0) )
+
+    # calculate forcing from wind and ocean stress at velocity points
     ForcingX = state.variables.WindForcingX + (
         0.5 * ( cDrag + npx.roll(cDrag,1,1) ) * cosWat *  state.variables.uVel
         - npx.sign(fCori) * sinWat * 0.5 * (
@@ -228,7 +232,6 @@ def evp_solver(state):
     else:
         EVPcFac = 0
 
-
     denom1 = 1 / evpAlpha
     denom2 = denom1
 
@@ -264,11 +267,11 @@ def evp_solver(state):
     #while resEVP > evpTol and iEVP < nEVPsteps:
         #iEVP = iEVP + 1
     for iEVP in range (nEVPsteps):
-        print(iEVP)
+        # print(iEVP)
         uIce, vIce, sigma11, sigma22, sigma12, resEVP0 = evp_solver_body(
-            state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12,
+            state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
             iEVP, EVPcFac, evpAlphaC, evpAlphaZ, evpBetaU, evpBetaV, resSig, resU, resEVP0)
-        
+
 
 
     if computeEvpResidual and plotEvpResidual:
