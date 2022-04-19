@@ -1,11 +1,16 @@
+from numpy import ones
 from veros.state import VerosState
 from veros.settings import Setting
 from veros.variables import Variable
 from veros import veros_routine, veros_kernel, KernelOutput
 from veros.core.operators import numpy as npx
+from veros.core.operators import update, at
 
 from seaice_size import *
 from seaice_params import *
+
+from seaice_fill_overlap import fill_overlap, fill_overlap3d
+from gendata import uwind, vwind, uo, vo, hice
 
 dimensions = dict(x=nx+2*olx, y=ny+2*oly, z=nITC)
 dims = ("x","y")
@@ -60,6 +65,8 @@ var_meta = dict(
     sigma11         = Variable("Stress tensor element", dims, "N/m^2"),
     sigma22         = Variable("Stress tensor element", dims, "N/m^2"),
     sigma12         = Variable("Stress tensor element", dims, "N/m^2"),
+    tauX            = Variable("Zonal surface stress", dims, "N/m^2"),
+    tauY            = Variable("Meridional surface stress", dims, "N/m^2")
 )
 
 sett_meta = dict(
@@ -82,50 +89,60 @@ sett_meta = dict(
 
 ones2d = npx.ones((nx+2*olx,ny+2*oly))
 ones3d = npx.ones((nx+2*olx,ny+2*oly,nITC))
+onesWind = npx.ones((32,nx+2*olx,ny+2*oly))
+def copy(x):
+    return update(x, at[:,:], x)
 
-init_values = dict(
-    hIceMean_init   = ones2d * 1.3,
-    hSnowMean_init  = ones2d * 0.1,
-    Area_init       = ones2d * 0.9,
-    TIceSnow_init   = ones3d * celsius2K,
-    uWind_init      = ones2d * 0, #5,
-    vWind_init      = ones2d * 0, #5,
-    wSpeed_init     = ones2d * 2, #npx.sqrt(5**2+5**2),
-    SeaIceLoad_init = ones2d * (rhoIce * 1.3 + rhoSnow * 0.2),
-    salt_init       = ones2d * 29,
-    theta_init      = ones2d * celsius2K - 1.66,
-    Qnet_init       = ones2d * 173.03212617345582,
-    Qsw_init        = ones2d * 0,
-    SWDown_init     = ones2d * 0,
-    LWDown_init     = ones2d * 180,
-    ATemp_init      = ones2d * 253.,
-    precip_init     = ones2d * 0,
-    R_low_init      = ones2d * -1000
-)
+print(npx.shape(uwind))
+
+
+uWind_gen = copy(onesWind)
+uWind_gen = update(uWind_gen, at[:,oly:-oly,olx:-olx], uwind)
+uWind_gen = fill_overlap3d(uWind_gen) * 0
+
+vWind_gen = copy(onesWind)
+vWind_gen = update(vWind_gen, at[:,oly:-oly,olx:-olx], vwind)
+vWind_gen = fill_overlap3d(vWind_gen) * 0
+
+uVel_gen = copy(ones2d)
+uVel_gen = update(uVel_gen, at[oly:-oly,olx:-olx], uo)
+uVel_gen = fill_overlap(uVel_gen)
+
+vVel_gen = copy(ones2d)
+vVel_gen = update(vVel_gen, at[oly:-oly,olx:-olx], vo)
+vVel_gen = fill_overlap(vVel_gen)
+
+hIce_gen = copy(ones2d)
+hIce_gen = update(hIce_gen, at[oly:-oly,olx:-olx], hice)
+hIce_gen = fill_overlap(hIce_gen)
+
 
 @veros_routine
 def set_inits(state):
-    state.variables.hIceMean    = init_values["hIceMean_init"]
-    state.variables.hSnowMean   = init_values["hSnowMean_init"]
-    state.variables.Area        = init_values["Area_init"]
-    state.variables.TIceSnow    = init_values["TIceSnow_init"]
-    state.variables.uWind       = init_values["uWind_init"]
-    state.variables.vWind       = init_values["vWind_init"]
-    state.variables.SeaIceLoad  = init_values["SeaIceLoad_init"]
-    state.variables.salt        = init_values["salt_init"]
-    state.variables.theta       = init_values["theta_init"]
-    state.variables.Qnet        = init_values["Qnet_init"]
-    state.variables.Qsw         = init_values["Qsw_init"]
-    state.variables.SWDown      = init_values["SWDown_init"]
-    state.variables.LWDown      = init_values["LWDown_init"]
-    state.variables.ATemp       = init_values["ATemp_init"]
-    state.variables.wSpeed      = init_values["wSpeed_init"]
-    state.variables.R_low       = init_values["R_low_init"]
-    state.variables.precip      = init_values["precip_init"]
+    state.variables.hIceMean    = hIce_gen
+    state.variables.hSnowMean   = ones2d * 0
+    state.variables.Area        = ones2d * 1
+    state.variables.TIceSnow    = ones3d * 273.0
+    state.variables.SeaIceLoad  = ones2d * (rhoIce * state.variables.hIceMean
+                                            + rhoSnow * state.variables.hSnowMean)
+    state.variables.uWind       = uWind_gen[0,:,:]
+    state.variables.vWind       = vWind_gen[0,:,:]
+    state.variables.wSpeed      = npx.sqrt(state.variables.uWind**2 + state.variables.vWind**2)
+    state.variables.uVel        = uVel_gen
+    state.variables.vVel        = vVel_gen
+    state.variables.salt        = ones2d * 30
+    state.variables.theta       = ones2d * celsius2K - 1.62
+    state.variables.Qnet        = ones2d * 255.28928198201896
+    state.variables.Qsw         = ones2d * 0
+    state.variables.SWDown      = ones2d * 0
+    state.variables.LWDown      = ones2d * 180
+    state.variables.ATemp       = ones2d * 253
+    state.variables.R_low       = ones2d * -1000
+    state.variables.R_low = update(state.variables.R_low, at[:,-1], 0)
+    state.variables.R_low = update(state.variables.R_low, at[-1,:], 0)
+    state.variables.precip      = ones2d * 0
 
 
 state = VerosState(var_meta, sett_meta, dimensions)
 state.initialize_variables()
-
 set_inits(state)
-#print(state.variables.hIceMean)
