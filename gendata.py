@@ -1,8 +1,13 @@
-
 import numpy as np
+import sys
+sys.path.append('/home/csys/mlosch/python')
+#from matplotlib.mlab import find
 import matplotlib.pyplot as plt
 ieee='b'
 accuracy='float64'
+
+def writefield(name, field):
+    (field.astype('float32').byteswap(False)).tofile(name)
 
 f0=1.4e-4
 gravity=9.81
@@ -26,7 +31,7 @@ h=-Ho*np.ones((ny,nx),dtype = accuracy);
 h[:,-1]=0;
 h[-1,:]=0;
 #writefield('bathy_3c_'+dxstr+'.bin',h)
-
+print(np.shape(h))
 variableWindField = True
 shiftWindField = True
 if variableWindField:
@@ -45,10 +50,10 @@ if variableWindField:
         tP=np.mod(t,period/2)
         tP[t>=period/2.]=period/2.-tP[t>=period/2.]
         tP = tP/(0.5*period)
-        olx=150.e3
-        oly=olx
-        mx = -olx+(2*olx+Lx)*tP
-        my = -oly+(2*oly+Ly)*tP
+        oLx=150.e3
+        oLy=oLx
+        mx = -oLx+(2*oLx+Lx)*tP
+        my = -oLy+(2*oLy+Ly)*tP
 
     alpha0= np.pi/2. - np.pi/2./5. # 90 grad ist ohne Konvergenz oder Divergenz
     alpha = np.pi/2. - np.pi/2./5.*np.maximum(np.sign(np.roll(mx,-1)-mx),0.) \
@@ -76,7 +81,7 @@ if variableWindField:
         vwind[k,:,:] = -wy*s*w*vmax;
 
         spd=np.sqrt(uwind[k,:,:]**2+vwind[k,:,:]**2)
-        div=uwind[k,1:-1,2:]-uwind[k,1:-1,:-2]\
+        div=uwind[k,1:-1,2:]-uwind[k,1:-1,:-2] \
             +vwind[k,2:,1:-1]-vwind[k,:-2,1:-1]
         # if spd.max() > 0:
         #     plt.clf();
@@ -93,28 +98,28 @@ if variableWindField:
         #     plt.show();
         #     plt.pause(.01)
 
-#    if shiftWindField:
-        #writefield('Uwindfield_shifted_'+dxstr+'.bin',uwind)
-        #writefield('Vwindfield_shifted_'+dxstr+'.bin',vwind)
-#    else:
-        #writefield('Uwindfield_'+dxstr+'.bin',uwind)
-        #writefield('Vwindfield_'+dxstr+'.bin',vwind)
-
-    uWind_gendata = uwind.copy()
-    vWind_gendata = vwind.copy()
+    # if shiftWindField:
+    #     writefield('Uwindfield_shifted_'+dxstr+'.bin',uwind)
+    #     writefield('Vwindfield_shifted_'+dxstr+'.bin',vwind)
+    # else:
+    #     writefield('Uwindfield_'+dxstr+'.bin',uwind)
+    #     writefield('Vwindfield_'+dxstr+'.bin',vwind)
 
 # ocean
 uo = +0.01*(2*yy-Ly)/Ly
 vo = -0.01*(2*xx-Lx)/Lx
-#writefield('uVel_'+dxstr+'.bin',uo)
-#writefield('vVel_'+dxstr+'.bin',vo)
-uVel_gendata = uo.copy()
-vVel_gendata = vo.copy()
+# writefield('uVel_'+dxstr+'.bin',uo)
+# writefield('vVel_'+dxstr+'.bin',vo)
+
+
+
 
 # initial thickness:
 hice = 0.3 + 0.005*np.sin(500*xx) + 0.005*np.sin(500*yy)
 #writefield('thickness_'+dxstr+'.bin',hice)
-hIce_init = hice.copy()
+# symmetrize
+hices = 0.5*(hice + hice.transpose())
+#writefield('thickness_sym_'+dxstr+'.bin',hices)
 # initial thickness with random noise
 hice = 0.3 + np.random.normal(scale=0.003,size=xx.shape)
 #writefield('noisy_thickness_'+dxstr+'.bin',hice)
@@ -124,6 +129,10 @@ hice = 0.3 + 0.005*(np.sin(60./1000.e3*xx) + np.sin(30./1000.e3*yy))
 hices = 0.5*(hice + hice.transpose())
 #writefield('thickness_aniso_sym_'+dxstr+'.bin',hices)
 
+# import matplotlib.pyplot as plt
+# plt.pcolormesh(hice)
+# plt.colorbar()
+# plt.show()
 
 # constant
 #writefield('const_00_'+dxstr+'.bin',np.zeros(hice.shape))
@@ -138,10 +147,10 @@ a0 = 1. - 0.5*np.exp(-800.*r) \
 
 a0[a0<0]=0.
 
-hice = 0.3*a0
-#writefield('area_circle_'+dxstr+'.bin',a0)
-#writefield('thickness_circle_'+dxstr+'.bin',hice)
+# hice = 0.3*a0 #???
+# writefield('area_circle_'+dxstr+'.bin',a0)
+# writefield('thickness_circle_'+dxstr+'.bin',hice)
 
-#writefield('const_5.00_'+dxstr+'.bin',5.*np.ones(xx.shape))
-#writefield('const_0.8_'+dxstr+'.bin',.8*np.ones(xx.shape))
-#writefield('const_1.0_'+dxstr+'.bin',1.*np.ones(xx.shape))
+# writefield('const_5.00_'+dxstr+'.bin',5.*np.ones(xx.shape))
+# writefield('const_0.8_'+dxstr+'.bin',.8*np.ones(xx.shape))
+# writefield('const_1.0_'+dxstr+'.bin',1.*np.ones(xx.shape))
