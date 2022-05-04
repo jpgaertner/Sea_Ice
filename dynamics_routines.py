@@ -43,8 +43,8 @@ def ocean_drag_coeffs(state,uIce,vIce):
     # calculate linear drag coefficient
     du = (uIce - state.variables.uVel)*maskInW
     dv = (vIce - state.variables.vVel)*maskInS
-    tmpVar = 0.25 * ( du**2 + npx.roll(du,-1,1)**2
-                    + dv**2 + npx.roll(dv,-1,0)**2 )
+    tmpVar = 0.25 * ( (du + npx.roll(du,-1,1))**2
+                    +  (dv + npx.roll(dv,-1,0))**2 )
 
     cDrag = npx.where(dragCoeff**2 * tmpVar > cDragMin**2,
                         dragCoeff * npx.sqrt(tmpVar), cDragMin)
