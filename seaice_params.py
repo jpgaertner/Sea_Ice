@@ -72,7 +72,7 @@ hice_reg_sq = hice_reg**2
 celsius2K = 273.15 # conversion from [K] to [°C]
 
 # timesteps [s]
-deltaTtherm = 10800          # timestep for thermodynamic equations
+deltaTtherm = 120          # timestep for thermodynamic equations
 recip_deltaTtherm = 1 / deltaTtherm
 deltaTdyn = deltaTtherm     # timestep for dynamic equations
 recip_deltaTdyn = 1 / deltaTdyn
@@ -111,7 +111,7 @@ cDragMin = 0.25             # minimum of linear ice-ocean drag coefficient
 
 seaIceLoadFac = 1   # factor to scale (and turn off) sea ice loading
 
-gravity = 9.8156    # gravitational acceleration
+gravity = 9.81    # gravitational acceleration
 
 PlasDefCoeff = 2    # coefficient for plastic deformation/ axes ratio of the
     #elliptical yield curve of the relationship between the principal stress
@@ -121,7 +121,7 @@ PlasDefCoeff = 2    # coefficient for plastic deformation/ axes ratio of the
 
 deltaMin = 2e-9    # regularization value for delta
 
-pressReplFac = 0    # interpolator between SeaIceStrength and regularized pressure
+pressReplFac = 1    # interpolator between SeaIceStrength and regularized pressure
 
 pStar = 27.5e3 # sea ice strength parameter
 cStar = 20  # sea ice strength parameter
