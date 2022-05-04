@@ -39,7 +39,7 @@ useAdaptiveEVP  = True
 aEVPalphaMin    = 5
 aEvpCoeff       = 0.5
 explicitDrag    = False
-nEVPsteps = 400
+nEVPsteps = 10
 
 @veros_kernel
 def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
@@ -76,7 +76,7 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
     # calculate sigma12 on z points
     if useAdaptiveEVP:
         evpAlphaZ = 0.5*( evpAlphaC + npx.roll(evpAlphaC,1,0) )
-        evpAlphaZ = 0.5*( evpAlphaZ + npx.roll(evpAlphaZ,1,1) ) #??? or roll evpAlphaC?
+        evpAlphaZ = 0.5*( evpAlphaZ + npx.roll(evpAlphaZ,1,1) )
         denom2 = 1. / evpAlphaZ
 
     sigma12 = sigma12 + (sig12 - sigma12) * denom2
@@ -110,7 +110,7 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
 
     # calculate forcing from wind and ocean stress at velocity points
     ForcingX = state.variables.WindForcingX + (
-        0.5 * ( cDrag + npx.roll(cDrag,1,1) ) * cosWat *  state.variables.uVel
+        0.5 * ( cDrag + npx.roll(cDrag,1,1) ) * cosWat * state.variables.uVel
         - npx.sign(fCori) * sinWat * 0.5 * (
             cDrag * dvAtC + npx.roll(cDrag * dvAtC,1,1)
         ) * locMaskU
@@ -200,7 +200,6 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
         resU = update(resU, at[iEVP], global_sum(resU[iEVP]))
 
         resEVP = resU[iEVP]
-        if iEVP==0: resEVP0 = resEVP
         resEVP = resEVP/resEVP0
 
         if printEvpResidual:
@@ -220,7 +219,7 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
         # ax[1].set_title('uIce')
         # plt.show()
 
-    return uIce, vIce, sigma11, sigma22, sigma12, resEVP0
+    return uIce, vIce, sigma11, sigma22, sigma12, resEVP
 
 
 @veros_kernel
@@ -251,26 +250,23 @@ def evp_solver(state):
     evpBetaU  = evpBeta
     evpBetaV  = evpBeta
 
-    # should initialised elsewhere (but this will work, too, just more
-    # expensive) #???
-    # sigma1  = zero2d
-    # sigma2  = zero2d
-    # sigma11 = zero2d
-    # sigma22 = zero2d
-    # sigma12 = zero2d
-    resSig  = npx.zeros(nEVPsteps+1)
+    resSig  = npx.zeros(nEVPsteps+1) #???
     resU    = npx.zeros(nEVPsteps+1)
 
-    resEVP0 = 0
-    iEVP = -1
-    resEVP = evpTol*2
-    #while resEVP > evpTol and iEVP < nEVPsteps:
-        #iEVP = iEVP + 1
+    # to avoid dividing by zero in the first iteration
+    resEVP0 = 1e-5 
+    resEVP = evpTol*2 #???
     for iEVP in range (nEVPsteps):
-        # print(iEVP)
-        uIce, vIce, sigma11, sigma22, sigma12, resEVP0 = evp_solver_body(
-            state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
-            iEVP, EVPcFac, evpAlphaC, evpAlphaZ, evpBetaU, evpBetaV, resSig, resU, resEVP0)
+        #print(iEVP)
+        if iEVP ==1:
+            uIce, vIce, sigma11, sigma22, sigma12, resEVP0 = evp_solver_body(
+                state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
+                iEVP, EVPcFac, evpAlphaC, evpAlphaZ, evpBetaU, evpBetaV, resSig, resU, resEVP0)
+        else:
+            uIce, vIce, sigma11, sigma22, sigma12, _ = evp_solver_body(
+                state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
+                iEVP, EVPcFac, evpAlphaC, evpAlphaZ, evpBetaU, evpBetaV, resSig, resU, resEVP0)
+
 
 
 
