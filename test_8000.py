@@ -10,7 +10,7 @@ from veros.core.operators import numpy as npx
 
 
 # 1441 (2days)
-for i in range(5):
+for i in range(1):
     print(i)
     model(state)
 
@@ -22,11 +22,9 @@ uIce = state.variables.uIce
 vIce = state.variables.vIce
 tauX = state.variables.tauX
 tauY = state.variables.tauY
-sigma11 = state.variables.sigma11
-sigma22 = state.variables.sigma22
 
-results = [ice, snow, area, uIce, vIce, tauX, tauY, sigma11, sigma22]
-npx.save('results_8000_1', results)
+results = [ice, snow, area, uIce, vIce, tauX, tauY]
+npx.save('results_8000', results)
 
 # fig, axs = plt.subplots(2,2, figsize=(9, 6.5))
 # ax0 = axs[0,0].pcolormesh(state.variables.uWind)
