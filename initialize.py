@@ -1,8 +1,7 @@
-from numpy import ones
 from veros.state import VerosState
 from veros.settings import Setting
 from veros.variables import Variable
-from veros import veros_routine, veros_kernel, KernelOutput
+from veros import veros_routine
 from veros.core.operators import numpy as npx
 from veros.core.operators import update, at
 
@@ -93,16 +92,14 @@ onesWind = npx.ones((32,nx+2*olx,ny+2*oly))
 def copy(x):
     return update(x, at[:,:], x)
 
-print(npx.shape(uwind))
-
 
 uWind_gen = copy(onesWind)
 uWind_gen = update(uWind_gen, at[:,oly:-oly,olx:-olx], uwind)
-uWind_gen = fill_overlap3d(uWind_gen) * 0
+uWind_gen = fill_overlap3d(uWind_gen)
 
 vWind_gen = copy(onesWind)
 vWind_gen = update(vWind_gen, at[:,oly:-oly,olx:-olx], vwind)
-vWind_gen = fill_overlap3d(vWind_gen) * 0
+vWind_gen = fill_overlap3d(vWind_gen)
 
 uVel_gen = copy(ones2d)
 uVel_gen = update(uVel_gen, at[oly:-oly,olx:-olx], uo)
