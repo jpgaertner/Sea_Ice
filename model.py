@@ -1,5 +1,5 @@
 from veros import runtime_settings
-backend = 'numpy' # flag which backend to use (numpy or jax)
+backend = 'jax' # flag which backend to use (numpy or jax)
 runtime_settings.backend = backend
 
 from veros import veros_routine
@@ -11,13 +11,6 @@ from seaice_dynsolver import update_AreaWS, update_IceVelocities, \
             update_SeaIceMass, update_SurfaceForcing
 from seaice_ocean_stress import update_OceanStress
 from seaice_growth import update_Growth
-
-from seaice_size import *
-
-
-# get initial state
-from initialize import state
-
 
 @veros_routine
 def model(state):
@@ -53,15 +46,4 @@ def model(state):
     update_ridging(state)
 
     # calculate thermodynamic ice growth
-    # update_Growth(state)
-
-
-for i in range(1):
-    model(state)
-
-import matplotlib.pyplot as plt
-
-plt.pcolormesh(state.variables.hIceMean[olx:-olx-1,oly:-oly-1])
-plt.colorbar()
-plt.title('hIceMean')
-plt.show()
+    update_Growth(state)
