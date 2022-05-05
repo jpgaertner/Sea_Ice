@@ -17,9 +17,9 @@ def calc_MeridionalFlux(state, field):
     maskLocS = SeaIceMaskV * maskInS
 
     # CFL number of meridional flow
-    vCFL = npx.abs(state.variables.vIce * deltatDyn * recip_dyC)
+    vCFL = npx.abs(state.variables.vIce * state.variables.deltatDyn * recip_dyC)
 
-    # calculate meridional advective fluxes for the given field
+    # calculate slope ratio Cr
     Rjp = (field[3:,:] - field[2:-1,:]) * maskLocS[3:,:]
     Rj = (field[2:-1,:] - field[1:-2,:]) * maskLocS[2:-1,:]
     Rjm = (field[1:-2,:] - field[:-3,:]) * maskLocS[1:-2,:]
@@ -29,6 +29,7 @@ def calc_MeridionalFlux(state, field):
                     Cr / Rj, npx.sign(Cr) * CrMax * npx.sign(Rj))
     Cr = limiter(Cr)
 
+    # calculate meridional advective fluxes for the given field
     MeridionalFlux = npx.zeros_like(iceMask)
     MeridionalFlux = update(MeridionalFlux, at[2:-1,:], state.variables.vTrans[2:-1,:] * (
                 field[2:-1,:] + field[1:-2,:]) * 0.5

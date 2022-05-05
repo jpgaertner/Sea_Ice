@@ -17,9 +17,9 @@ def calc_ZonalFlux(state, field):
     maskLocW = SeaIceMaskU * maskInW
 
     # CFL number of zonal flow
-    uCFL = npx.abs(state.variables.uIce * deltatDyn * recip_dxC)
+    uCFL = npx.abs(state.variables.uIce * state.variables.deltatDyn * recip_dxC)
 
-    # calculate zonal advective fluxes for the given field
+    # calculate slope ratio Cr
     Rjp = (field[:,3:] - field[:,2:-1]) * maskLocW[:,3:]
     Rj = (field[:,2:-1] - field[:,1:-2]) * maskLocW[:,2:-1]
     Rjm = (field[:,1:-2] - field[:,:-3]) * maskLocW[:,1:-2]
@@ -29,6 +29,7 @@ def calc_ZonalFlux(state, field):
                         Cr / Rj, npx.sign(Cr) * CrMax * npx.sign(Rj))
     Cr = limiter(Cr)
 
+    # zonal advective fluxes for the given field
     ZonalFlux = npx.zeros_like(iceMask)
     ZonalFlux = update(ZonalFlux, at[:,2:-1], state.variables.uTrans[:,2:-1] * (
                 field[:,2:-1] + field[:,1:-2]) * 0.5
