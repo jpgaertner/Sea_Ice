@@ -42,10 +42,10 @@ def calc_Advection(state, field):
 
     # update field according to zonal fluxes
     if extensiveFld:
-        fieldLoc = fieldLoc - deltaTtherm * maskInC * recip_rA \
+        fieldLoc = fieldLoc - deltatTherm * maskInC * recip_rA \
                 * ( npx.roll(ZonalFlux,-1,1) - ZonalFlux )
     else:
-        fieldLoc = fieldLoc - deltaTtherm * maskInC * recip_rA * recip_hIceMean \
+        fieldLoc = fieldLoc - deltatTherm * maskInC * recip_rA * recip_hIceMean \
             * (( npx.roll(ZonalFlux,-1,1) - ZonalFlux )
             - ( npx.roll(state.variable.uTrans,-1,1) - state.variable.uTrans )
             * field)
@@ -55,10 +55,10 @@ def calc_Advection(state, field):
 
     # update field according to meridional fluxes
     if extensiveFld:
-        fieldLoc = fieldLoc - deltaTtherm * maskInC * recip_rA \
+        fieldLoc = fieldLoc - deltatTherm * maskInC * recip_rA \
             * ( npx.roll(MeridionalFlux,-1,0) - MeridionalFlux )
     else:
-        fieldLoc = fieldLoc - deltaTtherm * maskInC * recip_rA * recip_hIceMean \
+        fieldLoc = fieldLoc - deltatTherm * maskInC * recip_rA * recip_hIceMean \
             * (( npx.roll(MeridionalFlux,-1,0) - MeridionalFlux )
             - ( npx.roll(state.variable.vTrans,-1,0) - state.variables.vTrans)
             * field)

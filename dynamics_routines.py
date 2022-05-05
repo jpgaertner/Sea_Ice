@@ -233,7 +233,7 @@ def calc_lhs(uIce, vIce, zeta, eta, press,
              cDrag, cBotC, R_low,
              iStep, myTime, myIter):
 
-    recip_deltaT = 1./deltaTdyn
+    recip_deltaT = 1./deltatDyn
     bdfAlpha = 1.
     sinWat = npx.sin(npx.deg2rad(waterTurnAngle))
     cosWat = npx.cos(npx.deg2rad(waterTurnAngle))

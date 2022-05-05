@@ -150,19 +150,19 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
         denomV = 1.
     else:
         # ... or implicitly
-        denomU = 1. + dragU * deltaTdyn*rMassU/evpBetaU
-        denomV = 1. + dragV * deltaTdyn*rMassV/evpBetaV
+        denomU = 1. + dragU * deltatDyn*rMassU/evpBetaU
+        denomV = 1. + dragV * deltatDyn*rMassV/evpBetaV
 
     # step momentum equations following Kimmritz et al. (2016)
     uIce = SeaIceMaskU * (
         uIce + (
-            deltaTdyn*rMassU * ( ForcingX + stressDivX )
+            deltatDyn*rMassU * ( ForcingX + stressDivX )
             + ( uIceNm1 - uIce )
         ) / evpBetaU
     ) / denomU
     vIce = SeaIceMaskV * (
         vIce + (
-            deltaTdyn*rMassV * ( ForcingY + stressDivY )
+            deltatDyn*rMassV * ( ForcingY + stressDivY )
             + ( vIceNm1 - vIce )
         ) / evpBetaV
     ) / denomV
@@ -185,10 +185,10 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
         #     ForcingX = ForcingX - uIce * dragU
         #     ForcingY = ForcingY - vIce * dragV
 
-        # uIcePm1 = ( SeaIceMassU * (uIce - uIceNm1)*recip_deltaTdyn
+        # uIcePm1 = ( SeaIceMassU * (uIce - uIceNm1)*recip_deltatDyn
         #             - (ForcingX + stressDivX)
         #            ) * SeaIceMaskU
-        # vIcePm1 = ( SeaIceMassV * (vIce - vIceNm1)*recip_deltaTdyn
+        # vIcePm1 = ( SeaIceMassV * (vIce - vIceNm1)*recip_deltatDyn
         #             - (ForcingY + stressDivY)
         #            ) * SeaIceMaskV
 
@@ -227,7 +227,7 @@ def evp_solver(state):
 
     if useAdaptiveEVP:
         aEVPcStar = 4
-        EVPcFac = deltaTdyn * aEVPcStar * ( npx.pi * aEvpCoeff ) ** 2
+        EVPcFac = deltatDyn * aEVPcStar * ( npx.pi * aEvpCoeff ) ** 2
     else:
         EVPcFac = 0
 

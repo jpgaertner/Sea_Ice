@@ -54,7 +54,6 @@ var_meta = dict(
     SeaIceMassU     = Variable("Sea ice mass centered around u point", dims, "kg"),
     SeaIceMassV     = Variable("Sea ice mass centered around v point", dims, "kg"),
     SeaIceStrength  = Variable("Ice Strength", dims, "N/m"),
-    press           = Variable("Ice Pressure", dims, "P"), #??? unit? difference to SeaIceStrength?
     zeta            = Variable("Bulk ice viscosity", dims, "Ns/m^2"),
     eta             = Variable("Shear ice viscosity", dims, "Ns/m^2"),
     os_hIceMean     = Variable("Overshoot of ice thickness from advection", dims, "m"),
@@ -69,8 +68,8 @@ var_meta = dict(
 )
 
 sett_meta = dict(
-    deltaTtherm     = Setting(0, float, "Timestep for thermodynamic equations"),
-    deltaTdyn       = Setting(0, float, "Timestep for dynamic equations"),
+    deltatTherm     = Setting(0, float, "Timestep for thermodynamic equations"),
+    deltatDyn       = Setting(0, float, "Timestep for dynamic equations"),
     nx              = Setting(0, int, "Grid points in zonal direction"),
     ny              = Setting(0, int, "Grid points in meridional direction"),
     noSlip          = Setting(False, bool, "flag whether to use no slip condition"),
@@ -143,3 +142,5 @@ def set_inits(state):
 state = VerosState(var_meta, sett_meta, dimensions)
 state.initialize_variables()
 set_inits(state)
+
+print(state.settings.deltatTherm)

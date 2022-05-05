@@ -61,7 +61,7 @@ maxTIce = 30    # maximum ice temperature
 minTIce = -50   # minimum ice temperature
 minTAir = -50   # minimum air temperature
 
-seaice_dalton = 0.00175 # dalton number/ sensible and latent #??? heat transfer coefficient
+seaice_dalton = 0.00175 # dalton number/ sensible and latent heat transfer coefficient
 
 # regularization values for area and ice thickness
 area_reg = 0.15
@@ -72,10 +72,10 @@ hice_reg_sq = hice_reg**2
 celsius2K = 273.15 # conversion from [K] to [°C]
 
 # timesteps [s]
-deltaTtherm = 120          # timestep for thermodynamic equations
-recip_deltaTtherm = 1 / deltaTtherm
-deltaTdyn = deltaTtherm     # timestep for dynamic equations
-recip_deltaTdyn = 1 / deltaTdyn
+deltatTherm = 120          # timestep for thermodynamic equations
+recip_deltatTherm = 1 / deltatTherm
+deltatDyn = deltatTherm     # timestep for dynamic equations
+recip_deltatDyn = 1 / deltatDyn
 
 # constants for McPhee formula for calculating turbulent ocean heat fluxes
 stantonNr = 0.0056      # stanton number
