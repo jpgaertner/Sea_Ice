@@ -150,19 +150,19 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
         denomV = 1.
     else:
         # ... or implicitly
-        denomU = 1. + dragU * deltatDyn*rMassU/evpBetaU
-        denomV = 1. + dragV * deltatDyn*rMassV/evpBetaV
+        denomU = 1. + dragU * state.settings.deltatDyn*rMassU/evpBetaU
+        denomV = 1. + dragV * state.settings.deltatDyn*rMassV/evpBetaV
 
     # step momentum equations following Kimmritz et al. (2016)
     uIce = SeaIceMaskU * (
         uIce + (
-            deltatDyn*rMassU * ( ForcingX + stressDivX )
+            state.settings.deltatDyn*rMassU * ( ForcingX + stressDivX )
             + ( uIceNm1 - uIce )
         ) / evpBetaU
     ) / denomU
     vIce = SeaIceMaskV * (
         vIce + (
-            deltatDyn*rMassV * ( ForcingY + stressDivY )
+            state.settings.deltatDyn*rMassV * ( ForcingY + stressDivY )
             + ( vIceNm1 - vIce )
         ) / evpBetaV
     ) / denomV
@@ -227,7 +227,7 @@ def evp_solver(state):
 
     if useAdaptiveEVP:
         aEVPcStar = 4
-        EVPcFac = deltatDyn * aEVPcStar * ( npx.pi * aEvpCoeff ) ** 2
+        EVPcFac = state.settings.deltatDyn * aEVPcStar * ( npx.pi * aEvpCoeff ) ** 2
     else:
         EVPcFac = 0
 
