@@ -1,9 +1,7 @@
 from veros.core.operators import numpy as npx
 from veros import veros_routine, veros_kernel, KernelOutput
 
-from seaice_params import rhoIce, rhoSnow, useRealFreshWaterFlux, \
-                            seaIceLoadFac, recip_rhoConst, gravity, \
-                            useFreedrift, useEVP, useJFNK, useLSR, usePicard
+from seaice_params import rhoIce, rhoSnow, recip_rhoConst, gravity
 from seaice_size import recip_dxC, recip_dyC
 
 
@@ -49,9 +47,9 @@ def calc_SurfaceForcing(state):
     # calculate actual sea surface height/ geopotential height anomaly
     # (equivalent to surface pressure)
     phiSurf = gravity * state.variables.etaN
-    if useRealFreshWaterFlux:
+    if state.settings.useRealFreshWaterFlux:
         phiSurf = phiSurf + (state.variables.pLoad \
-                    + state.variables.SeaIceLoad * gravity * seaIceLoadFac
+                    + state.variables.SeaIceLoad * gravity * state.settings.seaIceLoadFac #??? why two flags?
                              ) * recip_rhoConst
     else:
         phiSurf = phiSurf + state.variables.pLoad * recip_rhoConst
@@ -96,19 +94,19 @@ def update_AreaWS(state):
 @veros_kernel
 def calc_IceVelocities(state):
 
-    if useFreedrift:
+    if state.settings.useFreedrift:
         uIce, vIce = freedrift_solver(state)
 
-    if useEVP:
+    if state.settings.useEVP:
         uIce, vIce = evp_solver(state)
 
-    if useLSR:
+    if state.settings.useLSR:
         uIce, vIce = lsr_solver(state)
 
-    if usePicard:
+    if state.settings.usePicard:
         uIce, vIce = picard_solver(state)
 
-    if useJFNK:
+    if state.settings.useJFNK:
         uIce, vIce = jfnk_solver(state)
 
 
