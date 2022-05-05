@@ -1,5 +1,4 @@
 from veros.core.operators import numpy as npx
-from veros.core.operators import update, at
 from veros import veros_kernel, KernelOutput, veros_routine
 
 from seaice_size import *
@@ -41,11 +40,12 @@ def calc_Advection(state, field):
     ZonalFlux = calc_ZonalFlux(state, fieldLoc)
 
     # update field according to zonal fluxes
-    if extensiveFld:
-        fieldLoc = fieldLoc - deltatTherm * maskInC * recip_rA \
-                * ( npx.roll(ZonalFlux,-1,1) - ZonalFlux )
+    if state.settings.extensiveFld:
+        fieldLoc = fieldLoc - state.settings.deltatTherm * maskInC \
+            * recip_rA * ( npx.roll(ZonalFlux,-1,1) - ZonalFlux )
     else:
-        fieldLoc = fieldLoc - deltatTherm * maskInC * recip_rA * recip_hIceMean \
+        fieldLoc = fieldLoc - state.settings.deltatTherm * maskInC \
+            * recip_rA * recip_hIceMean \
             * (( npx.roll(ZonalFlux,-1,1) - ZonalFlux )
             - ( npx.roll(state.variable.uTrans,-1,1) - state.variable.uTrans )
             * field)
@@ -54,11 +54,12 @@ def calc_Advection(state, field):
     MeridionalFlux = calc_MeridionalFlux(state, fieldLoc)
 
     # update field according to meridional fluxes
-    if extensiveFld:
-        fieldLoc = fieldLoc - deltatTherm * maskInC * recip_rA \
-            * ( npx.roll(MeridionalFlux,-1,0) - MeridionalFlux )
+    if state.settings.extensiveFld:
+        fieldLoc = fieldLoc - state.settings.deltatTherm * maskInC \
+            * recip_rA * ( npx.roll(MeridionalFlux,-1,0) - MeridionalFlux )
     else:
-        fieldLoc = fieldLoc - deltatTherm * maskInC * recip_rA * recip_hIceMean \
+        fieldLoc = fieldLoc - state.settings.deltatTherm * maskInC \
+            * recip_rA * recip_hIceMean \
             * (( npx.roll(MeridionalFlux,-1,0) - MeridionalFlux )
             - ( npx.roll(state.variable.vTrans,-1,0) - state.variables.vTrans)
             * field)
