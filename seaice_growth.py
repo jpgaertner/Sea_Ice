@@ -4,6 +4,7 @@ from veros import veros_kernel, KernelOutput, veros_routine
 
 from seaice_size import *
 from seaice_params import *
+from initialize import recip_deltatTherm, recip_deltatDyn
 
 from seaice_solve4temp import solve4temp
 
@@ -194,7 +195,7 @@ def growth(state):
     PrecipRateOverIceSurfaceToSea = npx.where(tmp, 0, state.variables.precip)
 
     # total snow accumulation over ice [m]
-    SnowAccOverIce = SnowAccRateOverIce * AreapreTH * deltatTherm
+    SnowAccOverIce = SnowAccRateOverIce * AreapreTH * state.settings.deltatTherm
 
 
     ##### for every thickness category, record the ice surface #####
@@ -224,7 +225,7 @@ def growth(state):
     PotSnowMeltRateFromSurf = - F_ia_net * qs
 
     # the thickness of snow that can be melted in one time step:
-    PotSnowMeltFromSurf = PotSnowMeltRateFromSurf * deltatTherm
+    PotSnowMeltFromSurf = PotSnowMeltRateFromSurf * state.settings.deltatTherm
 
     # if the heat flux convergence could melt more snow than is actually
     # there, the excess is used to melt ice
@@ -327,9 +328,9 @@ def growth(state):
 
     ######  update ice, snow thickness and area #####
 
-    Area = AreapreTH + dArea_dt * iceMask * deltatTherm
-    hIceMean = hIceMeanpreTH + dhIceMean_dt * iceMask * deltatTherm
-    hSnowMean = hSnowMeanpreTH + dhSnowMean_dt * iceMask * deltatTherm
+    Area = AreapreTH + dArea_dt * iceMask * state.settings.deltatTherm
+    hIceMean = hIceMeanpreTH + dhIceMean_dt * iceMask * state.settings.deltatTherm
+    hSnowMean = hSnowMeanpreTH + dhSnowMean_dt * iceMask * state.settings.deltatTherm
 
     # set boundaries:
     Area = npx.clip(Area, 0, 1)
@@ -366,7 +367,7 @@ def growth(state):
 
     # the net energy flux out of the ocean [J/m2]
     NetEnergyFluxOutOfOcean = (AreapreTH * (F_ia_net + F_io_net + qswi)
-                + (1 - AreapreTH) * F_ao) * deltatTherm
+                + (1 - AreapreTH) * F_ao) * state.settings.deltatTherm
 
     # energy taken out of the ocean which is not used for sea ice growth [J].
     # If the net energy flux out of the ocean is balanced by the latent
@@ -403,7 +404,7 @@ def growth(state):
     EmPmR = iceMask *  ((state.variables.evap - state.variables.precip) * (1 - AreapreTH) \
         - PrecipRateOverIceSurfaceToSea * AreapreTH - state.variables.runoff - (
         FreshwaterContribFromIce + FreshwaterContribFromSnowMelt) \
-            / deltatTherm) * rhoFresh + iceMask * (
+            / state.settings.deltatTherm) * rhoFresh + iceMask * (
         state.variables.os_hIceMean * rhoIce + state.variables.os_hSnowMean * rhoSnow) \
             * recip_deltatTherm
 
