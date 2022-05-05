@@ -91,7 +91,8 @@ def bottomdrag_coeffs(state, uIce, vIce):
     return cBot
 
 @veros_kernel
-def strainrates(uIce, vIce,iEVP):
+def strainrates(state, uIce, vIce,iEVP):
+    #TODO remove iEVP when debugged
 
     ### input
     # uIce: zonal ice velocity
@@ -122,13 +123,13 @@ def strainrates(uIce, vIce,iEVP):
     mskZ = iceMask*npx.roll(iceMask,1,axis=1)
     mskZ =    mskZ*npx.roll(   mskZ,1,axis=0)
     e12 = 0.5 * ( dudy + dvdx - k1AtZ * vave - k2AtZ * uave ) * mskZ
-    if noSlip:
+    if state.settings.noSlip:
         hFacU = SeaIceMaskU - npx.roll(SeaIceMaskU,1,axis=0)
         hFacV = SeaIceMaskV - npx.roll(SeaIceMaskV,1,axis=1)
         e12   = e12 + ( 2.0 * uave * recip_dyU * hFacU
                       + 2.0 * vave * recip_dxV * hFacV )
 
-    if noSlip and secondOrderBC:
+    if state.settings.noSlip and state.settings.secondOrderBC:
         hFacU = ( SeaIceMaskU - npx.roll(SeaIceMaskU,1,0) ) / 3.
         hFacV = ( SeaIceMaskV - npx.roll(SeaIceMaskV,1,1) ) / 3.
         hFacU = hFacU * (npx.roll(SeaIceMaskU, 2,0) * npx.roll(SeaIceMaskU,1,0)
@@ -160,7 +161,7 @@ def strainrates(uIce, vIce,iEVP):
 
 @veros_kernel
 def viscosities(state, e11,e22,e12,iEVP):
-    #??? remove iEVP when debugged
+    #TODO remove iEVP when debugged
 
     """Usage: zeta, eta, press =
           viscosities(e11,e22,e12,SeaIceStrength,iStep,myTime,myIter)
@@ -207,7 +208,7 @@ def viscosities(state, e11,e22,e12,iEVP):
 
 @veros_kernel
 def calc_stress(e11, e22, e12, zeta, eta, press, iStep):
-    #??? remove iStep when debugged
+    #TODO remove iStep when debugged
     from seaice_averaging import c_point_to_z_point
     sig11 = zeta*(e11 + e22) + eta*(e11 - e22) - 0.5 * press
     sig22 = zeta*(e11 + e22) - eta*(e11 - e22) - 0.5 * press
@@ -216,7 +217,7 @@ def calc_stress(e11, e22, e12, zeta, eta, press, iStep):
 
 @veros_kernel
 def calc_stressdiv(sig11, sig22, sig12, iStep):
-    #??? remove iStep when debugged
+    #TODO remove iStep when debugged
     stressDivX = (
           sig11*dyF - npx.roll(sig11*dyF, 1,axis=1)
         - sig12*dxV + npx.roll(sig12*dxV,-1,axis=0)
@@ -233,7 +234,8 @@ def calc_lhs(uIce, vIce, zeta, eta, press,
              cDrag, cBotC, R_low,
              iStep, myTime, myIter):
 
-    recip_deltaT = 1./deltatDyn
+    #recip_deltaT = 1./state.settings.deltatDyn #TODO why calculate it here?
+    recip_deltaT = 1
     bdfAlpha = 1.
     sinWat = npx.sin(npx.deg2rad(waterTurnAngle))
     cosWat = npx.cos(npx.deg2rad(waterTurnAngle))
