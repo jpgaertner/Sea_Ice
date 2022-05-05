@@ -54,11 +54,11 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
         vIcePm1  = vIce
 
     # calculate strain rates and bulk moduli/ viscosities
-    e11, e22, e12 = strainrates(uIce, vIce,iEVP)
+    e11, e22, e12 = strainrates(state,uIce,vIce,iEVP)
 
     zeta, eta, press = viscosities(state,e11,e22,e12,iEVP)
 
-    sig11, sig22, sig12 = calc_stress(e11, e22, e12, zeta, eta, press, iEVP)
+    sig11, sig22, sig12 = calc_stress(e11,e22,e12,zeta,eta,press,iEVP)
 
     ##### first step stress equations following Kimmritz et al. (2016) #####
 
