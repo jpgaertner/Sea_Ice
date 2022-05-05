@@ -68,29 +68,29 @@ var_meta = dict(
 )
 
 sett_meta = dict(
-    deltatTherm     = Setting(0, float, "Timestep for thermodynamic equations"),
-    deltatDyn       = Setting(0, float, "Timestep for dynamic equations"),
-    nx              = Setting(0, int, "Grid points in zonal direction"),
-    ny              = Setting(0, int, "Grid points in meridional direction"),
-    noSlip          = Setting(False, bool, "flag whether to use no slip condition"),
-    secondOrderBC   = Setting(False, bool, "flag whether to use second order appreoximation for boundary conditions"),
-    useFreedrift    = Setting(False, bool, "flag whether to use freedrift solver"),
-    useEVP          = Setting(False, bool, "flag whether to use EVP solver"),
-    useLSR          = Setting(False, bool, "flag whether to use LSR solver"),
-    usePicard       = Setting(False, bool, "flag whether to use Picard solver"),
-    useJNFK         = Setting(False, bool, "flag whether to use JNFK solver"),
-    pStar  = Setting(27.5e3, float, "Standart sea ice strength"),
-    cStar           = Setting(20, float, "Sea ice strength parameter"),
-    PlasDefCoeff    = Setting(2, float, "Axes ratio of the elliptical yield curve"),
-    h0              = Setting(0.5, float, "Lead closing parameter")
+    deltatTherm             = Setting(120, float, "Timestep for thermodynamic equations [s]"),
+    deltatDyn               = Setting(120, float, "Timestep for dynamic equations [s]"),
+    nx                      = Setting(65, int, "Grid points in zonal direction"),
+    ny                      = Setting(65, int, "Grid points in meridional direction"),
+    gridcellWidth           = Setting(8000, float, "Grid cell width [m]"),
+    nITC                    = Setting(1, int, "Ice thickness categories"),
+    noSlip                  = Setting(True, bool, "flag whether to use no-slip condition"),
+    secondOrderBC           = Setting(False, bool, "flag whether to use second order appreoximation for boundary conditions"),
+    extensiveFld            = Setting(True, bool, "flag whether the advective fields are extensive"),
+    useRealFreshWaterFlux   = Setting(False, bool, "flag for using hte sea ice load in the calculation of the ocean surface height"),
+    useFreedrift            = Setting(False, bool, "flag whether to use freedrift solver"),
+    useEVP                  = Setting(True, bool, "flag whether to use EVP solver"),
+    useLSR                  = Setting(False, bool, "flag whether to use LSR solver"),
+    usePicard               = Setting(False, bool, "flag whether to use Picard solver"),
+    useJFNK                 = Setting(False, bool, "flag whether to use JNFK solver")
 )
+
 
 ones2d = npx.ones((nx+2*olx,ny+2*oly))
 ones3d = npx.ones((nx+2*olx,ny+2*oly,nITC))
 onesWind = npx.ones((32,nx+2*olx,ny+2*oly))
 def copy(x):
     return update(x, at[:,:], x)
-
 
 uWind_gen = copy(onesWind)
 uWind_gen = update(uWind_gen, at[:,oly:-oly,olx:-olx], uwind)
@@ -143,4 +143,6 @@ state = VerosState(var_meta, sett_meta, dimensions)
 state.initialize_variables()
 set_inits(state)
 
-print(state.settings.deltatTherm)
+# reciprocal of timesteps
+recip_deltatTherm = 1 / state.settings.deltatTherm
+recip_deltatDyn   = 1 / state.settings.deltatDyn
