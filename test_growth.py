@@ -19,7 +19,7 @@
 # aqh: atmospheric specific humidity [g/kg]
 
 from veros import runtime_settings
-backend = 'numpy' # flag which backend to use (numpy or jax)
+backend = 'jax' # flag which backend to use (numpy or jax)
 runtime_settings.backend = backend
 
 from veros import veros_routine
@@ -40,7 +40,7 @@ iceTemp = npx.array([state.variables.TIceSnow[0,0,0]])
 area = npx.array([state.variables.Area[0,0]])
 days = npx.array([0])
 
-timesteps = 60*6
+timesteps = 30*12
 
 for i in range(timesteps):
 
@@ -52,15 +52,15 @@ for i in range(timesteps):
     area = npx.append(area, state.variables.Area[0,0])
     days = npx.append(days,i)
 
-fig, axs = plt.subplots(2,2, figsize=(10,6))
-axs[0,0].plot(days, ice)
-axs[0,0].set_ylabel("Ice Thickness")
-axs[0,1].plot(days, snow)
-axs[0,1].set_ylabel("Snow Thickness")
-axs[1,0].plot(days, area)
-axs[1,0].set_ylabel("Area")
-axs[1,1].plot(days, iceTemp)
-axs[1,1].set_ylabel("Ice Temperature")
+# fig, axs = plt.subplots(2,2, figsize=(10,6))
+# axs[0,0].plot(days, ice)
+# axs[0,0].set_ylabel("Ice Thickness")
+# axs[0,1].plot(days, snow)
+# axs[0,1].set_ylabel("Snow Thickness")
+# axs[1,0].plot(days, area)
+# axs[1,0].set_ylabel("Area")
+# axs[1,1].plot(days, iceTemp)
+# axs[1,1].set_ylabel("Ice Temperature")
 
-fig.tight_layout()
-plt.show()
+# fig.tight_layout()
+# plt.show()
