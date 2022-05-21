@@ -1,18 +1,33 @@
+from veros import runtime_settings
+backend = 'jax' # flag which backend to use (numpy or jax)
+runtime_settings.backend = backend
 
 
 import matplotlib.pyplot as plt
 
 from model import model
-from initialize import state
 from seaice_size import *
 
 from veros.core.operators import numpy as npx
 
+from initialize import state
+from time import time
+#state = get_state()
+
+#model(state)
+start = time()
 
 # 1441 (2days)
-for i in range(1):
+
+for i in range(180):
     print(i)
     model(state)
+
+end = time()
+
+print('runtime =', end - start)
+
+
 
 # save model results
 ice = state.variables.hIceMean
