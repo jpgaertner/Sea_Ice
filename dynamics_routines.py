@@ -104,9 +104,9 @@ def strainrates(state, uIce, vIce,iEVP):
     # e12: 1,2 component of strain rate tensor
 
     # abbreviations at c points
-    dudx = ( npx.roll(uIce,-1,axis=1) - uIce ) * recip_dxF
+    dudx = ( npx.roll(uIce,-1,axis=1) - uIce ) * recip_dxU
     uave = ( npx.roll(uIce,-1,axis=1) + uIce ) * 0.5
-    dvdy = ( npx.roll(vIce,-1,axis=0) - vIce ) * recip_dyF
+    dvdy = ( npx.roll(vIce,-1,axis=0) - vIce ) * recip_dyV
     vave = ( npx.roll(vIce,-1,axis=0) + vIce ) * 0.5
 
     # evaluate strain rates at c points
@@ -199,7 +199,7 @@ def viscosities(state, e11,e22,e12,iEVP):
     eta  = zeta * recip_PlasDefCoeffSq
 
     # recalculate pressure
-    press = ( state.variables.SeaIceStrength * (1 - pressReplFac)
+    press = 0.5 * ( state.variables.SeaIceStrength * (1 - pressReplFac)
               + 2. * zeta * deltaC * pressReplFac / (1 + tensileStrFac)
              ) * (1 - tensileStrFac)
 
@@ -210,8 +210,8 @@ def viscosities(state, e11,e22,e12,iEVP):
 def calc_stress(e11, e22, e12, zeta, eta, press, iStep):
     #TODO remove iStep when debugged
     from seaice_averaging import c_point_to_z_point
-    sig11 = zeta*(e11 + e22) + eta*(e11 - e22) - 0.5 * press
-    sig22 = zeta*(e11 + e22) - eta*(e11 - e22) - 0.5 * press
+    sig11 = zeta*(e11 + e22) + eta*(e11 - e22) - press
+    sig22 = zeta*(e11 + e22) - eta*(e11 - e22) - press
     sig12 = 2. * e12 * c_point_to_z_point(eta)
     return sig11, sig22, sig12
 
@@ -219,11 +219,11 @@ def calc_stress(e11, e22, e12, zeta, eta, press, iStep):
 def calc_stressdiv(sig11, sig22, sig12, iStep):
     #TODO remove iStep when debugged
     stressDivX = (
-          sig11*dyF - npx.roll(sig11*dyF, 1,axis=1)
+          sig11*dyV - npx.roll(sig11*dyV, 1,axis=1)
         - sig12*dxV + npx.roll(sig12*dxV,-1,axis=0)
     ) * recip_rAw
     stressDivY = (
-          sig22*dxF - npx.roll(sig22*dxF, 1,axis=0)
+          sig22*dxU - npx.roll(sig22*dxU, 1,axis=0)
         - sig12*dyU + npx.roll(sig12*dyU,-1,axis=1)
     ) * recip_rAs
     return stressDivX, stressDivY
