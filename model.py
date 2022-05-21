@@ -1,7 +1,3 @@
-from veros import runtime_settings
-backend = 'jax' # flag which backend to use (numpy or jax)
-runtime_settings.backend = backend
-
 from veros import veros_routine
 
 from seaice_reg_ridge import update_clean_up_advection, update_ridging
@@ -11,6 +7,7 @@ from seaice_dynsolver import update_AreaWS, update_IceVelocities, \
             update_SeaIceMass, update_SurfaceForcing
 from seaice_ocean_stress import update_OceanStress
 from seaice_growth import update_Growth
+
 
 @veros_routine
 def model(state):
