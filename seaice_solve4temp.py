@@ -18,7 +18,7 @@ from seaice_params import *
 # hSnowActual: actual snow thickness [m]
 # TSurfIn: surface temperature of ice/snow [K]
 # TempFrz: freezing temperature [K]
-# ug: atmospheric geostrophic wind speed [m/s]
+# ug: atmospheric wind speed [m/s]
 # SWDown: shortwave radiative downward flux [W/m2]
 # LWDown: longwave radiative downward flux [W/m2]
 # ATemp: atmospheric temperature [K]
