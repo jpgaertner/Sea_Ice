@@ -32,7 +32,7 @@ var_meta = dict(
     WindForcingY    = Variable("Meridional forcing on ice by wind stress", dims, "N"),
     uTrans          = Variable("Zonal ice transport", dims, "m^2/s"),
     vTrans          = Variable("Meridional ice transport", dims, "m^2/s"),
-    etaN            = Variable("Ocean surface elevation", dims, "m"),
+    ssh             = Variable("Ocean surface elevation", dims, "m"),
     pLoad           = Variable("Surface pressure", dims, "P"),
     SeaIceLoad      = Variable("Load of sea ice on ocean surface", dims, "kg/m^2"),
     salt            = Variable("Ocean surface salinity", dims, "g/kg"),
@@ -68,11 +68,19 @@ var_meta = dict(
 )
 
 sett_meta = dict(
-    deltatTherm             = Setting(120, float, "Timestep for thermodynamic equations [s]"),
-    deltatDyn               = Setting(120, float, "Timestep for dynamic equations [s]"),
+    use_seaice              = Setting(False, bool, "flag for using the sea ice plug in"),
+    deltatTherm             = Setting(86400, float, "Timestep for thermodynamic equations [s]"),
+    deltatDyn               = Setting(86400, float, "Timestep for dynamic equations [s]"),
     nx                      = Setting(65, int, "Grid points in zonal direction"),
     ny                      = Setting(65, int, "Grid points in meridional direction"),
     gridcellWidth           = Setting(8000, float, "Grid cell width [m]"),
+    dxC                     = Setting(gridcellWidth, float, "zonal spacing of cell centers across western cell wall [m]"),
+    dyC                     = Setting(gridcellWidth, float, "meridional spacing of cell centers across southern cell wall [m]"),
+    dxU                     = Setting(gridcellWidth, float, "zonal spacing of u point through cell center [m]"),
+    dyU                     = Setting(gridcellWidth, float, "meridional spacing of u point through south-west corner of the cell[m]"),
+    rA                      = Setting(gridcellWidth**2, float, "grid cell area centered around c point [m^2]"), #TODO change names
+    rAw                     = Setting(gridcellWidth**2, float, "grid cell area centered around u point [m^2]"),
+    rAs                     = Setting(gridcellWidth**2, float, "grid cell area centered around v point [m^2]"),
     nITC                    = Setting(1, int, "Ice thickness categories"),
     noSlip                  = Setting(True, bool, "flag whether to use no-slip condition"),
     secondOrderBC           = Setting(False, bool, "flag whether to use second order appreoximation for boundary conditions"),
@@ -115,23 +123,23 @@ hIce_gen = fill_overlap(hIce_gen)
 
 @veros_routine
 def set_inits(state):
-    state.variables.hIceMean    = hIce_gen
-    state.variables.hSnowMean   = ones2d * 0
-    state.variables.Area        = ones2d * 1
+    state.variables.hIceMean    = ones2d * 1.3   #hIce_gen
+    state.variables.hSnowMean   = ones2d * 0.1   #ones2d * 0
+    state.variables.Area        = ones2d * 0.9   #ones2d * 1
     state.variables.TIceSnow    = ones3d * 273.0
     state.variables.SeaIceLoad  = ones2d * (rhoIce * state.variables.hIceMean
                                             + rhoSnow * state.variables.hSnowMean)
     state.variables.uWind       = uWind_gen[0,:,:]
     state.variables.vWind       = vWind_gen[0,:,:]
-    state.variables.wSpeed      = npx.sqrt(state.variables.uWind**2 + state.variables.vWind**2)
+    state.variables.wSpeed      = ones2d * 2     #npx.sqrt(state.variables.uWind**2 + state.variables.vWind**2)
     state.variables.uVel        = uVel_gen
     state.variables.vVel        = vVel_gen
-    state.variables.salt        = ones2d * 30
-    state.variables.theta       = ones2d * celsius2K - 1.62
-    state.variables.Qnet        = ones2d * 255.28928198201896
+    state.variables.salt        = ones2d * 29
+    state.variables.theta       = ones2d * celsius2K - 1.66
+    state.variables.Qnet        = ones2d * 173.03212617345582
     state.variables.Qsw         = ones2d * 0
     state.variables.SWDown      = ones2d * 0
-    state.variables.LWDown      = ones2d * 180
+    state.variables.LWDown      = ones2d * 80
     state.variables.ATemp       = ones2d * 253
     state.variables.R_low       = ones2d * -1000
     state.variables.R_low = update(state.variables.R_low, at[:,-1], 0)
