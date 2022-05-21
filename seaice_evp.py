@@ -1,5 +1,5 @@
 from veros.core.operators import numpy as npx
-from veros.core.operators import update, at
+from veros.core.operators import update, at, for_loop
 from veros import veros_kernel
 
 from seaice_params import *
@@ -35,15 +35,32 @@ plotEvpResidual    = False
 evpAlpha        = 500
 evpBeta         = evpAlpha
 useAdaptiveEVP  = True
-#useAdaptiveEVP  = False #now mEVP is used
+useAdaptiveEVP  = False #now mEVP is used
 aEVPalphaMin    = 5
 aEvpCoeff       = 0.5
 explicitDrag    = False
-nEVPsteps = 10
+nEVPsteps = 500
 
 @veros_kernel
-def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
-                    iEVP, EVPcFac, evpAlphaC, evpAlphaZ, evpBetaU, evpBetaV, resSig, resU, resEVP0):
+def evp_solver_body(iEVP, arg_body):
+
+    state       = arg_body[0]
+    uIce        = arg_body[1]
+    vIce        = arg_body[2]
+    uIceNm1     = arg_body[3]
+    vIceNm1     = arg_body[4]
+    sigma11     = arg_body[5]
+    sigma22     = arg_body[6]
+    sigma12     = arg_body[7]
+    denom1      = arg_body[8]
+    denom2      = arg_body[9]
+    EVPcFac     = arg_body[10]
+    evpAlphaC   = arg_body[11]
+    evpAlphaZ   = arg_body[12]
+    evpBetaU    = arg_body[13]
+    evpBetaV    = arg_body[14]
+    resSig      = arg_body[15]
+    resU        = arg_body[16]
 
     if computeEvpResidual:
         # save previous (p-1) iteration for residual computation
@@ -200,6 +217,7 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
         resU = update(resU, at[iEVP], global_sum(resU[iEVP]))
 
         resEVP = resU[iEVP]
+        resEVP0 = resU[0]
         resEVP = resEVP/resEVP0
 
         if printEvpResidual:
@@ -219,7 +237,8 @@ def evp_solver_body(state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma
         # ax[1].set_title('uIce')
         # plt.show()
 
-    return uIce, vIce, sigma11, sigma22, sigma12, resEVP
+    return [state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
+            EVPcFac, evpAlphaC, evpAlphaZ, evpBetaU, evpBetaV, resSig, resU]
 
 
 @veros_kernel
@@ -231,7 +250,7 @@ def evp_solver(state):
     else:
         EVPcFac = 0
 
-    denom1 = 1 / evpAlpha
+    denom1 = npx.ones_like(iceMask)*1 / evpAlpha
     denom2 = denom1
 
     # copy previous time step (n-1) of uIce, vIce
@@ -245,27 +264,38 @@ def evp_solver(state):
     sigma12 = state.variables.sigma12
 
     # initialize adaptive EVP specific fields
-    evpAlphaC = evpAlpha
-    evpAlphaZ = evpAlpha
-    evpBetaU  = evpBeta
-    evpBetaV  = evpBeta
+    evpAlphaC = npx.ones_like(iceMask)*evpAlpha
+    evpAlphaZ = npx.ones_like(iceMask)*evpAlpha
+    evpBetaU  = npx.ones_like(iceMask)*evpBeta
+    evpBetaV  = npx.ones_like(iceMask)*evpBeta
 
     resSig  = npx.zeros(nEVPsteps+1) #???
-    resU    = npx.zeros(nEVPsteps+1)
+    resU    = npx.zeros(nEVPsteps+1) #TODO why does this not lead to a division by zero?
 
     # to avoid dividing by zero in the first iteration
-    resEVP0 = 1e-5 
+    resEVP0 = 1e-5 #TODO are these necessary
     resEVP = evpTol*2 #???
-    for iEVP in range (nEVPsteps):
-        #print(iEVP)
-        if iEVP ==1:
-            uIce, vIce, sigma11, sigma22, sigma12, resEVP0 = evp_solver_body(
-                state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
-                iEVP, EVPcFac, evpAlphaC, evpAlphaZ, evpBetaU, evpBetaV, resSig, resU, resEVP0)
-        else:
-            uIce, vIce, sigma11, sigma22, sigma12, _ = evp_solver_body(
-                state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
-                iEVP, EVPcFac, evpAlphaC, evpAlphaZ, evpBetaU, evpBetaV, resSig, resU, resEVP0)
+    # for iEVP in range (nEVPsteps):
+    #     #print(iEVP)
+    #     if iEVP ==1:
+    #         uIce, vIce, sigma11, sigma22, sigma12, resEVP0 = evp_solver_body(
+    #             state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
+    #             iEVP, EVPcFac, evpAlphaC, evpAlphaZ, evpBetaU, evpBetaV, resSig, resU, resEVP0)
+    #     else:
+    #         uIce, vIce, sigma11, sigma22, sigma12, _ = evp_solver_body(
+    #             state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
+    #             iEVP, EVPcFac, evpAlphaC, evpAlphaZ, evpBetaU, evpBetaV, resSig, resU, resEVP0)
+
+    arg_body = [state, uIce, vIce, uIceNm1, vIceNm1, sigma11, sigma22, sigma12, denom1, denom2,
+                EVPcFac, evpAlphaC, evpAlphaZ, evpBetaU, evpBetaV, resSig, resU]
+
+
+    arg_body = for_loop(0,400,evp_solver_body,arg_body)
+
+    uIce = arg_body[1]
+    vIce = arg_body[2]
+    resSig = arg_body[15]
+    resU = arg_body[16]
 
 
 
@@ -279,7 +309,7 @@ def evp_solver(state):
         ax[1].set_title('resSig')
         # s12 = sigma12 + npx.roll(sigma12,-1,0)
         # s12 = 0.25*(s12 + npx.roll(s12,-1,1))
-        # s1=( sigma1 + npx.sqrt(sigma2**2 + 4*s12**2) )/press
+        # s1=( sigma1 + npx.sqrt(sigma2**2 + 4*s12**2) )/press # I changed press -> 0.5 * press
         # s2=( sigma1 - npx.sqrt(sigma2**2 + 4*s12**2) )/press
         # csf0=ax[0].plot(s1.ravel(),s2.ravel(),'.');#plt.colorbar(csf0,ax=ax[0])
         # ax[0].plot([-1.4,0.1],[-1.4,0.1],'k-'); #plt.colorbar(csf0,ax=ax[0])
