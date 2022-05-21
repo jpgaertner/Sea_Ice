@@ -4,7 +4,7 @@ from veros import veros_kernel, KernelOutput, veros_routine
 
 from seaice_size import *
 from seaice_params import *
-from initialize import recip_deltatTherm, recip_deltatDyn
+from initialize import recip_deltatTherm
 
 from seaice_solve4temp import solve4temp
 
@@ -123,7 +123,8 @@ def growth(state):
 
     hIceActual = npx.where(isIce, hIceMeanpreTH * recip_regArea, 0)
     recip_hIceActual = AreapreTH / npx.sqrt(hIceMeanpreTH**2 + hice_reg_sq)
-    hSnowActual = npx.where(isIce, hSnowMeanpreTH * recip_regArea, 0)
+    #hSnowActual = npx.where(isIce, hSnowMeanpreTH * recip_regArea, 0)
+    hSnowActual = npx.where(isIce, hSnowMeanpreTH / AreapreTH, 0) #TODO
 
     # add lower boundary
     hIceActual = npx.maximum(hIceActual, 0.05)
@@ -132,7 +133,7 @@ def growth(state):
     ##### retrieve the air-sea heat and shortwave radiative fluxes and #####
     #####   calculate the corresponding ice growth rate for open water #####
 
-    # set fluxed in (qswo) and out (F_ao) of the ocean
+    # set shortwave flux in (qswo) and total flux out (F_ao) of the ocean
     F_ao = state.variables.Qnet
     qswo = state.variables.Qsw
 
@@ -206,9 +207,9 @@ def growth(state):
     # for the ice part of the cell to mean fluxes for the whole cell
     TIceSnow = TIce_mult
     # TODO: maybe define a temperature for the case hIceMean = 0
-    F_io_net = npx.sum(F_io_net_mult*recip_nITC, axis=2) * AreapreTH
-    F_ia_net = npx.sum(F_ia_net_mult*recip_nITC, axis=2) * AreapreTH
-    qswi = npx.sum(qswi_mult*recip_nITC, axis=2) * AreapreTH
+    F_io_net = npx.sum(F_io_net_mult*recip_nITC, axis=2)# * AreapreTH #TODO
+    F_ia_net = npx.sum(F_ia_net_mult*recip_nITC, axis=2)# * AreapreTH
+    qswi = npx.sum(qswi_mult*recip_nITC, axis=2)# * AreapreTH
     #FWsublim = npx.sum(FWsublim_mult*recip_nITC, axis=2) * AreapreTH
 
 
@@ -237,11 +238,11 @@ def growth(state):
     # an excess of heat flux convergence after snow melting, it will
     # be used to melt ice
 
-    allSnowMelted = (PotSnowMeltFromSurf >= state.variables.hSnowMean)
+    allSnowMelted = (PotSnowMeltFromSurf >= hSnowActual)
 
     # the actual thickness of snow to be melted by snow surface
     # heat flux convergence [m]
-    SnowMeltFromSurface = npx.where(allSnowMelted, state.variables.hSnowMean, PotSnowMeltFromSurf)
+    SnowMeltFromSurface = npx.where(allSnowMelted, hSnowActual, PotSnowMeltFromSurf)
 
     # the actual snow melt rate due to snow surface heat flux convergence [m/s]
     SnowMeltRateFromSurface = npx.where(allSnowMelted,
@@ -250,7 +251,7 @@ def growth(state):
 
     # the actual surface heat flux convergence used to melt snow [W/m2]
     SurfHeatFluxConvergToSnowMelt = npx.where(allSnowMelted,
-                - state.variables.hSnowMean * recip_deltatTherm / qs, F_ia_net)
+                - hSnowActual * recip_deltatTherm / qs, F_ia_net)
 
     # the surface heat flux convergence is reduced by the amount that
     # is used for melting snow:
@@ -261,7 +262,7 @@ def growth(state):
 
     # the total ice growth rate is then:
     NetExistingIceGrowthRate = (IceGrowthRateUnderExistingIce
-                                + IceGrowthRateFromSurface) * recip_regArea
+                                + IceGrowthRateFromSurface) #* recip_regArea
 
 
     ##### calculate the heat fluxes from the ocean to the sea ice #####
