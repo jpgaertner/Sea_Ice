@@ -124,7 +124,7 @@ hIce_gen = fill_overlap(hIce_gen)
 @veros_routine
 def set_inits(state):
     state.variables.hIceMean    = ones2d * 1.3   #hIce_gen
-    state.variables.hSnowMean   = ones2d * 0.1   #ones2d * 0
+    state.variables.hSnowMean   = ones2d * 0   #ones2d * 0
     state.variables.Area        = ones2d * 0.9   #ones2d * 1
     state.variables.TIceSnow    = ones3d * 273.0
     state.variables.SeaIceLoad  = ones2d * (rhoIce * state.variables.hIceMean

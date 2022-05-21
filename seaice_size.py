@@ -59,7 +59,7 @@ recip_rAw = 1 / rAw
 recip_rAs = 1 / rAs
 
 # coriolis parameter at grid center point
-fCori = npx.ones((ny+2*oly,nx+2*olx)) * 1.46e-4
+fCori = npx.ones((ny+2*oly,nx+2*olx)) * 0#1.46e-4
 
 # masks for introducing boundaries
 maskInC = npx.ones((ny+2*oly,nx+2*olx))

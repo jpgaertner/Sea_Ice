@@ -3,10 +3,12 @@ from veros.core.operators import numpy as npx
 # densities [kg/m3]
 rhoIce = 900        # density of ice
 rhoSnow = 330       # density of snow
-rhoFresh = 1000     # density of fresh water
+#rhoFresh = 1000     # density of fresh water
+rhoFresh = 1027 # for thermodynamics benchmark
 recip_rhoFresh = 1 / rhoFresh
 rhoAir = 1.3        # density of air
-rhoConst = 1026     # constant reference density of sea water (Boussineq approximation)
+#rhoConst = 1026     # constant reference density of sea water (Boussineq approximation)
+rhoConst = 999.8 # for thermodynamics benchmark
 recip_rhoConst = 1 / rhoConst
 rhoice2rhosnow     = rhoIce / rhoSnow
 rhoIce2rhoFresh = rhoIce / rhoFresh
@@ -75,7 +77,7 @@ celsius2K = 273.15 # conversion from [K] to [°C]
 stantonNr = 0.0056      # stanton number
 uStarBase = 0.0125      # typical friction velocity beneath sea ice [m/s]
 McPheeTaperFac = 12.5   # tapering factor at the ice bottom
-
+#McPheeTaperFac = 0.92 # for thermodynamics benchmark
 # lead closing parameter
 h0 = 0.5
 recip_h0 = 1 / h0
