@@ -35,20 +35,21 @@ dxC = deltaX    # distance between two adjacent cell centers in x direction acro
 dyC = deltaX    # distance between two adjacent cell centers in y direction across southern cell wall [m]
 dxG = deltaX    # distance between cell faces (cell width) in x direction along southern cell wall [m]
 dyG = deltaX    # distance between cell faces (cell width) in y direction along western cell wall [m]
-dxF = deltaX    # distance between cell faces (cell width) in x direction through cell center [m]
-dyF = deltaX    # distance between cell faces (cell width) in y direction through cell center [m]
+dxU = deltaX    # distance between cell faces (cell width) in x direction through cell center [m]
+dyV = deltaX    # distance between cell faces (cell width) in y direction through cell center [m]
 dxV = deltaX    # distance between two adjacent v points in x direction through south-west corner of the cell [m]
 dyU = deltaX    # distance between two adjacent u points in y direction through south-west corner of the cell [m]
+# TODO remove here and use state obejct
 recip_dxC = 1 / dxC
 recip_dyC = 1 / dyC
 recip_dxG = 1 / dxG
 recip_dyG = 1 / dyG
-recip_dxF = 1 / dxF
-recip_dyF = 1 / dyF
+recip_dxU = 1 / dxU
+recip_dyV = 1 / dyV
 recip_dxV = 1 / dxV
 recip_dyU = 1 / dyU
 
-rA = dxF * dyF      # grid area with c point at center
+rA = dxU * dyV      # grid area with c point at center
 rAz = dxV * dyU     # grid area with z point at center
 rAw = dxC * dyG     # grid area with u point at center
 rAs = dxG * dyC     # grid area with v point at center
