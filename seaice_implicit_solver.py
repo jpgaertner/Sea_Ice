@@ -1,4 +1,5 @@
-import numpy as np
+from veros.core.operators import numpy as npx
+from veros import veros_kernel
 
 from scipy.sparse import linalg as spla
 from scipy.sparse.linalg import LinearOperator
@@ -30,23 +31,27 @@ computeJFNKResidual = True
 printJFNKResidual = True
 plotJFNKResidual = True
 
+@veros_kernel
 def _vecTo2d(vec):
     n = vec.shape[0]//2
-    u = np.zeros((ny+2*oly,nx+2*olx))
-    v = np.zeros((ny+2*oly,nx+2*olx))
+    u = npx.zeros((ny+2*oly,nx+2*olx))
+    v = npx.zeros((ny+2*oly,nx+2*olx))
     u[oly:-oly,olx:-olx]=vec[:n].reshape((ny,nx))
     v[oly:-oly,olx:-olx]=vec[n:].reshape((ny,nx))
     u,v=fill_overlap_uv(u,v)
     return u,v
 
+@veros_kernel
 def _2dToVec(u,v):
-    vec = np.hstack((u[oly:-oly,olx:-olx].ravel(),
+    vec = npx.hstack((u[oly:-oly,olx:-olx].ravel(),
                      v[oly:-oly,olx:-olx].ravel()))
     return vec
 
+@veros_kernel
 def calc_nonlinear_residual( Fu, Fv ):
-    return np.sqrt( _2dToVec(Fu**2*rAw,Fv**2*rAs).sum()/globalArea )
+    return npx.sqrt( _2dToVec(Fu**2*rAw,Fv**2*rAs).sum()/globalArea )
 
+@veros_kernel
 def matVecOp(x, zeta, eta, press,
              hIceMean, Area, areaW, areaS,
              SeaIceMassC, SeaIceMassU, SeaIceMassV,
@@ -66,6 +71,7 @@ def matVecOp(x, zeta, eta, press,
 
     return LinearOperator((n,n), matvec = matvec, dtype = 'float64')
 
+@veros_kernel
 def jacVecOp(x, uIce, vIce, Fu, Fv, hIceMean, hSnowMean, Area,
              zeta, eta, press, cDrag, cBotC,
              SeaIceMassC, SeaIceMassU, SeaIceMassV,
@@ -87,6 +93,7 @@ def jacVecOp(x, uIce, vIce, Fu, Fv, hIceMean, hSnowMean, Area,
 
     return LinearOperator((n,n), matvec = matvec, dtype = 'float64')
 
+@veros_kernel
 def preconditionerLSR(x, uVel, vVel, hIceMean, hSnowMean, Area,
                       zeta, eta, cDrag, cBotC, forcingU, forcingV,
                       SeaIceMassC, SeaIceMassU, SeaIceMassV,
@@ -110,6 +117,7 @@ def preconditionerLSR(x, uVel, vVel, hIceMean, hSnowMean, Area,
 
     return spla.LinearOperator((n, n), matvec = M_x)
 
+@veros_kernel
 def preconditionerSolve(x, zeta, eta, press,
                         hIceMean, Area, areaW, areaS,
                         SeaIceMassC, SeaIceMassU, SeaIceMassV,
@@ -147,32 +155,27 @@ def preconGmres(x, P):
         return xx
     return spla.LinearOperator((n, n), matvec = M_x)
 
-def picard_solver(uIce, vIce, hIceMean, hSnowMean, Area,
-                  uVel, vVel, forcingU, forcingV,
-                  SeaIceMassC, SeaIceMassU, SeaIceMassV,
-                  R_low, myTime, myIter):
+def picard_solver(state):
 
-    recip_deltaT = 1./deltaTdyn
+    recip_deltaT = 1./deltatDyn
     bdfAlpha = 1.
 
     # copy previous time step (n-1) of uIce, vIce
-    uIceLin = uIce.copy()
-    vIceLin = vIce.copy()
-    uIceNm1 = uIce.copy()
-    vIceNm1 = vIce.copy()
+    uIceLin = update(uIce, at[:,:], uIce)
+    vIceLin = update(vIce, at[:,:], vIce)
+    uIceNm1 = update(uIce, at[:,:], uIce)
+    vIceNm1 = update(vIce, at[:,:], vIce)
 
     # this does not change
     # mass*(uIceNm1)/deltaT
-    uIceRHSfix = forcingU + SeaIceMassU*uIceNm1*recip_deltaT
+    uIceRHSfix = state.variables.WindForcingX + state.variables.SeaIceMassU*uIceNm1*recip_deltaT
     # mass*(vIceNm1)/deltaT
-    vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
-    # calculate ice strength
-    press0 = calc_ice_strength(hIceMean, iceMask)
+    vIceRHSfix = state.variables.WindForcingY + state.variables.SeaIceMassV*vIceNm1*recip_deltaT
 
 
     residual = []
-    areaW = 0.5 * (Area + np.roll(Area,1,1))
-    areaS = 0.5 * (Area + np.roll(Area,1,0))
+    areaW = 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,1))
+    areaS = 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,0))
     exitCode = 1
     iPicard = -1
     resNonLin = nonLinTol*2
@@ -185,14 +188,11 @@ def picard_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         uIceLin = wght*uIce+(1.-wght)*uIceLin
         vIceLin = wght*vIce+(1.-wght)*vIceLin
         #
-        cDrag = ocean_drag_coeffs(uIceLin, vIceLin, uVel, vVel)
-        cBotC = bottomdrag_coeffs(uIceLin, vIceLin, hIceMean, Area, R_low)
+        cDrag = ocean_drag_coeffs(state, uIceLin, vIceLin)
+        cBotC = bottomdrag_coeffs(state, uIceLin, vIceLin)
         e11, e22, e12    = strainrates(uIceLin, vIceLin)
-        zeta, eta, press = viscosities(
-            e11, e22, e12, press0, iPicard, myIter, myTime)
-        bu, bv = calc_rhs(uIceRHSfix, vIceRHSfix, areaW, areaS,
-                          uVel, vVel, cDrag,
-                          iPicard, myIter, myTime)
+        zeta, eta, press = viscosities(e11, e22, e12, iPicard)
+        bu, bv = calc_rhs(state, uIceRHSfix, vIceRHSfix, cDrag, iPicard)
         # transform to vectors without overlaps
         b = _2dToVec(bu,bv)
         u = _2dToVec(uIce,vIce)
@@ -218,8 +218,8 @@ def picard_solver(uIce, vIce, hIceMean, hSnowMean, Area,
             linTol = linTolMax
 
         if computePicardResidual:
-            # print(np.allclose(A.dot(u1), b))
-            resNonLin = np.sqrt( ( (A.matvec(u)-b)**2 ).sum() )
+            # print(npx.allclose(A.dot(u1), b))
+            resNonLin = npx.sqrt( ( (A.matvec(u)-b)**2 ).sum() )
             if printPicardResidual or exitCode>0: print(
                 'iPicard = %3i, linTol %f non-linear residual = %e'%(
                     iPicard, linTol, resNonLin) )
@@ -231,12 +231,12 @@ def picard_solver(uIce, vIce, hIceMean, hSnowMean, Area,
 
         uIce, vIce = _vecTo2d(u1)
         if computePicardResidual:
-            # print(np.allclose(A.dot(u1), b))
+            # print(npx.allclose(A.dot(u1), b))
             residual.append(resNonLin)
             if iPicard==0: resNonLin0 = resNonLin
             resNonLin = resNonLin/resNonLin0
 
-            resNonLinPost = np.sqrt( ( (A.matvec(u1)-b)**2 ).sum() )
+            resNonLinPost = npx.sqrt( ( (A.matvec(u1)-b)**2 ).sum() )
 
             if printPicardResidual or exitCode>0: print(
                     'iPicard = %3i, exitCode = %3i, non-linear residual = %e'%(
@@ -246,7 +246,7 @@ def picard_solver(uIce, vIce, hIceMean, hSnowMean, Area,
             #                   SeaIceMassC, SeaIceMassU, SeaIceMassV,
             #                   cDrag, cBotC, R_low,
             #                   iPicard, myIter, myTime)
-            # print(np.sqrt(((Au-bu)**2+(Av-bv)**2)[oly:-oly,olx:-olx].sum()),
+            # print(npx.sqrt(((Au-bu)**2+(Av-bv)**2)[oly:-oly,olx:-olx].sum()),
             #       residual[iPicard])
 
 
@@ -264,7 +264,7 @@ def jfnk_solver(uIce, vIce, hIceMean, hSnowMean, Area,
                 SeaIceMassC, SeaIceMassU, SeaIceMassV,
                 R_low, myTime, myIter):
 
-    recip_deltaT = 1./deltaTdyn
+    recip_deltaT = 1./deltatDyn
     bdfAlpha = 1.
 
     # copy previous time step (n-1) of uIce, vIce
@@ -279,11 +279,11 @@ def jfnk_solver(uIce, vIce, hIceMean, hSnowMean, Area,
     # mass*(vIceNm1)/deltaT
     vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
     # calculate ice strength
-    press0 = calc_ice_strength(hIceMean, iceMask)
+    SeaIceStrength = calc_ice_strength(hIceMean, iceMask)
 
     residual = []
-    areaW = 0.5 * (Area + np.roll(Area,1,1))
-    areaS = 0.5 * (Area + np.roll(Area,1,0))
+    areaW = 0.5 * (Area + npx.roll(Area,1,1))
+    areaS = 0.5 * (Area + npx.roll(Area,1,0))
     exitCode = 1
     iJFNK = -1
     resNonLin = 1.
@@ -297,11 +297,11 @@ def jfnk_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         vIceLin = wght*vIce+(1.-wght)*vIceLin
 
         # these are just for the lsr-preconditioner
-        cDrag = ocean_drag_coeffs(uIceLin, vIceLin, uVel, vVel)
-        cBotC = bottomdrag_coeffs(uIceLin, vIceLin, hIceMean, Area, R_low)
+        cDrag = ocean_drag_coeffs(uIceLin, vIceLin)
+        cBotC = bottomdrag_coeffs(uIceLin, vIceLin)
         e11, e22, e12    = strainrates(uIceLin, vIceLin)
         zeta, eta, press = viscosities(
-            e11, e22, e12, press0, iJFNK, myIter, myTime)
+            e11, e22, e12, SeaIceStrength, iJFNK, myIter, myTime)
 
         # first residual
         Fu, Fv = calc_residual(uIce, vIce, hIceMean, hSnowMean, Area,
@@ -363,7 +363,7 @@ def jfnk_solver(uIce, vIce, hIceMean, hSnowMean, Area,
 
         print('gmres: exitCode = %i, linTol = %f, %f, %f'%(
             exitCode, linTol, du.min(), du.max() ) )
-        if np.abs(du).max() == 0:
+        if npx.abs(du).max() == 0:
             print('Newton innovation vector = 0, stopping')
             break
 
