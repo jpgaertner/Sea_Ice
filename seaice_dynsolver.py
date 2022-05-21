@@ -46,7 +46,7 @@ def calc_SurfaceForcing(state):
 
     # calculate actual sea surface height/ geopotential height anomaly
     # (equivalent to surface pressure)
-    phiSurf = gravity * state.variables.etaN
+    phiSurf = gravity * state.variables.ssh
     if state.settings.useRealFreshWaterFlux:
         phiSurf = phiSurf + (state.variables.pLoad \
                     + state.variables.SeaIceLoad * gravity * state.settings.seaIceLoadFac #??? why two flags?
