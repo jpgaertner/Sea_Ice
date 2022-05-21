@@ -70,7 +70,7 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
     mskZ  =    mskZ*np.roll(   mskZ,1,axis=0)
 
     # u - component
-    sig11 = (zeta-eta) *       (np.roll(vIce,-1,0)-vIce)*recip_dyF \
+    sig11 = (zeta-eta) *       (np.roll(vIce,-1,0)-vIce)*recip_dyV \
           + (zeta+eta) * 0.5 * (np.roll(vIce,-1,0)+vIce)*k2AtC \
           - 0.5 * press
     hFacM = SeaIceMaskV - np.roll(SeaIceMaskV,1,1)
@@ -94,12 +94,12 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
     )
 
     uIceRHS = uIceRHS + (
-          sig11*dyF - np.roll(sig11*dyF, 1,axis=1)
+          sig11*dyV - np.roll(sig11*dyV, 1,axis=1)
         - sig12*dxV + np.roll(sig12*dxV,-1,axis=0)
     ) * recip_rAw
 
     # v - component
-    sig22 = (zeta-eta) *       (np.roll(uIce,-1,1)-uIce)*recip_dxF \
+    sig22 = (zeta-eta) *       (np.roll(uIce,-1,1)-uIce)*recip_dxU \
           + (zeta+eta) * 0.5 * (np.roll(uIce,-1,1)+uIce)*k1AtC \
           - 0.5 * press
     hFacM = SeaIceMaskU - np.roll(SeaIceMaskU,1,0)
@@ -123,7 +123,7 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
     )
 
     vIceRHS = vIceRHS + (
-          sig22*dxF - np.roll(sig22*dxF, 1,axis=0)
+          sig22*dxU - np.roll(sig22*dxU, 1,axis=0)
         - sig12*dyU + np.roll(sig12*dyU,-1,axis=1)
     ) * recip_rAs
 
@@ -137,14 +137,14 @@ def lsr_coefficents(zeta, eta, dragSym, seaiceMassU, seaiceMassV,
     else:
         strImpCplFac = 0.
 
-    # needs to be sorted out, can be 1.5/deltaTdyn
-    bdfAlphaOverDt = 1./deltaTdyn
+    # needs to be sorted out, can be 1.5/deltatDyn
+    bdfAlphaOverDt = 1./deltatDyn
 
     # coefficients of uIce(i,j) and vIce(i,j) belonging to ...
     # ... d/dx (eta+zeta) d/dx u
-    UXX = dyF * ( zeta + eta ) * recip_dxF
+    UXX = dyV * ( zeta + eta ) * recip_dxU
     # ... d/dy eta+zeta dv/dy
-    VYY = dxF * ( zeta + eta ) * recip_dyF
+    VYY = dxU * ( zeta + eta ) * recip_dyV
     # ... d/dy eta d/dy u
     UYY = dxV * c_point_to_z_point(eta+strImpCplFac*zeta, noSlip) * recip_dyU
     # ... d/dx eta dv/dx
@@ -154,9 +154,9 @@ def lsr_coefficents(zeta, eta, dragSym, seaiceMassU, seaiceMassV,
     # ... d/dx eta k1 v
     VXM = dyU * c_point_to_z_point( eta, noSlip ) * k1AtZ * 0.5
     # ... d/dx (zeta-eta) k1 u
-    UXM = dyF * ( zeta - eta ) * k1AtC * 0.5
+    UXM = dyV * ( zeta - eta ) * k1AtC * 0.5
     # ... d/dy (zeta-eta) k2 v
-    VYM = dxF * ( zeta - eta ) * k2AtC * 0.5
+    VYM = dxU * ( zeta - eta ) * k2AtC * 0.5
 
     # assemble coefficient matrix, beware of sign convention: because
     # this is the left hand side we calculate -grad(sigma), but the
@@ -383,7 +383,7 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         printLsrResidual   = False
         plotLsrResidual    = False
 
-    recip_deltaT = 1./deltaTdyn
+    recip_deltaT = 1./deltatDyn
     bdfAlpha = 1.
     sinWat = np.sin(np.deg2rad(waterTurnAngle))
     cosWat = np.cos(np.deg2rad(waterTurnAngle))
@@ -404,7 +404,7 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         # mass*(vIceNm1)/deltaT
         vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
         # calculate ice strength
-        press0 = calc_ice_strength(hIceMean, iceMask)
+        SeaIceStrength = calc_ice_strength(hIceMean, iceMask)
 
     residual = []
     iLsr = -1
@@ -445,7 +445,7 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
             #
             e11, e22, e12    = strainrates(uIceC, vIceC)
             zeta, eta, press = viscosities(
-                e11, e22, e12, press0, iLsr, myTime, myIter)
+                e11, e22, e12, SeaIceStrength, iLsr, myTime, myIter)
             #
             uIceRHS, vIceRHS = calc_rhs_lsr(
                 uIceRHSfix, vIceRHSfix, areaW, areaS, uIceC, vIceC,
