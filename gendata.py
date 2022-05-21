@@ -17,6 +17,9 @@ Ly=Lx
 dx = 8e3;
 dy = dx;
 nx,ny,nz=int(Lx/dx)+1,int(Ly/dy)+1,3
+# nx = 1265
+# ny = nx
+# nz = 3
 x = (np.arange(nx,dtype = accuracy)+0.5)*dx;
 y = (np.arange(ny,dtype = accuracy)+0.5)*dy;
 xx,yy = np.meshgrid(x,y);
@@ -30,8 +33,8 @@ h=-Ho*np.ones((ny,nx),dtype = accuracy);
 # channnel walls
 h[:,-1]=0;
 h[-1,:]=0;
-#writefield('bathy_3c_'+dxstr+'.bin',h)
-print(np.shape(h))
+# writefield('bathy_3c_'+dxstr+'.bin',h)
+# print(np.shape(h))
 variableWindField = True
 shiftWindField = True
 if variableWindField:
