@@ -71,22 +71,17 @@ hice_reg_sq = hice_reg**2
 
 celsius2K = 273.15 # conversion from [K] to [°C]
 
-# timesteps [s]
-deltatTherm = 120          # timestep for thermodynamic equations
-recip_deltatTherm = 1 / deltatTherm
-deltatDyn = deltatTherm     # timestep for dynamic equations
-recip_deltatDyn = 1 / deltatDyn
-
 # constants for McPhee formula for calculating turbulent ocean heat fluxes
 stantonNr = 0.0056      # stanton number
 uStarBase = 0.0125      # typical friction velocity beneath sea ice [m/s]
 McPheeTaperFac = 12.5   # tapering factor at the ice bottom
-# lead closing parameter/ demarcation thickness between thin and thick ice
-# ('thin ice' = open water)
+
+# lead closing parameter
 h0 = 0.5
 recip_h0 = 1 / h0
 h0_south = h0
 recip_h0_south = 1 / h0_south
+
 
 ##### constants in advection routines #####
 
@@ -121,7 +116,7 @@ PlasDefCoeff = 2    # coefficient for plastic deformation/ axes ratio of the
 
 deltaMin = 2e-9    # regularization value for delta
 
-pressReplFac = 1    # interpolator between SeaIceStrength and regularized pressure
+pressReplFac = 1    # flag whether to use replacement pressure
 
 pStar = 27.5e3 # sea ice strength parameter
 cStar = 20  # sea ice strength parameter
@@ -138,27 +133,3 @@ zetaMaxfac = 2.5e8  # factor determining the maximum viscosity [s]
 zetaMin = 0         # minimum viscosity
 
 CrMax = 1e6 # paramter used for calculating advective fluxes
-
-noSlip = True # flag whether to use no slip conditions
-
-secondOrderBC = False # flag whether to use second order appreoximation for boundary conditions
-
-useRealFreshWaterFlux = False   # flag for using the sea ice load in the
-                                # calculation of the ocean surface height
-
-extensiveFld = True # flag whether the advected field is an extensive one
-
-
-# flag which solver to use
-useFreedrift = False
-useEVP       = False
-useLSR       = False
-usePicard    = False
-useJFNK      = False
-
-# useFreedrift = True
-useEVP = True
-# useLSR = True
-# usePicard=True
-# useJFNK = True
-
