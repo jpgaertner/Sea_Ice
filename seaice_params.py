@@ -1,14 +1,21 @@
 from veros.core.operators import numpy as npx
 
+
+
 # densities [kg/m3]
-rhoIce = 900        # density of ice
+
+# for the thermodynamics benchmark
+rhoIce = 910
+rhoFresh = 999.8
+rhoConst = 1027
+rhoAir = 1.2
+
+#rhoIce = 900        # density of ice
 rhoSnow = 330       # density of snow
 #rhoFresh = 1000     # density of fresh water
-rhoFresh = 1027 # for thermodynamics benchmark
 recip_rhoFresh = 1 / rhoFresh
-rhoAir = 1.3        # density of air
+#rhoAir = 1.3        # density of air
 #rhoConst = 1026     # constant reference density of sea water (Boussineq approximation)
-rhoConst = 999.8 # for thermodynamics benchmark
 recip_rhoConst = 1 / rhoConst
 rhoice2rhosnow     = rhoIce / rhoSnow
 rhoIce2rhoFresh = rhoIce / rhoFresh
