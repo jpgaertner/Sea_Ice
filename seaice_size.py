@@ -6,8 +6,6 @@ from seaice_fill_overlap import fill_overlap
 # # for the 1d test
 # nx = 1
 # ny = 1
-# olx = 2
-# oly = 2
 
 # number of cells of tile along x, y axis
 nx = 64+1
