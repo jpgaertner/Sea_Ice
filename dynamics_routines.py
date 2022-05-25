@@ -1,14 +1,29 @@
-import numpy as np
+from veros.core.operators import numpy as npx
+from veros import veros_kernel, KernelOutput, veros_routine
 
 from seaice_params import *
 from seaice_size import *
 
-secondOrderBC = False
 
-def calc_ice_strength(hIceMean, Area):
-    return SeaIceStrength * hIceMean * np.exp(-cStar * (1 - Area)) * iceMask
+# calculate ice strength from ice thickness and ice cover fraction
+@veros_kernel
+def calc_ice_strength(state):
 
-def ocean_drag_coeffs(uIce, vIce, uVel, vVel):
+    SeaIceStrength = pStar * state.variables.hIceMean \
+                * npx.exp(-cStar * (1 - state.variables.Area)) * iceMask
+    return KernelOutput(SeaIceStrength = SeaIceStrength)
+
+@veros_routine
+def update_IceStrength(state):
+
+    # retrieve sea ice strength and update state object
+    IceStrength = calc_ice_strength(state)
+    state.variables.update(IceStrength)
+
+
+# calculate linear ocean drag coefficient from ice and ocean velocities
+@veros_kernel
+def ocean_drag_coeffs(state,uIce,vIce):
 
     ### input:
     # uIce: zonal ice velocity
@@ -23,25 +38,22 @@ def ocean_drag_coeffs(uIce, vIce, uVel, vVel):
 
 
     # get ice-water drag coefficient times density
-    dragCoeff = np.ones(uIce.shape) * waterIceDrag * rhoConst
-    south = np.where(fCori < 0)
-    dragCoeff[south] = waterIceDrag_south * rhoConst
+    dragCoeff = npx.where(fCori < 0, waterIceDrag_south, waterIceDrag) * rhoConst
 
     # calculate linear drag coefficient
-    cDrag = np.ones(uIce.shape) * cDragMin
-    du = (uIce - uVel)*maskInW
-    dv = (vIce - vVel)*maskInS
-    tmpVar = 0.25 * ( du**2 + np.roll(du,-1,1)**2
-                    + dv**2 + np.roll(dv,-1,0)**2 )
+    du = (uIce - state.variables.uVel)*maskInW
+    dv = (vIce - state.variables.vVel)*maskInS
+    tmpVar = 0.25 * ( (du + npx.roll(du,-1,1))**2
+                    +  (dv + npx.roll(dv,-1,0))**2 )
 
-    tmp = np.where(dragCoeff**2 * tmpVar > cDragMin**2)
-    cDrag[tmp] = dragCoeff[tmp] * np.sqrt(tmpVar[tmp])
+    cDrag = npx.where(dragCoeff**2 * tmpVar > cDragMin**2,
+                        dragCoeff * npx.sqrt(tmpVar), cDragMin)
     cDrag = cDrag * iceMask
-
 
     return cDrag
 
-def bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low):
+@veros_kernel
+def bottomdrag_coeffs(state, uIce, vIce):
 
     ### input:
     # uIce: zonal ice velocity
@@ -56,14 +68,13 @@ def bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low):
     fac = 10. #scales the soft maximum for more accuracy
     recip_fac = 1. / fac
 
-    tmpFld = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    isArea = np.where(Area[:-1,:-1] > 0.01)
+    tmpFld = 0.25 * ( (uIce*maskInW)**2
+                    + npx.roll(uIce*maskInW,-1,1)**2
+                    + (vIce*maskInS)**2
+                    + npx.roll(vIce*maskInS,-1,0)**2 )
+    tmpFld = basalDragK2 / npx.sqrt(tmpFld + basalDragU0**2)
 
-    tmpFld = 0.25 * ( (uIce*maskInW)**2 + np.roll(uIce*maskInW,-1,1)**2
-                    + (vIce*maskInS)**2 + np.roll(vIce*maskInS,-1,1)**2 )
-    tmpFld = basalDragK2 / np.sqrt(tmpFld + basalDragU0**2)
-
-    hCrit = np.abs(R_low) * Area / basalDragK1
+    hCrit = npx.abs(state.variables.R_low) * state.variables.Area / basalDragK1
 
     # we want to have some soft maximum for better differentiability:
     # max(a,b;k) = ln(exp(k*a)+exp(k*b))/k
@@ -71,20 +82,21 @@ def bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low):
     # max(a,0;k) = ln(exp(k*a)+1)/k
     # If k*a gets too large, EXP will overflow, but for the anticipated
     # values of hActual < 100m, and k=10, this should be very unlikely
-    cBot = np.where(Area > 0.01,
+    cBot = npx.where(state.variables.Area > 0.01,
             tmpFld
-                * np.log(np.exp(fac * (hIceMean-hCrit)) + 1.) * recip_fac
-                * np.exp(-cBasalStar * (1. - Area)),
+                * npx.log(npx.exp(fac * (state.variables.hIceMean-hCrit)) + 1.)
+                * recip_fac * npx.exp(-cBasalStar * (1. - state.variables.Area)),
                 0.)
 
     return cBot
 
-def strainrates(uFld, vFld):
+@veros_kernel
+def strainrates(state, uIce, vIce,iEVP):
+    #TODO remove iEVP when debugged
 
     ### input
-    # uFld: zonal ice field velocity
-    # vFld: meridional ice Field velocity
-    # secondOrderBC: flag
+    # uIce: zonal ice velocity
+    # vIce: meridional ice velocity
 
     ### output
     # e11: 1,1 component of strain rate tensor
@@ -92,38 +104,38 @@ def strainrates(uFld, vFld):
     # e12: 1,2 component of strain rate tensor
 
     # abbreviations at c points
-    dudx = ( np.roll(uFld,-1,axis=1) - uFld ) * recip_dxF
-    uave = ( np.roll(uFld,-1,axis=1) + uFld ) * 0.5
-    dvdy = ( np.roll(vFld,-1,axis=0) - vFld ) * recip_dyF
-    vave = ( np.roll(vFld,-1,axis=0) + vFld ) * 0.5
+    dudx = ( npx.roll(uIce,-1,axis=1) - uIce ) * recip_dxU
+    uave = ( npx.roll(uIce,-1,axis=1) + uIce ) * 0.5
+    dvdy = ( npx.roll(vIce,-1,axis=0) - vIce ) * recip_dyV
+    vave = ( npx.roll(vIce,-1,axis=0) + vIce ) * 0.5
 
     # evaluate strain rates at c points
-    e11 = (dudx + vave * k2AtC) * maskInC
-    e22 = (dvdy + uave * k1AtC) * maskInC
+    e11 = ( dudx + vave * k2AtC ) * maskInC
+    e22 = ( dvdy + uave * k1AtC ) * maskInC
 
     # abbreviations at z points
-    dudy = ( uFld - np.roll(uFld,1,axis=0) ) * recip_dyU
-    uave = ( uFld + np.roll(uFld,1,axis=0) ) * 0.5
-    dvdx = ( vFld - np.roll(vFld,1,axis=1) ) * recip_dxV
-    vave = ( vFld + np.roll(vFld,1,axis=1) ) * 0.5
+    dudy = ( uIce - npx.roll(uIce,1,axis=0) ) * recip_dyU
+    uave = ( uIce + npx.roll(uIce,1,axis=0) ) * 0.5
+    dvdx = ( vIce - npx.roll(vIce,1,axis=1) ) * recip_dxV
+    vave = ( vIce + npx.roll(vIce,1,axis=1) ) * 0.5
 
     # evaluate strain rate at z points
-    mskZ = iceMask*np.roll(iceMask,1,axis=1)
-    mskZ =    mskZ*np.roll(   mskZ,1,axis=0)
-    e12 = 0.5 * (dudy + dvdx - k1AtZ * vave - k2AtZ * uave ) * mskZ
-    if noSlip:
-        hFacU = SeaIceMaskU - np.roll(SeaIceMaskU,1,axis=0)
-        hFacV = SeaIceMaskV - np.roll(SeaIceMaskV,1,axis=1)
+    mskZ = iceMask*npx.roll(iceMask,1,axis=1)
+    mskZ =    mskZ*npx.roll(   mskZ,1,axis=0)
+    e12 = 0.5 * ( dudy + dvdx - k1AtZ * vave - k2AtZ * uave ) * mskZ
+    if state.settings.noSlip:
+        hFacU = SeaIceMaskU - npx.roll(SeaIceMaskU,1,axis=0)
+        hFacV = SeaIceMaskV - npx.roll(SeaIceMaskV,1,axis=1)
         e12   = e12 + ( 2.0 * uave * recip_dyU * hFacU
                       + 2.0 * vave * recip_dxV * hFacV )
 
-    if secondOrderBC:
-        hFacU = ( SeaIceMaskU - np.roll(SeaIceMaskU,1,0) ) / 3.
-        hFacV = ( SeaIceMaskV - np.roll(SeaIceMaskV,1,1) ) / 3.
-        hFacU = hFacU * (np.roll(SeaIceMaskU, 2,0) * np.roll(SeaIceMaskU,1,0)
-                       + np.roll(SeaIceMaskU,-1,0) * SeaIceMaskU )
-        hFacV = hFacV * (np.roll(SeaIceMaskV, 2,1) * np.roll(SeaIceMaskV,1,1)
-                       + np.roll(SeaIceMaskV,-1,1) * SeaIceMaskV )
+    if state.settings.noSlip and state.settings.secondOrderBC:
+        hFacU = ( SeaIceMaskU - npx.roll(SeaIceMaskU,1,0) ) / 3.
+        hFacV = ( SeaIceMaskV - npx.roll(SeaIceMaskV,1,1) ) / 3.
+        hFacU = hFacU * (npx.roll(SeaIceMaskU, 2,0) * npx.roll(SeaIceMaskU,1,0)
+                       + npx.roll(SeaIceMaskU,-1,0) * SeaIceMaskU )
+        hFacV = hFacV * (npx.roll(SeaIceMaskV, 2,1) * npx.roll(SeaIceMaskV,1,1)
+                       + npx.roll(SeaIceMaskV,-1,1) * SeaIceMaskV )
         # right hand sided dv/dx = (9*v(i,j)-v(i+1,j))/(4*dxv(i,j)-dxv(i+1,j))
         # according to a Taylor expansion to 2nd order. We assume that dxv
         # varies very slowly, so that the denominator simplifies to 3*dxv(i,j),
@@ -138,24 +150,26 @@ def strainrates(uFld, vFld):
         # The masking is ugly, but hopefully effective.
         e12 = e12 + 0.5 * (
             recip_dyU * ( 6. * uave
-                          - np.roll(uFld, 2,0) * np.roll(SeaIceMaskU,1,0)
-                          - np.roll(uFld,-1,0) * SeaIceMaskU ) * hFacU
+                          - npx.roll(uIce, 2,0) * npx.roll(SeaIceMaskU,1,0)
+                          - npx.roll(uIce,-1,0) * SeaIceMaskU ) * hFacU
           + recip_dxV * ( 6. * vave
-                          - np.roll(vFld, 2,1) * np.roll(SeaIceMaskV,1,1)
-                          - np.roll(vFld,-1,1) * SeaIceMaskV ) * hFacV
+                          - npx.roll(vIce, 2,1) * npx.roll(SeaIceMaskV,1,1)
+                          - npx.roll(vIce,-1,1) * SeaIceMaskV ) * hFacV
         )
 
     return e11, e22, e12
 
-def viscosities(e11,e22,e12,press0,iStep,myTime,myIter):
+@veros_kernel
+def viscosities(state, e11,e22,e12,iEVP):
+    #TODO remove iEVP when debugged
 
     """Usage: zeta, eta, press =
-          viscosities(e11,e22,e12,press0,iStep,myTime,myIter)
+          viscosities(e11,e22,e12,SeaIceStrength,iStep,myTime,myIter)
     ### input
     # e11: 1,1 component of strain rate tensor
     # e22: 2,2 component of strain rate tensor
     # e12: 1,2 component of strain rate tensor
-    # press0: maximum compressive stres
+    # SeaIceStrength: maximum compressive stres
 
     ### ouput
     # zeta, eta : bulk and shear viscosity
@@ -169,44 +183,48 @@ def viscosities(e11,e22,e12,press0,iStep,myTime,myIter):
 
     # use area weighted average of squares of e12 (more accurate)
     e12Csq = rAz * e12**2
-    e12Csq =                     e12Csq + np.roll(e12Csq,-1,0)
-    e12Csq = 0.25 * recip_rA * ( e12Csq + np.roll(e12Csq,-1,1) )
+    e12Csq =                     e12Csq + npx.roll(e12Csq,-1,0)
+    e12Csq = 0.25 * recip_rA * ( e12Csq + npx.roll(e12Csq,-1,1) )
 
     deltaSq = (e11+e22)**2 + recip_PlasDefCoeffSq * (
         (e11-e22)**2 + 4. * e12Csq )
-    deltaC = np.sqrt(deltaSq)
+    deltaC = npx.sqrt(deltaSq)
 
     # smooth regularization of delta for better differentiability
     # deltaCreg = deltaC + deltaMin
-    # deltaCreg = np.sqrt( deltaSq + deltaMin**2 )
-    deltaCreg = np.maximum(deltaC,deltaMin)
+    # deltaCreg = npx.sqrt( deltaSq + deltaMin**2 )
+    deltaCreg = npx.maximum(deltaC,deltaMin)
 
-    zeta = 0.5 * (press0 * (1 + tensileStrFac)) / deltaCreg
+    zeta = 0.5 * ( state.variables.SeaIceStrength * (1 + tensileStrFac) ) / deltaCreg
     eta  = zeta * recip_PlasDefCoeffSq
 
     # recalculate pressure
-    press = ( press0 * (1 - pressReplFac)
+    press = 0.5 * ( state.variables.SeaIceStrength * (1 - pressReplFac)
               + 2. * zeta * deltaC * pressReplFac / (1 + tensileStrFac)
              ) * (1 - tensileStrFac)
 
     return zeta, eta, press
 
 
-def calc_stress(e11, e22, e12, zeta, eta, press, iStep, myTime, myIter):
+@veros_kernel
+def calc_stress(e11, e22, e12, zeta, eta, press, iStep):
+    #TODO remove iStep when debugged
     from seaice_averaging import c_point_to_z_point
-    sig11 = zeta*(e11 + e22) + eta*(e11 - e22) - 0.5 * press
-    sig22 = zeta*(e11 + e22) - eta*(e11 - e22) - 0.5 * press
+    sig11 = zeta*(e11 + e22) + eta*(e11 - e22) - press
+    sig22 = zeta*(e11 + e22) - eta*(e11 - e22) - press
     sig12 = 2. * e12 * c_point_to_z_point(eta)
     return sig11, sig22, sig12
 
-def calc_stressdiv(sig11, sig22, sig12, iStep, myTime, myIter):
+@veros_kernel
+def calc_stressdiv(sig11, sig22, sig12, iStep):
+    #TODO remove iStep when debugged
     stressDivX = (
-          sig11*dyF - np.roll(sig11*dyF, 1,axis=1)
-        - sig12*dxV + np.roll(sig12*dxV,-1,axis=0)
+          sig11*dyV - npx.roll(sig11*dyV, 1,axis=1)
+        - sig12*dxV + npx.roll(sig12*dxV,-1,axis=0)
     ) * recip_rAw
     stressDivY = (
-          sig22*dxF - np.roll(sig22*dxF, 1,axis=0)
-        - sig12*dyU + np.roll(sig12*dyU,-1,axis=1)
+          sig22*dxU - npx.roll(sig22*dxU, 1,axis=0)
+        - sig12*dyU + npx.roll(sig12*dyU,-1,axis=1)
     ) * recip_rAs
     return stressDivX, stressDivY
 
@@ -216,15 +234,16 @@ def calc_lhs(uIce, vIce, zeta, eta, press,
              cDrag, cBotC, R_low,
              iStep, myTime, myIter):
 
-    recip_deltaT = 1./deltaTdyn
+    #recip_deltaT = 1./state.settings.deltatDyn #TODO why calculate it here?
+    recip_deltaT = 1
     bdfAlpha = 1.
-    sinWat = np.sin(np.deg2rad(waterTurnAngle))
-    cosWat = np.cos(np.deg2rad(waterTurnAngle))
+    sinWat = npx.sin(npx.deg2rad(waterTurnAngle))
+    cosWat = npx.cos(npx.deg2rad(waterTurnAngle))
 
     #
     e11, e22, e12          = strainrates(uIce, vIce)
     # zeta, eta, press       = viscosities(
-    #     e11, e22, e12, press0, iStep, myIter, myTime)
+    #     e11, e22, e12, SeaIceStrength, iStep, myIter, myTime)
     sig11, sig22, sig12    = calc_stress(
         e11, e22, e12, zeta, eta, press, iStep, myIter, myTime)
     stressDivX, stressDivY = calc_stressdiv(
@@ -239,23 +258,23 @@ def calc_lhs(uIce, vIce, zeta, eta, press,
     vIceLHS = bdfAlpha*SeaIceMassV*recip_deltaT*vIce - stressDivY
     # coriols terms: - mass*f*vIce
     #                + mass*f*uIce
-    fuAtC = SeaIceMassC * fCori * 0.5 * ( uIce + np.roll(uIce,-1,1) )
-    fvAtC = SeaIceMassC * fCori * 0.5 * ( vIce + np.roll(vIce,-1,0) )
-    uIceLHS = uIceLHS - 0.5 * ( fvAtC + np.roll(fvAtC,1,1) )
-    vIceLHS = vIceLHS + 0.5 * ( fuAtC + np.roll(fuAtC,1,0) )
+    fuAtC = SeaIceMassC * fCori * 0.5 * ( uIce + npx.roll(uIce,-1,1) )
+    fvAtC = SeaIceMassC * fCori * 0.5 * ( vIce + npx.roll(vIce,-1,0) )
+    uIceLHS = uIceLHS - 0.5 * ( fvAtC + npx.roll(fvAtC,1,1) )
+    vIceLHS = vIceLHS + 0.5 * ( fuAtC + npx.roll(fuAtC,1,0) )
     # ocean-ice and bottom drag terms: + (Cdrag*cosWat+Cb)*uIce - vIce*sinWat)
-    uAtC = 0.5 * ( uIce + np.roll(uIce,-1,1) )
-    vAtC = 0.5 * ( vIce + np.roll(vIce,-1,0) )
+    uAtC = 0.5 * ( uIce + npx.roll(uIce,-1,1) )
+    vAtC = 0.5 * ( vIce + npx.roll(vIce,-1,0) )
     uIceLHS = uIceLHS + (
-        0.5 * ( symDrag + np.roll(symDrag,1,1) ) *  uIce
-        - np.sign(fCori) * sinWat * 0.5 * (
-            symDrag * vAtC + np.roll(symDrag * vAtC,1,1)
+        0.5 * ( symDrag + npx.roll(symDrag,1,1) ) *  uIce
+        - npx.sign(fCori) * sinWat * 0.5 * (
+            symDrag * vAtC + npx.roll(symDrag * vAtC,1,1)
         )
     ) * areaW
     vIceLHS = vIceLHS + (
-        0.5 * ( symDrag + np.roll(symDrag,1,0) ) * vIce
-        + np.sign(fCori) * sinWat * 0.5 * (
-            symDrag * uAtC  + np.roll(symDrag * uAtC,1,0)
+        0.5 * ( symDrag + npx.roll(symDrag,1,0) ) * vIce
+        + npx.sign(fCori) * sinWat * 0.5 * (
+            symDrag * uAtC  + npx.roll(symDrag * uAtC,1,0)
         )
     ) * areaS
     # momentum advection (not now)
@@ -263,30 +282,29 @@ def calc_lhs(uIce, vIce, zeta, eta, press,
     # apply masks for interior (important when we have open boundaries)
     return uIceLHS*maskInW, vIceLHS*maskInS
 
-def calc_rhs(uIceRHSfix, vIceRHSfix, areaW, areaS,
-             uVel, vVel, cDrag,
-             iStep, myTime, myIter):
+@veros_kernel
+def calc_rhs(state, uIceRHSfix, vIceRHSfix, cDrag, iStep):
 
-    sinWat = np.sin(np.deg2rad(waterTurnAngle))
-    cosWat = np.cos(np.deg2rad(waterTurnAngle))
+    sinWat = npx.sin(npx.deg2rad(waterTurnAngle))
+    cosWat = npx.cos(npx.deg2rad(waterTurnAngle))
 
     # ice-velocity independent contribution to drag terms
     # - Cdrag*(uVel*cosWat - vVel*sinWat)/(vVel*cosWat + uVel*sinWat)
     # ( remember to average to correct velocity points )
-    uAtC = 0.5 * ( uVel + np.roll(uVel,-1,1) )
-    vAtC = 0.5 * ( vVel + np.roll(vVel,-1,0) )
+    uAtC = 0.5 * ( state.variables.uVel + npx.roll(state.variables.uVel,-1,1) )
+    vAtC = 0.5 * ( state.variables.vVel + npx.roll(state.variables.vVel,-1,0) )
     uIceRHS = uIceRHSfix + (
-        0.5 * ( cDrag + np.roll(cDrag,1,1) ) * cosWat *  uVel
-        - np.sign(fCori) * sinWat * 0.5 * (
-            cDrag * vAtC + np.roll(cDrag * vAtC,1,1)
+        0.5 * ( cDrag + npx.roll(cDrag,1,1) ) * cosWat *  state.variables.uVel
+        - npx.sign(fCori) * sinWat * 0.5 * (
+            cDrag * vAtC + npx.roll(cDrag * vAtC,1,1)
         )
-    ) * areaW
+    ) * state.variables.areaW
     vIceRHS = vIceRHSfix + (
-        0.5 * ( cDrag + np.roll(cDrag,1,0) ) * cosWat * vVel
-        + np.sign(fCori) * sinWat * 0.5 * (
-            cDrag * uAtC  + np.roll(cDrag * uAtC,1,0)
+        0.5 * ( cDrag + npx.roll(cDrag,1,0) ) * cosWat * state.variables.vVel
+        + npx.sign(fCori) * sinWat * 0.5 * (
+            cDrag * uAtC  + npx.roll(cDrag * uAtC,1,0)
         )
-    ) * areaS
+    ) * state.variables.areaS
 
     return uIceRHS*maskInW, vIceRHS*maskInS
 
@@ -296,23 +314,23 @@ def calc_residual(uIce, vIce, hIceMean, hSnowMean, Area,
                   iStep, myTime, myIter):
 
     # initialize fractional areas at velocity points
-    areaW = 0.5 * (Area + np.roll(Area,1,1))
-    areaS = 0.5 * (Area + np.roll(Area,1,0))
+    areaW = 0.5 * (Area + npx.roll(Area,1,1))
+    areaS = 0.5 * (Area + npx.roll(Area,1,0))
 
     # # set up mass per unit area
     # SeaIceMassC = rhoIce * hIceMean
     # # if SEAICEaddSnowMass (true)
     # SeaIceMassC= SeaIceMassC + rhoSnow * hSnowMean
-    # SeaIceMassU = 0.5 * ( SeaIceMassC + np.roll(SeaIceMassC,1,1) )
-    # SeaIceMassV = 0.5 * ( SeaIceMassC + np.roll(SeaIceMassC,1,0) )
+    # SeaIceMassU = 0.5 * ( SeaIceMassC + npx.roll(SeaIceMassC,1,1) )
+    # SeaIceMassV = 0.5 * ( SeaIceMassC + npx.roll(SeaIceMassC,1,0) )
     # calculate ice strength
-    press0 = calc_ice_strength(hIceMean, Area)
+    SeaIceStrength = calc_ice_strength(hIceMean, Area)
     #
     cDrag = ocean_drag_coeffs(uIce, vIce, uVel, vVel)
     cBotC = bottomdrag_coeffs(uIce, vIce, hIceMean, Area, R_low)
     e11, e22, e12    = strainrates(uIce, vIce)
     zeta, eta, press = viscosities(
-        e11, e22, e12, press0, iStep, myIter, myTime)
+        e11, e22, e12, SeaIceStrength, iStep, myIter, myTime)
 
     Au, Av = calc_lhs(uIce, vIce, zeta, eta, press,
                       hIceMean, Area, areaW, areaS,

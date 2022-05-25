@@ -1,114 +1,134 @@
-import numpy as np
+from veros.core.operators import numpy as npx
 
-from seaice_size import *
+
 
 # densities [kg/m3]
+
+# for the thermodynamics benchmark
 rhoIce = 910
-rhoSnow = 330
 rhoFresh = 999.8
+rhoConst = 1027
+rhoAir = 1.2
+
+#rhoIce = 900        # density of ice
+rhoSnow = 330       # density of snow
+#rhoFresh = 1000     # density of fresh water
 recip_rhoFresh = 1 / rhoFresh
-rhoConst = 1027 #constant reference density for sea water (Boussinesq)
+#rhoAir = 1.3        # density of air
+#rhoConst = 1026     # constant reference density of sea water (Boussineq approximation)
 recip_rhoConst = 1 / rhoConst
 rhoice2rhosnow     = rhoIce / rhoSnow
 rhoIce2rhoFresh = rhoIce / rhoFresh
 rhoFresh2rhoSnow = rhoFresh / rhoSnow
 
+
+##### constants used in growth and solve4temp #####
+
 # albedos
-dryIceAlb = 0.75
-dryIceAlb_south = 0.75
-wetIceAlb = 0.66
-wetIceAlb_south = 0.66
-drySnowAlb = 0.84
-drySnowAlb_south = 0.84
-wetSnowAlb = 0.7
-wetSnowAlb_south = 0.7
-wetAlbTemp = 0
+dryIceAlb = 0.75        # albedo of dry ice
+dryIceAlb_south = 0.75  # albedo of dry ice in the southern hemisphere
+wetIceAlb = 0.66        # albedo of wet ice
+wetIceAlb_south = 0.66  # albedo of wet ice in the southern hemisphere
+drySnowAlb = 0.84       # albedo of dry snow
+drySnowAlb_south = 0.84 # albedo of dry snow in the southern hemisphere
+wetSnowAlb = 0.7        # albdeo of wet snow
+wetSnowAlb_south = 0.7  # albedo of wet snow in the southern hemisphere
+wetAlbTemp = 0          # temperature [°C] above which the wet albedos are used
 
-lhFusion = 3.34e5
-lhEvap = 2.5e6
-lhSublim = lhEvap + lhFusion
-cpAir = 1005
-rhoAir = 1.2
-stefBoltz = 5.67e-8
-emissivity = 0.95 #0.97
-iceEmiss = emissivity
-snowEmiss = emissivity
+# latent heat constants of water
+lhFusion = 3.34e5               # latent heat of fusion
+lhEvap = 2.5e6                  # latent heat of evaporation
+lhSublim = lhEvap + lhFusion    # latent heat of sublimation
 
-iceConduct = 2.1656
-snowConduct = 0.31
-hCut = 0.15 #cut off snow thickness, used for calculating albedo
-shortwave = 0.3 #penetration shortwave radiation factor
+cpAir = 1005    # specific heat of air
 
-heatCapacity = 3986.0
+stefBoltz = 5.67e-8 # stefan boltzman constant
 
-tempFrz0 = -1.96
-dTempFrz_dS = 0
+# emissivities
+emissivity = 0.95       # longwave ocean emissivity
+iceEmiss = emissivity   # longwave ice emissivity
+snowEmiss = emissivity  # longwave snow emissivity
 
-saltIce = 0 #salinity of sea ice
+# conductivities
+iceConduct = 2.1656 # sea ice conductivity
+snowConduct = 0.31  # snow conductivity
 
-minLwDown = 60 #minimum downward longwave radiation
-maxTIce = 30 #maximum ice temperature
-minTIce = -50 #minimum ice temperature
-minTAir = -50 #minimum air temperature
+hCut = 0.15 # cut off snow thickness (for h >= hCut the snow is shortwave opaque)
 
-# coefficients for flux computations/bulk formulae
-seaice_dalton = 0.00175
+shortwave = 0.3 # ice penetration by shortwave radiation factor
 
-# parametrization values:
-SEAICE_area_reg = 0.15
-SEAICE_hice_reg = 0.10
+heatCapacity = 3986.0   # heat capacity of water
 
-#The change of mean ice thickness due to out-of-bounds values following
-#sea ice dynamics and advection
-d_hIcebyDyn = np.ones((sNy,sNx))
-d_hSnowbyDyn = np.ones((sNy,sNx))
+tempFrz0 = -1.96    # freezing temperature [°C]
+dTempFrz_dS = 0     # derivative of freezing temperature w.r.t. salinity
 
-SINegFac = 1 #value is actually one, but what is it?
-swFracAbsTopOcean = 0 #the fraction of incoming shortwave radiation absorbed in the uppermost ocean grid cell
+saltIce = 0 # salinity of sea ice
 
-celsius2K = 273.15
+# boundaries for longwave radiation and temperature
+minLwDown = 60  # minimum downward longwave radiation
+maxTIce = 30    # maximum ice temperature
+minTIce = -50   # minimum ice temperature
+minTAir = -50   # minimum air temperature
 
-deltaTtherm = 7200 #timestep for thermodynamic equations [s]
-recip_deltaTtherm = 1 / deltaTtherm
-deltaTdyn = deltaTtherm #timestep for dynamic equations [s]
-recip_deltaTdyn = 1 / deltaTdyn
+seaice_dalton = 0.00175 # dalton number/ sensible and latent heat transfer coefficient
 
-#constants needed for McPhee formulas for calculating turbulent ocean fluxes:
-stantonNr = 0.0056 #stanton number
-uStarBase = 0.0125 #typical friction velocity beneath sea ice [m/s]
-McPheeTaperFac = 12.5 #tapering factor
+# regularization values for area and ice thickness
+area_reg = 0.15
+hice_reg = 0.10
+area_reg_sq = area_reg**2
+hice_reg_sq = hice_reg**2
 
-# lead closing parameters:
-h0 = 0.5 # the thickness of new ice formed in open water [m]
+celsius2K = 273.15 # conversion from [K] to [°C]
+
+# constants for McPhee formula for calculating turbulent ocean heat fluxes
+stantonNr = 0.0056      # stanton number
+uStarBase = 0.0125      # typical friction velocity beneath sea ice [m/s]
+McPheeTaperFac = 12.5   # tapering factor at the ice bottom
+#McPheeTaperFac = 0.92 # for thermodynamics benchmark
+# lead closing parameter
+h0 = 0.5
 recip_h0 = 1 / h0
-h0_south = 0.5
+h0_south = h0
 recip_h0_south = 1 / h0_south
 
-airTurnAngle = 0 #turning angle of air-ice interfacial stress
-waterTurnAngle = 0 #turning angle of the water-ice interfacial stress
 
-eps = 1e-10 #8?
+##### constants in advection routines #####
+
+airTurnAngle = 0    # turning angle of air-ice stress
+waterTurnAngle = 0  # turning angle of the water-ice stress
+sinWat = npx.sin(npx.deg2rad(waterTurnAngle))
+cosWat = npx.cos(npx.deg2rad(waterTurnAngle))
+
+# minimum wind speed [m/s]
+eps = 1e-10
 eps_sq = eps**2
-si_eps = 1e-5
-area_floor = si_eps
 
-airOceanDrag = 0.0012 #air-ocean drag coefficient
-airIceDrag = 0.0012 #air-ice drag coefficient
-airIceDrag_south = 0.001
-waterIceDrag = 0.0055 #water-ice drag coefficient
-waterIceDrag_south = 0.0055
-cDragMin = 0.25 #minimum of linear drag coefficient between ice and ocean
-stressFactor = 1
+si_eps = 1e-5       # 'minimum' ice thickness [m] (smaller ice thicknesses are set to zero)
+area_floor = si_eps # minimum ice cover fraction if ice is present
 
-seaIceLoadFac = 1 #factor to scale (and turn off) seaIceLoading
-gravity = 9.8156
+# drag coefficients
+airIceDrag = 0.0012         # air-ice drag coefficient
+airIceDrag_south = airIceDrag
+waterIceDrag = 0.0055       # water-ice drag coefficient
+waterIceDrag_south = waterIceDrag
+cDragMin = 0.25             # minimum of linear ice-ocean drag coefficient
 
-PlasDefCoeff = 2 #coefficient for plastic deformation, related to the relation of the critical stresses needed for plastic deformation when pushing ice together vs. pulling it apart
+seaIceLoadFac = 1   # factor to scale (and turn off) sea ice loading
 
-deltaMin = 2.e-9
-pressReplFac = 0
+gravity = 9.81    # gravitational acceleration
 
-cStar = 20
+PlasDefCoeff = 2    # coefficient for plastic deformation/ axes ratio of the
+    #elliptical yield curve of the relationship between the principal stress
+    # components (sigma_1, sigma_2) (related to the relation of the critical
+    # stresses needed for plastic deformation when pushing ice together vs.
+    # pulling it apart)
+
+deltaMin = 2e-9    # regularization value for delta
+
+pressReplFac = 1    # flag whether to use replacement pressure
+
+pStar = 27.5e3 # sea ice strength parameter
+cStar = 20  # sea ice strength parameter
 
 # basal drag parameters
 basalDragU0 = 5e-5
@@ -116,23 +136,9 @@ basalDragK1 = 8
 basalDragK2 = 0
 cBasalStar = cStar
 
-tensileStrFac = np.ones((sNy+2*OLy,sNx+2*OLx)) * 0. #5
+tensileStrFac = 0 # sea ice tensile strength factor
 
-SeaIceStrength = 27.5e3
-zetaMaxfac = 2.5e8
-zetaMin = 0
+zetaMaxfac = 2.5e8  # factor determining the maximum viscosity [s]
+zetaMin = 0         # minimum viscosity
 
-# solver
-useFreedrift = False
-useEVP       = False
-useLSR       = False
-usePicard    = False
-useJFNK      = False
-
-useFreedrift = True
-# useEVP = True
-#useLSR = True
-#usePicard=True
-# useJFNK = True
-
-noSlip = True
+CrMax = 1e6 # paramter used for calculating advective fluxes

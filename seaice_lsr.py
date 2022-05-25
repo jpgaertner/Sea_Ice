@@ -70,7 +70,7 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
     mskZ  =    mskZ*np.roll(   mskZ,1,axis=0)
 
     # u - component
-    sig11 = (zeta-eta) *       (np.roll(vIce,-1,0)-vIce)*recip_dyF \
+    sig11 = (zeta-eta) *       (np.roll(vIce,-1,0)-vIce)*recip_dyV \
           + (zeta+eta) * 0.5 * (np.roll(vIce,-1,0)+vIce)*k2AtC \
           - 0.5 * press
     hFacM = SeaIceMaskV - np.roll(SeaIceMaskV,1,1)
@@ -94,12 +94,12 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
     )
 
     uIceRHS = uIceRHS + (
-          sig11*dyF - np.roll(sig11*dyF, 1,axis=1)
+          sig11*dyV - np.roll(sig11*dyV, 1,axis=1)
         - sig12*dxV + np.roll(sig12*dxV,-1,axis=0)
     ) * recip_rAw
 
     # v - component
-    sig22 = (zeta-eta) *       (np.roll(uIce,-1,1)-uIce)*recip_dxF \
+    sig22 = (zeta-eta) *       (np.roll(uIce,-1,1)-uIce)*recip_dxU \
           + (zeta+eta) * 0.5 * (np.roll(uIce,-1,1)+uIce)*k1AtC \
           - 0.5 * press
     hFacM = SeaIceMaskU - np.roll(SeaIceMaskU,1,0)
@@ -123,7 +123,7 @@ def calc_rhs_lsr(uIceRHSfix, vIceRHSfix, areaW, areaS,
     )
 
     vIceRHS = vIceRHS + (
-          sig22*dxF - np.roll(sig22*dxF, 1,axis=0)
+          sig22*dxU - np.roll(sig22*dxU, 1,axis=0)
         - sig12*dyU + np.roll(sig12*dyU,-1,axis=1)
     ) * recip_rAs
 
@@ -137,14 +137,14 @@ def lsr_coefficents(zeta, eta, dragSym, seaiceMassU, seaiceMassV,
     else:
         strImpCplFac = 0.
 
-    # needs to be sorted out, can be 1.5/deltaTdyn
-    bdfAlphaOverDt = 1./deltaTdyn
+    # needs to be sorted out, can be 1.5/deltatDyn
+    bdfAlphaOverDt = 1./deltatDyn
 
     # coefficients of uIce(i,j) and vIce(i,j) belonging to ...
     # ... d/dx (eta+zeta) d/dx u
-    UXX = dyF * ( zeta + eta ) * recip_dxF
+    UXX = dyV * ( zeta + eta ) * recip_dxU
     # ... d/dy eta+zeta dv/dy
-    VYY = dxF * ( zeta + eta ) * recip_dyF
+    VYY = dxU * ( zeta + eta ) * recip_dyV
     # ... d/dy eta d/dy u
     UYY = dxV * c_point_to_z_point(eta+strImpCplFac*zeta, noSlip) * recip_dyU
     # ... d/dx eta dv/dx
@@ -154,9 +154,9 @@ def lsr_coefficents(zeta, eta, dragSym, seaiceMassU, seaiceMassV,
     # ... d/dx eta k1 v
     VXM = dyU * c_point_to_z_point( eta, noSlip ) * k1AtZ * 0.5
     # ... d/dx (zeta-eta) k1 u
-    UXM = dyF * ( zeta - eta ) * k1AtC * 0.5
+    UXM = dyV * ( zeta - eta ) * k1AtC * 0.5
     # ... d/dy (zeta-eta) k2 v
-    VYM = dxF * ( zeta - eta ) * k2AtC * 0.5
+    VYM = dxU * ( zeta - eta ) * k2AtC * 0.5
 
     # assemble coefficient matrix, beware of sign convention: because
     # this is the left hand side we calculate -grad(sigma), but the
@@ -254,9 +254,9 @@ def lsr_residual( rhsU, rhsV, uRt1, uRt2, vRt1, vRt2,
     )
     if calcMeanResid:
         residU = (uRes*uRes*rAw*maskInW
-                  *maskInC*np.roll(maskInC,1,1))[OLy:-OLy,OLx:-OLx].sum()
+                  *maskInC*np.roll(maskInC,1,1))[oly:-oly,olx:-olx].sum()
         residV = (vRes*vRes*rAs*maskInS
-                  *maskInC*np.roll(maskInC,1,0))[OLy:-OLy,OLx:-OLx].sum()
+                  *maskInC*np.roll(maskInC,1,0))[oly:-oly,olx:-olx].sum()
         residU = global_sum( residU )
         residV = global_sum( residV )
         # scale residuals by globalArea so that they do not get
@@ -293,15 +293,15 @@ def tridiag(a,b,c,d):
 
 def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
 
-    iMin = max(OLx-2,2)
-    iMax = max(OLx + sNx, 2*OLx+sNx-2)
+    iMin = max(olx-2,2)
+    iMax = max(olx + nx, 2*olx+nx-2)
     iMxx = iMax-1
     # initialisation
     cuu = CU.copy()
     # zebra loop
     if useLsrZebra: ks = 2
     else:           ks = 1
-    for k in range(OLy,OLy+ks):
+    for k in range(oly,oly+ks):
         # boundary conditions
         uIc[k::ks,:]    = rhsU[k::ks,:] \
             + uRt1[k::ks,:]*np.roll(uIc, 1,0)[k::ks,:] \
@@ -331,15 +331,15 @@ def lsr_tridiagu(AU, BU, CU, uRt1, uRt2, rhsU, uIc):
 
 def lsr_tridiagv(AV, BV, CV, vRt1, vRt2, rhsV, vIc):
 
-    jMin = max(OLy-2,2)
-    jMax = max(OLy + sNy, 2*OLy+sNy-2)
+    jMin = max(oly-2,2)
+    jMax = max(oly + ny, 2*oly+ny-2)
     jMxx = jMax-1
     # initialisation
     cvv = CV.copy()
     # zebra loop
     if useLsrZebra: ks = 2
     else:           ks = 1
-    for k in range(OLx,OLx+ks):
+    for k in range(olx,olx+ks):
         # boundary conditions
         vIc[:,k::ks]    = rhsV[:,k::ks] \
             + vRt1[:,k::ks]*np.roll(vIc, 1,1)[:,k::ks] \
@@ -383,7 +383,7 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         printLsrResidual   = False
         plotLsrResidual    = False
 
-    recip_deltaT = 1./deltaTdyn
+    recip_deltaT = 1./deltatDyn
     bdfAlpha = 1.
     sinWat = np.sin(np.deg2rad(waterTurnAngle))
     cosWat = np.cos(np.deg2rad(waterTurnAngle))
@@ -404,7 +404,7 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         # mass*(vIceNm1)/deltaT
         vIceRHSfix = forcingV + SeaIceMassV*vIceNm1*recip_deltaT
         # calculate ice strength
-        press0 = calc_ice_strength(hIceMean, iceMask)
+        SeaIceStrength = calc_ice_strength(hIceMean, iceMask)
 
     residual = []
     iLsr = -1
@@ -445,7 +445,7 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
             #
             e11, e22, e12    = strainrates(uIceC, vIceC)
             zeta, eta, press = viscosities(
-                e11, e22, e12, press0, iLsr, myTime, myIter)
+                e11, e22, e12, SeaIceStrength, iLsr, myTime, myIter)
             #
             uIceRHS, vIceRHS = calc_rhs_lsr(
                 uIceRHSfix, vIceRHSfix, areaW, areaS, uIceC, vIceC,
@@ -476,10 +476,10 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
 
             resUU = np.sqrt( global_sum(
                 (uu**2*rAw*maskInW*maskInC*np.roll(maskInC,1,1))
-                [OLy:-OLy,OLx:-OLx].sum() )/globalArea )
+                [oly:-oly,olx:-olx].sum() )/globalArea )
             resVV = np.sqrt( global_sum(
                 (vv**2*rAs*maskInS*maskInC*np.roll(maskInC,1,0))
-                [OLy:-OLy,OLx:-OLx].sum() )/globalArea )
+                [oly:-oly,olx:-olx].sum() )/globalArea )
 
             if printLsrResidual:
                 print ( 'pre  lin: %i      %e %e %e %e'%(
@@ -546,9 +546,9 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
             if not useAsPreconditioner:
                 if iLin>1:
                     doIterU = np.sqrt((uIce-uNm1)**2
-                                      )[OLy:-OLy,OLx:-OLx].max() > linTol
+                                      )[oly:-oly,olx:-olx].max() > linTol
                     doIterV = np.sqrt((vIce-vNm1)**2
-                                      )[OLy:-OLy,OLx:-OLx].max() > linTol
+                                      )[oly:-oly,olx:-olx].max() > linTol
             # else:
             #     print('precond: iLin %i', iLin)
 
@@ -586,7 +586,7 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
     return uIce, vIce
 
         # n = iMax-iMin
-        # for j in range(OLy,sNy+OLy):
+        # for j in range(oly,ny+oly):
         #     b = uIc[j,iMin:iMax]
         #     A = sp.spdiags([AU[j,iMin:iMax],
         #                     BU[j,iMin:iMax],
@@ -594,7 +594,7 @@ def lsr_solver(uIce, vIce, hIceMean, hSnowMean, Area,
         #     uIc[j,iMin:iMax] = solve(A,b,overwrite_b=True)
 
         # n = jMax-jMin
-        # for i in range(OLx,sNx+OLx):
+        # for i in range(olx,nx+olx):
             # b = vIc[jMin:jMax,i]
             # A = sp.spdiags([AV[jMin:jMax,i],
             #                 BV[jMin:jMax,i],

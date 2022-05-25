@@ -18,84 +18,49 @@
 # ATemp: atmospheric temperature [K]
 # aqh: atmospheric specific humidity [g/kg]
 
-import numpy as np
+from veros import runtime_settings
+backend = 'jax' # flag which backend to use (numpy or jax)
+runtime_settings.backend = backend
+
+from veros import veros_routine
+from veros.core.operators import numpy as npx
+
 from seaice_size import *
 from seaice_params import *
-from seaice_growth import growth
+
+from seaice_growth import update_Growth
+
 import matplotlib.pyplot as plt
 
-# # for the 1d test
-# sNx = 1
-# sNy = 1
-# OLx = 2
-# OLy = 2
+from initialize import state
 
+ice = npx.array([state.variables.hIceMean[0,0]])
+snow = npx.array([state.variables.hSnowMean[0,0]])
+iceTemp = npx.array([state.variables.TIceSnow[0,0,0]])
+area = npx.array([state.variables.Area[0,0]])
+days = npx.array([0])
 
-
-hIceMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 1.3 * iceMask
-Area = np.ones((sNx+2*OLx,sNy+2*OLy))* 0.9 * iceMask
-hSnowMean = np.ones((sNx+2*OLx,sNy+2*OLy)) * 0.1 * iceMask
-
-salt = np.ones((sNx+2*OLx,sNy+2*OLy))*29
-TIceSnow = np.ones((sNx+2*OLx,sNy+2*OLy,nITC)) * 248.7569580078125
-precip = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #order 1e-6
-snowPrecip = np.ones((sNx+2*OLx,sNy+2*OLy))*0
-evap = np.ones((sNx+2*OLx,sNy+2*OLy))*0
-runoff = np.ones((sNx+2*OLx,sNy+2*OLy))*0
-wspeed = np.ones((sNx+2*OLx,sNy+2*OLy))*2
-theta = np.zeros((sNx+2*OLx,sNy+2*OLy)) -1.66 #-1.96
-Qnet = np.ones((sNx+2*OLx,sNy+2*OLy))* 173.03212617345582#29.694019940648037
-Qsw = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #winter condition
-SWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*0 #winter
-LWDown = np.ones((sNx+2*OLx,sNy+2*OLy))*180 #20 winter
-ATemp = np.ones((sNx+2*OLx,sNy+2*OLy))* 253
-aqh = np.ones((sNx+2*OLx,sNy+2*OLy))*0#1e-4
-
-os_hIceMean = np.zeros_like(iceMask)
-os_hSnowMean = np.zeros_like(iceMask)
-
-ice = np.array([hIceMean[0,0]])
-snow = np.array([hSnowMean[0,0]])
-qnet = np.array([Qnet[0,0]])
-iceTemp = np.array([TIceSnow[0,0,:]])
-area = np.array([Area[0,0]])
-qsw = np.array([Qsw[0,0]])
-days = np.array([0])
-
-timesteps = 60*12
+timesteps = 30*12
 
 for i in range(timesteps):
-    hIceMean, hSnowMean, Area, TIceSnow, saltflux, EvPrecRun, Qsw_out, Qnet_out, seaIceLoad = (
-        growth(hIceMean, hSnowMean, Area, os_hIceMean, os_hSnowMean, salt, TIceSnow, precip, snowPrecip, evap, 
-        runoff, wspeed, theta, Qnet, Qsw, SWDown, LWDown, ATemp, aqh))
 
-    ice = np.append(ice, hIceMean[0,0])
-    snow = np.append(snow, hSnowMean[0,0])
-    qnet = np.append(qnet, Qnet[0,0])
-    iceTemp = np.append(iceTemp, TIceSnow[0,0,:])
-    area = np.append(area, Area[0,0])
-    qsw = np.append(qsw, Qsw[0,0])
-    days = np.append(days,i)
+    update_Growth(state)
 
-import matplotlib.pyplot as plt
-plt.contourf(hIceMean[OLy:-OLy,OLx:-OLx])
-plt.colorbar()
-plt.show()
+    ice = npx.append(ice, state.variables.hIceMean[0,0])
+    snow = npx.append(snow, state.variables.hSnowMean[0,0])
+    iceTemp = npx.append(iceTemp, state.variables.TIceSnow[0,0,0])
+    area = npx.append(area, state.variables.Area[0,0])
+    days = npx.append(days,i)
 
 # fig, axs = plt.subplots(2,2, figsize=(10,6))
-# axs[0,0].plot(ice)
+# axs[0,0].plot(days, ice)
 # axs[0,0].set_ylabel("Ice Thickness")
-# axs[0,1].plot(snow)
+# axs[0,1].plot(days, snow)
 # axs[0,1].set_ylabel("Snow Thickness")
-# axs[1,0].plot(area)
+# axs[1,0].plot(days, area)
 # axs[1,0].set_ylabel("Area")
-# axs[1,1].plot(iceTemp)
+# axs[1,1].plot(days, iceTemp)
 # axs[1,1].set_ylabel("Ice Temperature")
 
 # fig.tight_layout()
 # plt.show()
-
-# print(ice[timesteps])
-# print(area[timesteps])
-# print(snow[timesteps])
-#print(iceTemp[timesteps])

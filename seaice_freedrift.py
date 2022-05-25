@@ -1,81 +1,60 @@
-import numpy as np
+from veros.core.operators import numpy as npx
+from veros import veros_kernel
 
 from seaice_size import *
 from seaice_params import *
 
 from seaice_fill_overlap import fill_overlap
 
-
-def seaIceFreeDrift(hIceMean, uVel, vVel, IceSurfStressX0, IceSurfStressY0):
-
-    # initialize fields
-    uIceFD = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    vIceFD = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    uIceCenter = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    vIceCenter = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    uVelCenter = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    vVelCenter = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    tauXIceCenter = np.zeros((sNy+2*OLy,sNx+2*OLx))
-    tauYIceCenter = np.zeros((sNy+2*OLy,sNx+2*OLx))
+# calculate ice velocities from surface stress
+@veros_kernel
+def freedrift_solver(state):
 
     # air-ice stress at cell center
-    tauXIceCenter[OLy:-OLy,OLx:-OLx] = 0.5 * (IceSurfStressX0[OLy:-OLy,OLx:-OLx] + IceSurfStressX0[OLy+1:-OLy+1,OLx:-OLx])
-    tauYIceCenter[OLy:-OLy,OLx:-OLx] = 0.5 * (IceSurfStressY0[OLy:-OLy,OLx:-OLx] + IceSurfStressY0[OLy:-OLy,OLx+1:-OLx+1])
+    tauXIceCenter = 0.5 * (state.variables.WindForcingX \
+                + npx.roll(state.variables.WindForcingX,-1,1))
+    tauYIceCenter = 0.5 * (state.variables.WindForcingY \
+                + npx.roll(state.variables.WindForcingY,-1,0))
 
     # mass of ice per unit area times coriolis factor
-    mIceCor = rhoIce * hIceMean[OLy:-OLy,OLx:-OLx] * fCori[OLy:-OLy,OLx:-OLx]
+    mIceCor = rhoIce * state.variables.hIceMean * fCori
 
     # ocean surface velocity at the cell center
-    uVelCenter[OLy:-OLy,OLx:-OLx] = 0.5 * (uVel[OLy:-OLy,OLx:-OLx] + uVel[OLy+1:-OLy+1,OLx:-OLx])
-    vVelCenter[OLy:-OLy,OLx:-OLx] = 0.5 * (vVel[OLy:-OLy,OLx:-OLx] + vVel[OLy:-OLy,OLx+1:-OLx+1])
+    uVelCenter = 0.5 * (state.variables.uVel + npx.roll(state.variables.uVel,-1,1))
+    vVelCenter = 0.5 * (state.variables.vVel + npx.roll(state.variables.vVel,-1,0))
 
     # right hand side of the free drift equation
-    rhsX = - tauXIceCenter[OLy:-OLy,OLx:-OLx] - mIceCor * vVelCenter[OLy:-OLy,OLx:-OLx]
-    rhsY = - tauYIceCenter[OLy:-OLy,OLx:-OLx] + mIceCor * uVelCenter[OLy:-OLy,OLx:-OLx]
+    rhsX = - tauXIceCenter - mIceCor * vVelCenter
+    rhsY = - tauYIceCenter + mIceCor * uVelCenter
 
     # norm of angle of rhs
     tmp1 = rhsX**2 + rhsY**2
-    rhsN = np.zeros((sNy,sNx))
-    rhsA = np.zeros((sNy,sNx))
-    where1 = np.where(tmp1 > 0)
-    rhsN[where1] = np.sqrt(rhsX[where1]**2 + rhsY[where1]**2)
-    rhsA[where1] = np.arctan2(rhsY[where1],rhsX[where1])
+    where1 = (tmp1 > 0)
+    rhsN = npx.where(where1, npx.sqrt(rhsX**2 + rhsY**2), 0)
+    rhsA = npx.where(where1, npx.arctan2(rhsY,rhsX), 0)
 
     # solve for norm
-    tmp1 = np.ones((sNy,sNx)) / (rhoConst * waterIceDrag)
-    south = np.where(fCori[OLy:-OLy,OLx:-OLx] < 0)
-    tmp1[south] = 1 / (rhoConst * waterIceDrag_south)
+    south = (fCori < 0)
+    tmp1 = 1 / (npx.where(south, waterIceDrag_south, waterIceDrag) * rhoConst)
     tmp2 = tmp1**2 * mIceCor**2
     tmp3 = tmp1**2 * rhsN**2
     tmp4 = tmp2**2 + 4 * tmp3
-    solNorm = np.zeros((sNy,sNx))
-    where2 = np.where(tmp3 > 0)
-    solNorm[where2] = np.sqrt(0.5 * (np.sqrt(tmp4[where2]) - tmp2[where2]))
+    solNorm = npx.where(tmp3 > 0, npx.sqrt(0.5 * (npx.sqrt(tmp4) - tmp2)), 0)
 
     # solve for angle
-    tmp1 = np.ones((sNy,sNx)) * waterIceDrag * rhoConst
-    tmp1[south] = waterIceDrag_south * rhoConst
+    tmp1 = 1 / tmp1
     tmp2 = tmp1 * solNorm**2
     tmp3 = mIceCor * solNorm
     tmp4 = tmp2**2 + tmp3**2
-    solAngle = np.zeros((sNy,sNx))
-    where3 = np.where(tmp4 > 0)
-    solAngle[where3] = rhsA[where3] - np.arctan2(tmp3[where3], tmp2[where3])
+    solAngle = npx.where(tmp4 > 0, rhsA - npx.arctan2(tmp3, tmp2), 0)
 
     # compute uIce, vIce at cell center
-    uIceCenter[OLy:-OLy,OLx:-OLx] = uVelCenter[OLy:-OLy,OLx:-OLx] - solNorm * np.cos(solAngle)
-    vIceCenter[OLy:-OLy,OLx:-OLx] = vVelCenter[OLy:-OLy,OLx:-OLx] - solNorm * np.sin(solAngle)
-
-    uIceCenter = fill_overlap(uIceCenter)
-    vIceCenter = fill_overlap(vIceCenter)
+    uIceCenter = uVelCenter - solNorm * npx.cos(solAngle)
+    vIceCenter = vVelCenter - solNorm * npx.sin(solAngle)
 
     # interpolate to velocity points
-    uIceFD[OLy:-OLy,OLx:-OLx] = 0.5 * (uIceCenter[OLy-1:-OLy-1,OLx:-OLx] + uIceCenter[OLy:-OLy,OLx:-OLx])
-    vIceFD[OLy:-OLy,OLx:-OLx] = 0.5 * (vIceCenter[OLy:-OLy,OLx-1:-OLx-1] + vIceCenter[OLy:-OLy,OLx:-OLx])
-
-    # fill the overlap regions
-    uIceFD = fill_overlap(uIceFD)
-    vIceFD = fill_overlap(vIceFD)
+    uIceFD = 0.5 * (npx.roll(uIceCenter,1,1) + uIceCenter)
+    vIceFD = 0.5 * (npx.roll(vIceCenter,1,0) + vIceCenter)
 
     # apply masks
     uIceFD = uIceFD * SeaIceMaskU

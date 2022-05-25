@@ -7,15 +7,15 @@ from seaice_solve4temp import solve4temp
 
 import matplotlib.pyplot as plt
 
-hIceActual = np.ones((sNx,sNy))*0.5
-hSnowActual = np.ones((sNx,sNy))*0
-TSurf = celsius2K*np.ones((sNx,sNy))
-ug = np.ones((sNx,sNy))*2
-SWDown = np.ones((sNx,sNy))*0
-LWDown = np.ones((sNx,sNy))*50
-ATemp = celsius2K*np.ones((sNx,sNy))-20
-aqh = np.ones((sNx,sNy))*0.0001
-TempFrz = celsius2K*np.ones((sNx,sNy))-2
+hIceActual = np.ones((nx,ny))*0.5
+hSnowActual = np.ones((nx,ny))*0
+TSurf = celsius2K*np.ones((nx,ny))
+ug = np.ones((nx,ny))*2
+SWDown = np.ones((nx,ny))*0
+LWDown = np.ones((nx,ny))*50
+ATemp = celsius2K*np.ones((nx,ny))-20
+aqh = np.ones((nx,ny))*0.0001
+TempFrz = celsius2K*np.ones((nx,ny))-2
 
 T = np.array([TSurf[0,0]])
 Fio = np.array([])
