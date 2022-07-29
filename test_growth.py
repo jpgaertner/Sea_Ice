@@ -40,7 +40,7 @@ iceTemp = npx.array([state.variables.TIceSnow[0,0,0]])
 area = npx.array([state.variables.Area[0,0]])
 days = npx.array([0])
 
-timesteps = 30*12
+timesteps = 30
 
 for i in range(timesteps):
 
