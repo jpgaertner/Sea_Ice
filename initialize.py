@@ -135,8 +135,8 @@ def set_inits(state):
     state.variables.uVel        = uVel_gen
     state.variables.vVel        = vVel_gen
     state.variables.salt        = ones2d * 29
-    state.variables.theta       = ones2d * celsius2K - 2
-    state.variables.Qnet        = ones2d * 168.99925638039838
+    state.variables.theta       = ones2d * celsius2K - 1.66
+    state.variables.Qnet        = ones2d * 173.03212617345582
     state.variables.Qsw         = ones2d * 0
     state.variables.SWDown      = ones2d * 0
     state.variables.LWDown      = ones2d * 80
