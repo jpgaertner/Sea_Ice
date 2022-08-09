@@ -167,6 +167,10 @@ def growth(state):
     TempFrz = tempFrz0 + dTempFrz_dS * state.variables.salt + celsius2K
 
     # calculate heat fluxes and ice/ snow surface temperature
+    if printSolve4TempVars:
+        print('sinput:', hIceActual_mult[0,0,0], hSnowActual_mult[0,0,0],
+                TIce_mult[0,0,0], TempFrz[0,0])
+
     for l in range(nITC):
         output = solve4temp(state, hIceActual_mult[:,:,l], hSnowActual_mult[:,:,l],
             TIce_mult[:,:,l], TempFrz)
@@ -177,6 +181,10 @@ def growth(state):
         F_ia_mult = update(F_ia_mult, at[:,:,l], output[3])
         qswi_mult = update(qswi_mult, at[:,:,l], output[4])
         FWsublim_mult = update(FWsublim_mult, at[:,:,l], output[5])
+
+    if printSolve4TempVars:
+        print('soutput:', TIce_mult[0,0,0], F_io_net_mult[0,0,0], F_ia_net_mult[0,0,0],
+                F_ia_mult[0,0,0], qswi_mult[0,0,0], FWsublim_mult[0,0,0])
 
 
     ##### evaluate precipitation as snow or rain #####

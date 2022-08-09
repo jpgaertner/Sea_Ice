@@ -2,6 +2,7 @@ from veros.core.operators import numpy as npx
 
 
 growthTesting = True    # for comparing the thermodynamics with the MITgcm
+printSolve4TempVars = False  # for printing the solve4temp inputs and outputs
 
 # densities [kg/m3]
 
