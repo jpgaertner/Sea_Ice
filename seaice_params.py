@@ -16,10 +16,10 @@ else:
     rhoFresh = 1000     # density of fresh water
     rhoAir = 1.3        # density of air
     rhoConst = 1026     # constant reference density of sea water (Boussineq approximation)
+rhoSnow = 330           # density of snow
 recip_rhoFresh = 1 / rhoFresh
-rhoSnow = 330       # density of snow
 recip_rhoConst = 1 / rhoConst
-rhoice2rhosnow     = rhoIce / rhoSnow
+rhoIce2rhoSnow     = rhoIce / rhoSnow
 rhoIce2rhoFresh = rhoIce / rhoFresh
 rhoFresh2rhoSnow = rhoFresh / rhoSnow
 
@@ -85,10 +85,7 @@ celsius2K = 273.15 # conversion from [K] to [°C]
 # constants for McPhee formula for calculating turbulent ocean heat fluxes
 stantonNr = 0.0056      # stanton number
 uStarBase = 0.0125      # typical friction velocity beneath sea ice [m/s]
-if growthTesting:
-    McPheeTaperFac = 0.92
-else:
-    McPheeTaperFac = 12.5   # tapering factor at the ice bottom
+McPheeTaperFac = 12.5   # tapering factor at the ice bottom
 
 # lead closing parameter
 h0 = 0.5
