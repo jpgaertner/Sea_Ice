@@ -263,7 +263,7 @@ def growth(state):
     # the actual thickness of snow to be melted by snow surface
     # heat flux convergence [m]
     if growthTesting:
-        SnowMeltFromSurface = npx.where(allSnowMelted, hIceActual,
+        SnowMeltFromSurface = npx.where(allSnowMelted, hSnowActual,
                                                     PotSnowMeltFromSurf)
     else:
         SnowMeltFromSurface = npx.where(allSnowMelted, state.variables.hSnowMean,
