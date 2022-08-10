@@ -380,7 +380,7 @@ def growth(state):
     h_sub = (hSnowMean * rhoSnow + hIceMean * rhoIce) * recip_rhoConst
     d_hIceMeanByFlood = npx.maximum(0, h_sub - hIceMean)
     hIceMean = hIceMean + d_hIceMeanByFlood
-    hSnowMean = hSnowMean - d_hIceMeanByFlood * rhoice2rhosnow
+    hSnowMean = hSnowMean - d_hIceMeanByFlood * rhoIce2rhoSnow
 
 
     ##### calculate output to ocean #####
